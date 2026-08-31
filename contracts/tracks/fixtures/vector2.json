@@ -1,0 +1,7 @@
+{
+  "publicKeyDer": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzMhPA7keTg9mzPJ9TWYWW/q2Pcyz1UboxyqYojaHsC1j1V3XRoZmfrhvCoL9J7LpTczXHyBTVavk911CGHB3zw==",
+  "challenge": "WiYI16wtMZwTipiYqLjapUGaPkqEtfyn5Vd09F0T4Ms=",
+  "authenticatorData": "dKbqkhPJnC90siSSsyDPQCYqlMGpUKA5fyklC2CEHvAdAAAAAA==",
+  "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiV2lZSTE2d3RNWndUaXBpWXFMamFwVUdhUGtxRXRmeW41VmQwOUYwVDRNcyIsIm9yaWdpbiI6Imh0dHBzOi8vd2ViYXV0aG4uaW8iLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+  "signatureDer": "MEUCIBLSDVj/axJmqlTUeF57STKmW+9kcdcM8lREtBtfxldVAiEAuZTTz3Xu/fMKcpAjjvm8zFIIrlEQXrqbgK2RuUxQD64="
+}
