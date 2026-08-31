@@ -1,10 +1,12 @@
 //! Subscription passes as time-bound, resellable NFTs.
 //!
-//! Minimal ERC-721-*like*: it emits a standard `Transfer(address,address,
-//! uint256)` so a subgraph can index it, but it is NOT ERC-721 compliant.
-//! There are no approvals, no operators, no enumeration and no metadata URI,
-//! so it will not work with generic NFT marketplaces or wallets. Resale goes
-//! through `buy` on this contract only.
+//! NOT ERC-721, and deliberately does not pretend to be. There are no
+//! approvals, operators, enumeration or metadata URI, so this will not work
+//! with generic NFT wallets or marketplaces; resale goes through `buy` here.
+//! Ownership changes emit `PassTransferred`, NOT ERC-721's
+//! `Transfer(address,address,uint256)` -- emitting that signature would have
+//! advertised a standard this contract does not implement, and indexers and
+//! wallets would have believed it.
 //!
 //! Deployed separately from PassKeyWallet, which is untouched.
 
@@ -32,8 +34,11 @@ sol! {
     event Unlisted(uint256 indexed tokenId, address indexed seller);
     /// A pass changed hands, with the payment split recorded.
     event Bought(uint256 indexed tokenId, address indexed buyer, address indexed seller, uint256 price, uint256 royalty);
-    /// ERC-721-shaped ownership change, so standard indexers understand it.
-    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
+    /// Ownership moved. Deliberately NOT named `Transfer`: this contract is
+    /// not ERC-721 and must not claim that interface.
+    event PassTransferred(address indexed from, address indexed to, uint256 indexed tokenId);
+    /// An address was granted or revoked the right to issue passes.
+    event IssuerSet(address indexed issuer, bool allowed);
 }
 
 sol_storage! {
@@ -45,17 +50,59 @@ sol_storage! {
         /// 0 means "not for sale", so a listing price of 0 is rejected.
         mapping(uint256 => uint256) prices;
         uint256 next_token_id;
+        /// Controls the issuer allowlist. Set once, at construction.
+        address admin;
+        /// Only these addresses may mint.
+        mapping(address => bool) allowed_issuers;
     }
 }
 
 #[public]
 impl Subscription {
+    /// Runs once at deployment. `admin` becomes the allowlist controller and
+    /// the first permitted issuer.
+    ///
+    /// The admin is an explicit argument, NOT `msg_sender()`. cargo-stylus
+    /// routes construction through the StylusDeployer contract, so inside a
+    /// constructor `msg_sender()` is that contract rather than the deploying
+    /// EOA. Deriving admin from it hands control to a contract that will
+    /// never call `set_issuer`, which permanently bricks minting.
+    ///
+    /// A constructor rather than an `initialize()` function because an
+    /// initializer is unguarded until someone calls it, so it can be
+    /// front-run. The SDK guarantees this runs exactly once.
+    #[constructor]
+    pub fn constructor(&mut self, admin: Address) -> Result<(), Vec<u8>> {
+        if admin.is_zero() {
+            return Err(b"zero admin".to_vec());
+        }
+        self.admin.set(admin);
+        self.allowed_issuers.setter(admin).set(true);
+        Ok(())
+    }
+
+    /// Grant or revoke the right to mint passes. Admin only.
+    pub fn set_issuer(&mut self, issuer: Address, allowed: bool) -> Result<(), Vec<u8>> {
+        if self.vm().msg_sender() != self.admin.get() {
+            return Err(b"not admin".to_vec());
+        }
+        if issuer.is_zero() {
+            return Err(b"zero issuer".to_vec());
+        }
+        self.allowed_issuers.setter(issuer).set(allowed);
+        self.vm().log(IssuerSet { issuer, allowed });
+        Ok(())
+    }
+
     /// Issue a pass to `to`, valid for `duration_seconds` from now.
     ///
-    /// The caller becomes the issuer and earns the royalty on every future
-    /// resale of this token.
-    #[payable]
+    /// Not payable: nothing here consumes a payment, and there is no withdraw
+    /// function, so accepting ETH would strand it in the contract forever.
+    /// Sending value now reverts instead of burning it.
     pub fn mint(&mut self, to: Address, duration_seconds: U256) -> Result<U256, Vec<u8>> {
+        if !self.allowed_issuers.get(self.vm().msg_sender()) {
+            return Err(b"not an issuer".to_vec());
+        }
         if to.is_zero() {
             return Err(b"zero recipient".to_vec());
         }
@@ -85,7 +132,7 @@ impl Subscription {
             issuer,
             expiry: U256::from(expiry),
         });
-        self.vm().log(Transfer {
+        self.vm().log(PassTransferred {
             from: Address::ZERO,
             to,
             tokenId: token_id,
@@ -114,6 +161,10 @@ impl Subscription {
         if owner != self.vm().msg_sender() {
             return Err(b"not owner".to_vec());
         }
+        // An expired pass grants nothing, so it cannot be offered for sale.
+        if !self.is_active(token_id) {
+            return Err(b"expired".to_vec());
+        }
         // 0 is the sentinel for "not listed", so it cannot also be a price.
         if price.is_zero() {
             return Err(b"zero price".to_vec());
@@ -127,7 +178,8 @@ impl Subscription {
         Ok(())
     }
 
-    /// Withdraw the pass from sale.
+    /// Withdraw the pass from sale. Allowed even once expired, so a seller can
+    /// always clear a stale listing.
     pub fn unlist(&mut self, token_id: U256) -> Result<(), Vec<u8>> {
         let owner = self.owners.get(token_id);
         if owner.is_zero() {
@@ -150,6 +202,12 @@ impl Subscription {
         let price = self.prices.get(token_id);
         if price.is_zero() {
             return Err(b"not listed".to_vec());
+        }
+        // Re-checked at purchase, not just at listing: a pass can expire while
+        // it sits on the market, and buying zero remaining access is a loss
+        // with no recourse.
+        if !self.is_active(token_id) {
+            return Err(b"expired".to_vec());
         }
         let seller = self.owners.get(token_id);
         let buyer = self.vm().msg_sender();
@@ -185,7 +243,7 @@ impl Subscription {
             price,
             royalty,
         });
-        self.vm().log(Transfer {
+        self.vm().log(PassTransferred {
             from: seller,
             to: buyer,
             tokenId: token_id,
@@ -216,5 +274,15 @@ impl Subscription {
     /// Id the next mint will use.
     pub fn next_token_id(&self) -> U256 {
         self.next_token_id.get()
+    }
+
+    /// Whether `who` may mint passes.
+    pub fn is_issuer(&self, who: Address) -> bool {
+        self.allowed_issuers.get(who)
+    }
+
+    /// Address controlling the issuer allowlist.
+    pub fn admin(&self) -> Address {
+        self.admin.get()
     }
 }
