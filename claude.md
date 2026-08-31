@@ -57,6 +57,10 @@ ERC-4337, bundlers, paymasters, IPFS, subgraphs, any backend server, any
 database, multi-device passkeys, social recovery, session keys, mainnet
 deployment, token standards.
 
+NOTE (1 Sept): partially superseded — see "Scope now IN" below. IPFS,
+subgraphs and token standards moved IN. ERC-4337, bundlers, paymasters,
+mainnet and multi-device passkeys remain OUT.
+
 If I ask for any of these, remind me they are out of scope before building.
 
 ## Repo layout
@@ -105,3 +109,27 @@ If I ask for any of these, remind me they are out of scope before building.
 - Never fabricate test vectors, gas numbers, transaction hashes, or contract
   addresses. If you need one, ask me for it.
 - Flag security concerns immediately, even if I did not ask.
+
+## Product (as of 1 Sept)
+PassKey Wallet is the login. On top of it: a subscription marketplace
+where SaaS access is a time-bound NFT. Buy a 30-day pass, use 10 days,
+resell the remaining 20. Contract splits payment 90% seller / 10%
+original issuer.
+
+Pitch: "Subscriptions you can resell. No email, no password, no seed
+phrase — just your fingerprint."
+
+## Scope now IN (was out)
+- Subscription NFT contract (new, separate from PassKeyWallet)
+- Chrome extension wallet
+- AI chatbot with vector-DB knowledge base
+- IPFS metadata via Pinata
+- The Graph subgraph (3h timebox, viem getLogs fallback)
+
+## Still OUT
+ERC-4337, bundlers, paymasters, mainnet, multi-device passkeys.
+
+## Hard rule
+PassKeyWallet at 0x490630168df621c98e6bba22549295a2202de358 is DEPLOYED
+and WORKING. Do not redeploy it. Do not modify its contract. New
+functionality goes in new contracts that it calls via execute().

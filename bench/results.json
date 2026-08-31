@@ -1,0 +1,55 @@
+{
+  "measuredAt": "2026-08-31",
+  "chain": "arbitrum-sepolia",
+  "signatureSource": "contracts/tracks/fixtures/vector1.json (real Windows Hello assertion, Chrome)",
+  "method": "eth_estimateGas, min of 3 runs. Fixed costs (21000 intrinsic, calldata, router dispatch, uncached Stylus module init) removed two independent ways.",
+
+  "stylus_rust_p256": {
+    "note": "p256 crate (RustCrypto) compiled to WASM, verify_prehash only. No SHA-256, no parsing, no storage, no outbound call.",
+    "variants": {
+      "no_precomputed_tables": {
+        "address": "0x52ca5d07bf69e0b2fb4f25ff10a32f709beb0fae",
+        "compressedWasmBytes": 21630,
+        "pureVerificationGas": 372028
+      },
+      "precomputed_tables": {
+        "address": "0x80f7a7de171ab41ee80b0f32c8460d97a3ee9da1",
+        "compressedWasmBytes": 20919,
+        "pureVerificationGas": 361747
+      }
+    },
+    "isolationCrossCheck": {
+      "address": "0x337cc429dcd46e31b5d98ed26d364a6b5cfffaf2",
+      "noopGas": 71162,
+      "verifyOnceGas": 432951,
+      "verifyTwiceGas": 795617,
+      "oneVerification_x1_minus_noop": 361789,
+      "oneVerification_x2_minus_x1": 362666,
+      "agreementPercent": 0.24,
+      "note": "x2-x1 cancels every fixed cost including per-call WASM init; both methods agree, so ~362k is the real compute cost."
+    },
+    "headlineGas": 362000
+  },
+
+  "rip7212_precompile": {
+    "address": "0x0000000000000000000000000000000000000100",
+    "present": true,
+    "validatedRealSignature": true,
+    "rejectsTamperedDigest": true,
+    "callGas": 37928,
+    "sameCalldataToDeadAddressGas": 30772,
+    "pureVerificationGas": 7156,
+    "note": "RIP-7212 secp256r1 precompile is LIVE on Arbitrum Sepolia. Not a published figure -- measured here against the same real signature."
+  },
+
+  "solidity_published_reference": {
+    "range": "200000-330000",
+    "note": "NOT measured here. Published figures for hand-rolled Solidity P-256 verifiers (e.g. Daimo p256-verifier ~330k, FreshCryptoLib ~200k). /solidity was never built."
+  },
+
+  "conclusion": {
+    "stylusVsSolidity": "Stylus Rust p256 at ~362k gas is SLOWER than published Solidity verifiers at 200k-330k. The project's premise that Rust on Stylus would be dramatically cheaper is NOT supported by measurement.",
+    "precompileVsBoth": "The RIP-7212 precompile at ~7.2k gas is roughly 50x cheaper than the Stylus implementation and ~30-45x cheaper than Solidity verifiers.",
+    "premiseCorrection": "CLAUDE.md states the EVM has NO precompile for secp256r1. That is no longer true on Arbitrum: RIP-7212 is live at 0x100 on Arbitrum Sepolia and verified the real fixture signature."
+  }
+}
