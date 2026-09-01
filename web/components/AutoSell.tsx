@@ -136,9 +136,15 @@ export function AutoSell({
 
   const evaluated = useMemo(
     () =>
-      rules
-        .filter((r) => !r.doneAt)
-        .map((r) => evaluate(r, byToken.get(r.tokenId), nowMs ?? Date.now())),
+      // Nothing is evaluated until the clock has mounted. Falling back to
+      // Date.now() here would read the wall clock during render, which is
+      // impure and disagrees with the prerendered HTML -- and a rule has
+      // nothing meaningful to say before it knows what time it is.
+      nowMs === null
+        ? []
+        : rules
+            .filter((r) => !r.doneAt)
+            .map((r) => evaluate(r, byToken.get(r.tokenId), nowMs)),
     [rules, byToken, nowMs],
   );
 
