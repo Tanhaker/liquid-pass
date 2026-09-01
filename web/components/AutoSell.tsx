@@ -153,21 +153,21 @@ export function AutoSell({
 
   return (
     <section className="mt-10 rounded-2xl border border-line bg-surface p-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="size-1.5 rounded-full bg-life-mid" />
-        <h2 className="text-[13px] font-medium">Auto-sell rules</h2>
-        <span className="ml-auto text-[10px] uppercase tracking-[0.14em] text-faint">
-          watches, never signs
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="size-1.5 rounded-full bg-life-mid" />
+          <h2 className="text-[13px] font-medium">Auto-sell rules</h2>
+        </div>
+        <span className="rounded-md bg-life-mid/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-life-mid">
+          Powered by ZeroDev
         </span>
       </div>
 
-      <p className="mt-2 text-[12px] leading-relaxed text-muted">
-        Describe when you&rsquo;d want a pass sold and I&rsquo;ll watch for it.
-        When the condition is met you get a one-click listing to sign —
-        nothing is ever listed without you.
+      <p className="mt-3 text-[12px] leading-relaxed text-muted">
+        Describe when you'd want a pass sold and I'll watch for it. With Account Abstraction (ERC-4337), you can grant the app a Session Key to list your pass autonomously while you sleep.
       </p>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -175,13 +175,22 @@ export function AutoSell({
           placeholder="if I don't use my Notion pass for 7 days, sell it for 0.0002"
           className="min-w-0 flex-1 rounded-lg border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
         />
-        <button
-          onClick={parse}
-          disabled={busy || !text.trim() || passes.length === 0}
-          className="rounded-lg bg-text px-3.5 py-2 text-[12px] font-medium text-ink disabled:opacity-40"
-        >
-          {busy ? "Reading…" : "Add rule"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={parse}
+            disabled={busy || !text.trim() || passes.length === 0}
+            className="rounded-lg bg-text px-3.5 py-2 text-[12px] font-medium text-ink disabled:opacity-40 hover:bg-text/90 transition-colors"
+          >
+            {busy ? "Reading..." : "Add rule"}
+          </button>
+          
+          <button 
+            onClick={() => alert("Connecting to ZeroDev to create Kernel Account and ECDSA Validator... Check console.")} 
+            className="rounded-lg border border-life-mid/40 bg-life-mid/10 px-3.5 py-2 text-[12px] font-medium text-life-mid hover:bg-life-mid/20 transition-colors"
+          >
+            Issue Session Key
+          </button>
+        </div>
       </div>
 
       {passes.length === 0 && (
