@@ -10,10 +10,28 @@ import type { PlanMetadata } from "@/app/api/ipfs/route";
  * stored on chain in the first place.
  */
 
+/**
+ * Gateways, best-first.
+ *
+ * The dedicated Pinata gateway leads because it is the only one that actually
+ * worked when this was tested against a real CID. The public alternatives are
+ * not merely slow:
+ *
+ *   gateway.pinata.cloud   Cloudflare interstitial for non-browser clients
+ *   ipfs.io                no connection
+ *   cloudflare-ipfs.com    no connection
+ *   dweb.link              301, no content
+ *
+ * They stay in the list as genuine fallbacks -- a browser with cookies gets
+ * past the Pinata interstitial that a server-side fetch cannot -- but the
+ * dedicated gateway is what makes this work in practice, which is why it is
+ * first and why it is configurable.
+ */
 const GATEWAYS = [
+  process.env.NEXT_PUBLIC_IPFS_GATEWAY ??
+    "https://yellow-legal-emu-572.mypinata.cloud/ipfs/",
   "https://gateway.pinata.cloud/ipfs/",
   "https://ipfs.io/ipfs/",
-  "https://cloudflare-ipfs.com/ipfs/",
 ];
 
 const TIMEOUT_MS = 6_000;

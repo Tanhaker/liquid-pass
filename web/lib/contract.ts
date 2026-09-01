@@ -125,6 +125,62 @@ export function discountPct(paid: bigint, askingPrice: bigint): number | null {
   return Number(((paid - askingPrice) * 100n) / paid);
 }
 
+/**
+ * What the remaining time is proportionally worth.
+ *
+ * A pass is time. Ten days left on a thirty-day pass that originally sold for
+ * 0.003 ETH is worth 0.001 ETH of access -- that is the whole product stated
+ * as arithmetic.
+ *
+ * This is a SUGGESTION, not a rule. The contract does not enforce it and must
+ * not: a marketplace where the seller cannot set their own price is not a
+ * marketplace. Sellers routinely price below fair value to move a pass quickly,
+ * or above it for something scarce. Showing the fair price simply lets a buyer
+ * see which of those is happening.
+ *
+ * Returns null when it cannot be computed -- a pass with no recorded original
+ * price, or no known duration, has no fair value, and inventing one would put
+ * a fabricated number next to a real one.
+ */
+export function fairPrice(
+  paid: bigint,
+  expiry: bigint,
+  duration: bigint,
+  nowMs: number | null,
+): bigint | null {
+  if (paid <= 0n || duration <= 0n) return null;
+  const left = BigInt(remaining(expiry, nowMs ?? Date.now()));
+  if (left <= 0n) return 0n;
+  // Integer maths throughout: bigint wei must never touch floating point.
+  const capped = left > duration ? duration : left;
+  return (paid * capped) / duration;
+}
+
+/**
+ * How a listing compares to its time-proportional value, as a percentage.
+ * Negative means priced below fair value, positive means above.
+ */
+export function priceVsFair(listed: bigint, fair: bigint | null): number | null {
+  if (fair === null || fair <= 0n || listed <= 0n) return null;
+  return Number(((listed - fair) * 100n) / fair);
+}
+
+/**
+ * Wei as a short ETH string.
+ *
+ * formatEther is exact, which is right for a price someone is about to pay but
+ * wrong for a derived figure: the fair value of 13 of 14 days works out to
+ * 0.000095312632275132 ETH, and eighteen decimals of a suggestion is noise.
+ * Six significant digits keeps testnet-sized amounts legible without rounding
+ * a real price into something the contract would reject.
+ */
+export function formatEthShort(wei: bigint): string {
+  if (wei === 0n) return "0";
+  const eth = Number(wei) / 1e18;
+  if (eth >= 0.001) return String(Number(eth.toFixed(6)));
+  return String(Number(eth.toPrecision(3)));
+}
+
 export function formatRemaining(seconds: number): string {
   if (seconds <= 0) return "expired";
   const d = Math.floor(seconds / 86400);

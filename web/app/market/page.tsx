@@ -10,8 +10,11 @@ import {
   EXPLORER,
   LIQUID_PASS_ADDRESS,
   discountPct,
+  fairPrice,
+  formatEthShort,
   formatRemaining,
   lifeFraction,
+  priceVsFair,
   liquidPassAbi,
   remaining,
   shortAddress,
@@ -315,6 +318,8 @@ function ResaleCard({
   const left = remaining(expiry, now ?? Number(expiry) * 1000);
   const fraction = lifeFraction(expiry, plan?.duration ?? 0n);
   const off = discountPct(pass.paid, pass.listed);
+  const fair = fairPrice(pass.paid, expiry, plan?.duration ?? 0n, now);
+  const vsFair = priceVsFair(pass.listed, fair);
   const urgent = left > 0 && left <= 7 * 86400;
 
   return (
@@ -377,6 +382,22 @@ function ResaleCard({
         {pass.paid > 0n && (
           <p className="tnum mt-2 text-[11px] text-faint">
             originally {formatEther(pass.paid)} ETH
+          </p>
+        )}
+        {fair !== null && fair > 0n && (
+          <p className="tnum mt-1 text-[11px]">
+            <span className="text-faint">time value {formatEthShort(fair)} ETH</span>
+            {vsFair !== null && vsFair !== 0 && (
+              <span
+                className="ml-1.5"
+                style={{
+                  color:
+                    vsFair < 0 ? "var(--color-life-full)" : "var(--color-life-low)",
+                }}
+              >
+                {vsFair < 0 ? `${Math.abs(vsFair)}% under` : `${vsFair}% over`}
+              </span>
+            )}
           </p>
         )}
       </div>

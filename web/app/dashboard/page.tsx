@@ -12,6 +12,8 @@ import {
   EXPLORER,
   LIQUID_PASS_ADDRESS,
   discountPct,
+  fairPrice,
+  formatEthShort,
   formatRemaining,
   lifeFraction,
   liquidPassAbi,
@@ -234,6 +236,9 @@ function OwnedPass({
   // as "just expiring" rather than flashing a wrong number.
   const left = remaining(expiry, now ?? Number(expiry) * 1000);
   const fraction = lifeFraction(expiry, plan?.duration ?? 0n);
+  // What the remaining time is proportionally worth, offered as the default
+  // ask so the seller does not have to work it out.
+  const fair = fairPrice(pass.paid, expiry, plan?.duration ?? 0n, now);
   const expired = left <= 0;
   const isListed = pass.listed > 0n;
 
@@ -339,11 +344,23 @@ function OwnedPass({
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && submit()}
-              placeholder={pass.paid > 0n ? formatEther(pass.paid / 2n) : "0.0001"}
+              placeholder={fair !== null && fair > 0n ? formatEthShort(fair) : "0.0001"}
               inputMode="decimal"
               autoFocus
               className="tnum w-full rounded-lg border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
             />
+            {fair !== null && fair > 0n && (
+              <button
+                type="button"
+                onClick={() => setPrice(formatEthShort(fair))}
+                className="tnum block text-left text-[11px] text-faint underline underline-offset-2 hover:text-muted"
+              >
+                use time value: {formatEthShort(fair)} ETH
+                <span className="ml-1 no-underline">
+                  ({formatRemaining(left)} of {formatEther(pass.paid)} ETH)
+                </span>
+              </button>
+            )}
             {priceError && (
               <p className="text-[11px] text-life-crit">{priceError}</p>
             )}
