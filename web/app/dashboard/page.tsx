@@ -7,6 +7,7 @@ import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { arbitrumSepolia } from "wagmi/chains";
 import { DecayRing, lifeColor } from "@/components/DecayRing";
 import { Banner, Empty, SkeletonGrid, humanise, useFees, useNow } from "@/components/ui";
+import { useDemo } from "@/lib/demo";
 import {
   EXPLORER,
   LIQUID_PASS_ADDRESS,
@@ -222,6 +223,8 @@ function OwnedPass({
   onUnlist: () => void;
 }) {
   const now = useNow();
+  const { shiftExpiry } = useDemo();
+  const expiry = shiftExpiry(pass.expiry);
 
   const [listing, setListing] = useState(false);
   const [price, setPrice] = useState("");
@@ -229,8 +232,8 @@ function OwnedPass({
 
   // Before the clock mounts, fall back to the expiry itself so the pass reads
   // as "just expiring" rather than flashing a wrong number.
-  const left = remaining(pass.expiry, now ?? Number(pass.expiry) * 1000);
-  const fraction = lifeFraction(pass.expiry, plan?.duration ?? 0n);
+  const left = remaining(expiry, now ?? Number(expiry) * 1000);
+  const fraction = lifeFraction(expiry, plan?.duration ?? 0n);
   const expired = left <= 0;
   const isListed = pass.listed > 0n;
 

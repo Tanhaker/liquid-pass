@@ -20,6 +20,7 @@ import {
 } from "@/lib/contract";
 import { activeListings, fetchPasses, fetchPlans } from "@/lib/data";
 import { Banner, Empty, SkeletonGrid, humanise, useFees, useNow } from "@/components/ui";
+import { useDemo } from "@/lib/demo";
 
 type Tab = "plans" | "resale";
 
@@ -305,8 +306,11 @@ function ResaleCard({
 }) {
   // Ticks locally so the countdown is alive without hammering the RPC.
   const now = useNow();
-  const left = remaining(pass.expiry, now ?? Number(pass.expiry) * 1000);
-  const fraction = lifeFraction(pass.expiry, plan?.duration ?? 0n);
+  const { shiftExpiry } = useDemo();
+  // In live mode shiftExpiry is the identity function, so this is a no-op.
+  const expiry = shiftExpiry(pass.expiry);
+  const left = remaining(expiry, now ?? Number(expiry) * 1000);
+  const fraction = lifeFraction(expiry, plan?.duration ?? 0n);
   const off = discountPct(pass.paid, pass.listed);
   const urgent = left > 0 && left <= 7 * 86400;
 

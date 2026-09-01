@@ -17,6 +17,8 @@ import { shortAddress } from "@/lib/contract";
 const LINKS = [
   { href: "/market", label: "Market", icon: GridIcon },
   { href: "/dashboard", label: "My Passes", icon: RingIcon },
+  { href: "/explorer", label: "Explorer", icon: PulseIcon },
+  { href: "/analytics", label: "Analytics", icon: ChartIcon },
   { href: "/issuer", label: "Issuer", icon: KeyIcon },
 ];
 
@@ -136,6 +138,22 @@ function RingIcon() {
     <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
       <circle cx="7" cy="7" r="5.4" stroke="currentColor" strokeWidth="1.3" opacity="0.35" />
       <path d="M7 1.6a5.4 5.4 0 0 1 5.4 5.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PulseIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path d="M1 7h3l2-4 2 8 2-4h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ChartIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path d="M2 12V8M6 12V3M10 12V6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
     </svg>
   );
 }
