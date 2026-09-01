@@ -25,6 +25,7 @@ import { fetchActivity, fetchPasses, fetchPlans, passesOf, type Activity } from 
 import { AutoSell } from "@/components/AutoSell";
 import { YieldConcept } from "@/components/YieldConcept";
 import { PricingOracle } from "@/components/PricingOracle";
+import { GiftSplit } from "@/components/GiftSplit";
 import { planSignals, type PlanSignal } from "@/lib/signals";
 
 export default function Dashboard() {
@@ -202,6 +203,30 @@ export default function Dashboard() {
                       }),
                     )
                   }
+                  onGift={(to) =>
+                    run(`t-${pass.tokenId}`, `Gifted pass #${pass.tokenId}`, async () =>
+                      writeContractAsync({
+                        address: LIQUID_PASS_ADDRESS,
+                        abi: liquidPassAbi,
+                        functionName: "transferPass",
+                        args: [to, pass.tokenId],
+                        chainId: arbitrumSepolia.id,
+                        ...(await fees()),
+                      }),
+                    )
+                  }
+                  onSplit={(parts) =>
+                    run(`t-${pass.tokenId}`, `Split pass #${pass.tokenId}`, async () =>
+                      writeContractAsync({
+                        address: LIQUID_PASS_ADDRESS,
+                        abi: liquidPassAbi,
+                        functionName: "split",
+                        args: [pass.tokenId, parts],
+                        chainId: arbitrumSepolia.id,
+                        ...(await fees()),
+                      }),
+                    )
+                  }
                 />
               ))}
             </div>
@@ -258,6 +283,8 @@ function OwnedPass({
   disabled,
   onList,
   onUnlist,
+  onGift,
+  onSplit,
 }: {
   pass: Pass;
   plan?: Plan;
@@ -266,6 +293,8 @@ function OwnedPass({
   disabled: boolean;
   onList: (price: bigint) => void;
   onUnlist: () => void;
+  onGift: (to: `0x${string}`) => void;
+  onSplit: (parts: bigint) => void;
 }) {
   const now = useNow();
   const { shiftExpiry } = useDemo();
@@ -430,6 +459,16 @@ function OwnedPass({
             Sell remaining time
           </button>
         )}
+
+        <GiftSplit
+          pass={pass}
+          plan={plan}
+          nowMs={now}
+          busy={busy}
+          disabled={disabled}
+          onGift={onGift}
+          onSplit={onSplit}
+        />
       </div>
     </div>
   );

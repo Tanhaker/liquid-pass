@@ -9,10 +9,10 @@ import { parseAbi } from "viem";
  * product path.
  */
 export const LIQUID_PASS_ADDRESS =
-  "0x8f3138daa0fff0fced0f8d0c59817594daf0c8a2" as const;
+  "0x22703fdd3dd77f854ca111e581bbd84cf82c1d36" as const;
 
 /** Block the contract was deployed in, so getLogs never scans from genesis. */
-export const DEPLOY_BLOCK = 304281600n;
+export const DEPLOY_BLOCK = 304290900n;
 
 export const EXPLORER = "https://sepolia.arbiscan.io";
 
@@ -61,6 +61,12 @@ export const liquidPassAbi = parseAbi([
   "function admin() view returns (address)",
   "function isIssuer(address who) view returns (bool)",
   "function mint(address to, uint256 durationSeconds) returns (uint256)",
+
+  // --- gift and split ---
+  "function transferPass(address to, uint256 tokenId)",
+  // Slices are SEQUENTIAL: a 12-month pass becomes month 1..12, not twelve
+  // simultaneous passes. Returns the first new token id.
+  "function split(uint256 tokenId, uint256 parts) returns (uint256)",
 
   // --- events, for the activity feed and the getLogs data layer ---
   "event PlanCreated(uint256 indexed planId, address indexed issuer, uint256 price, uint256 durationSeconds)",

@@ -60,6 +60,10 @@ sol_storage! {
         mapping(uint256 => uint256) prices;
         /// When the listing opened. The start of the decay ramp.
         mapping(uint256 => uint256) listed_at;
+        /// When a pass BEGINS granting access. 0 for everything issued
+        /// normally, which is why is_active treats 0 as "already started".
+        /// Only slices produced by `split` carry a future start.
+        mapping(uint256 => uint256) starts;
         uint256 next_token_id;
         /// Controls the issuer allowlist. Set once, at construction.
         address admin;
@@ -354,7 +358,14 @@ impl Subscription {
 
     /// Whether the pass still grants access.
     pub fn is_active(&self, token_id: U256) -> bool {
-        U256::from(self.vm().block_timestamp()) < self.expiries.get(token_id)
+        // Both ends, not just the expiry. Split slices are sequential windows,
+        // so a slice whose turn has not come must NOT grant access -- without
+        // the start check, splitting a pass into four would produce four
+        // simultaneously usable passes: four times the access, minted from
+        // nothing. `starts` is 0 for everything issued normally, so this is a
+        // no-op for every pass that did not come from a split.
+        let now = U256::from(self.vm().block_timestamp());
+        now >= self.starts.get(token_id) && now < self.expiries.get(token_id)
     }
 
     /// Seconds of access left, or 0 once expired.
@@ -412,6 +423,102 @@ impl Subscription {
         self.vm().log(Unlisted {
             tokenId: token_id,
             seller: owner,
+        });
+        Ok(())
+    }
+
+    /// Split a pass into `parts` consecutive slices.
+    ///
+    /// A year-long pass becomes twelve month-long ones that can go to twelve
+    /// different people. The slices are SEQUENTIAL, not parallel: slice 1 runs
+    /// from now, slice 2 begins where slice 1 ends, and so on. Parallel slices
+    /// would be twelve simultaneous passes -- twelve times the access the
+    /// holder paid for, minted from nothing.
+    ///
+    /// The original is burned. Its recorded purchase price is divided across
+    /// the slices so each carries its share, and the resale discount on any
+    /// one of them stays honest.
+    pub fn split(&mut self, token_id: U256, parts: U256) -> Result<U256, Vec<u8>> {
+        let owner = self.owners.get(token_id);
+        if owner.is_zero() {
+            return Err(b"no such token".to_vec());
+        }
+        if owner != self.vm().msg_sender() {
+            return Err(b"not owner".to_vec());
+        }
+        if !self.prices.get(token_id).is_zero() {
+            return Err(b"unlist first".to_vec());
+        }
+        if !self.is_active(token_id) {
+            return Err(b"expired".to_vec());
+        }
+        let n: u64 = parts.try_into().map_err(|_| b"too many parts".to_vec())?;
+        if n < 2 || n > 24 {
+            return Err(b"parts must be 2..24".to_vec());
+        }
+
+        let expiry = self.expiries.get(token_id);
+        let now = U256::from(self.vm().block_timestamp());
+        let span = expiry - now;
+        let slice = span / parts;
+        if slice.is_zero() {
+            return Err(b"too little time".to_vec());
+        }
+
+        let plan = self.token_plans.get(token_id);
+        let issuer = self.issuers.get(token_id);
+        let share = self.token_paid.get(token_id) / parts;
+
+        // Burn first: the original must not survive as a usable pass.
+        self.owners.setter(token_id).set(Address::ZERO);
+        self.expiries.setter(token_id).set(U256::ZERO);
+
+        let first = self.next_token_id.get();
+        for i in 0..n {
+            let id = first + U256::from(i);
+            let start = now + slice * U256::from(i);
+            let end = if i + 1 == n { expiry } else { start + slice };
+            self.owners.setter(id).set(owner);
+            self.starts.setter(id).set(start);
+            self.expiries.setter(id).set(end);
+            self.issuers.setter(id).set(issuer);
+            self.token_plans.setter(id).set(plan);
+            self.token_paid.setter(id).set(share);
+            self.vm().log(PassTransferred {
+                from: Address::ZERO,
+                to: owner,
+                tokenId: id,
+            });
+        }
+        self.next_token_id.set(first + parts);
+        Ok(first)
+    }
+
+    /// Hand a pass to someone else. Owner only, no payment.
+    ///
+    /// Clears any listing: the new owner did not set that price and must not
+    /// inherit a live offer to sell.
+    pub fn transfer_pass(&mut self, to: Address, token_id: U256) -> Result<(), Vec<u8>> {
+        let owner = self.owners.get(token_id);
+        if owner.is_zero() {
+            return Err(b"no such token".to_vec());
+        }
+        if owner != self.vm().msg_sender() {
+            return Err(b"not owner".to_vec());
+        }
+        if to.is_zero() {
+            return Err(b"zero recipient".to_vec());
+        }
+        if to == owner {
+            return Err(b"already owner".to_vec());
+        }
+        self.owners.setter(token_id).set(to);
+        self.prices.setter(token_id).set(U256::ZERO);
+        self.listed_at.setter(token_id).set(U256::ZERO);
+        self.vm().log(PassTransferred {
+            from: owner,
+            to,
+            tokenId: token_id,
         });
         Ok(())
     }
