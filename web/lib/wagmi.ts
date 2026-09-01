@@ -1,23 +1,37 @@
-// `injected` comes from the wagmi root, NOT from "wagmi/connectors". That
-// barrel also pulls in the Base Account connector, whose @coinbase/cdp-sdk
-// dependency imports an optional @x402/* package that is not installed, and
-// the unresolved import fails the whole build.
-import { http, createConfig, injected } from "wagmi";
+import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { arbitrumSepolia } from "wagmi/chains";
-
-export const ARBITRUM_SEPOLIA_RPC = "https://sepolia-rollup.arbitrum.io/rpc";
+import { http } from "wagmi";
 
 /**
- * The connected wallet acts as the relayer: it pays gas and sends the
- * transaction. Authorisation comes from the passkey signature inside the
- * calldata, not from msg.sender -- the contract never checks the caller.
+ * Wallet configuration, via RainbowKit.
+ *
+ * RainbowKit's `getDefaultConfig` builds the wagmi config and the connector
+ * list together, so this replaces the bare `injected()` setup rather than
+ * layering on top of it.
+ *
+ * On the WalletConnect project id: RainbowKit needs one to offer the
+ * QR-code/mobile wallets. Without it, injected wallets (MetaMask, Rabby,
+ * Brave) still connect normally and the WalletConnect entries simply fail if
+ * chosen. A placeholder is used rather than crashing the app at import time,
+ * because a missing id must not take the whole marketplace down -- but it does
+ * mean mobile wallet connections need a real id from cloud.reown.com.
  */
-export const config = createConfig({
+const projectId =
+  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "liquid-pass-no-wc-id";
+
+export const ARBITRUM_SEPOLIA_RPC =
+  process.env.NEXT_PUBLIC_RPC_URL ?? "https://sepolia-rollup.arbitrum.io/rpc";
+
+export const config = getDefaultConfig({
+  appName: "Liquid Pass",
+  appDescription: "Buy time. Use it. Sell what's left.",
+  projectId,
   chains: [arbitrumSepolia],
-  connectors: [injected()],
   transports: {
     [arbitrumSepolia.id]: http(ARBITRUM_SEPOLIA_RPC),
   },
+  // Server-side rendering is on, so the config must not touch browser APIs
+  // during the first render.
   ssr: true,
 });
 

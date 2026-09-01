@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAccount } from "wagmi";
 import { arbitrumSepolia } from "wagmi/chains";
-import { shortAddress } from "@/lib/contract";
 
 /**
  * Floating pill navigation.
@@ -25,10 +25,10 @@ const LINKS = [
 
 export function Nav() {
   const pathname = usePathname();
-  const { address, isConnected, chainId } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
-  const { disconnect } = useDisconnect();
+  const { isConnected, chainId } = useAccount();
 
+  // RainbowKit shows its own "Wrong network" button, but the Sepolia pill
+  // beside it would still read as fine, so this keeps the two in step.
   const wrongNetwork = isConnected && chainId !== arbitrumSepolia.id;
 
   return (
@@ -73,28 +73,19 @@ export function Nav() {
           </span>
 
           {wrongNetwork && (
-            <span className="rounded-lg bg-life-crit/15 px-2.5 py-1.5 text-[11px] text-life-crit">
+            <span className="hidden rounded-lg bg-life-crit/15 px-2.5 py-1.5 text-[11px] text-life-crit sm:inline">
               Wrong network
             </span>
           )}
 
-          {isConnected ? (
-            <button
-              onClick={() => disconnect()}
-              title="Disconnect"
-              className="tnum rounded-xl border border-line bg-raised px-3 py-1.5 text-[12px] text-muted transition-colors hover:border-line-bright hover:text-text"
-            >
-              {address ? shortAddress(address) : "connected"}
-            </button>
-          ) : (
-            <button
-              onClick={() => connect({ connector: connectors[0] })}
-              disabled={isPending || !connectors.length}
-              className="rounded-xl bg-text px-3.5 py-1.5 text-[12px] font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {isPending ? "Connecting…" : "Connect"}
-            </button>
-          )}
+          {/* RainbowKit owns the connect/account/network states. Rebuilding
+              them by hand is how you end up with a button that disagrees with
+              the wallet it is describing. */}
+          <ConnectButton
+            showBalance={false}
+            accountStatus={{ smallScreen: "avatar", largeScreen: "address" }}
+            chainStatus="none"
+          />
         </div>
       </header>
     </div>
