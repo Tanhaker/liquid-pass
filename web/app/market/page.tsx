@@ -382,6 +382,23 @@ function ResaleCard({
             {busy ? "Confirm…" : "Take over"}
           </button>
         </div>
+        {/*
+          The opening ask beside what it costs now. This is the point of the
+          whole decay mechanism made visible: the seller asked X, the pass has
+          been draining since, and the contract charges less as a result.
+          Without this row a card shows one number and the decay is invisible.
+        */}
+        {pass.listed > pass.current && (
+          <div className="mt-3 flex items-center justify-between border-t border-line pt-2.5 text-[11px]">
+            <span className="tnum text-faint">
+              opened at{" "}
+              <span className="line-through">{formatEthShort(pass.listed)}</span>
+            </span>
+            <span className="tnum text-life-full">
+              now {formatEthShort(pass.current)} ETH
+            </span>
+          </div>
+        )}
         {pass.paid > 0n && (
           <p className="tnum mt-2 text-[11px] text-faint">
             originally {formatEther(pass.paid)} ETH

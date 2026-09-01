@@ -21,9 +21,11 @@ import {
   type Pass,
   type Plan,
 } from "@/lib/contract";
-import { fetchPasses, fetchPlans, passesOf } from "@/lib/data";
+import { fetchActivity, fetchPasses, fetchPlans, passesOf, type Activity } from "@/lib/data";
 import { AutoSell } from "@/components/AutoSell";
 import { YieldConcept } from "@/components/YieldConcept";
+import { PricingOracle } from "@/components/PricingOracle";
+import { planSignals, type PlanSignal } from "@/lib/signals";
 
 export default function Dashboard() {
   const client = usePublicClient();
@@ -34,6 +36,7 @@ export default function Dashboard() {
 
   const [plans, setPlans] = useState<Plan[]>([]);
   const [passes, setPasses] = useState<Pass[]>([]);
+  const [activity, setActivity] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -43,9 +46,15 @@ export default function Dashboard() {
     // No setState before the first await: doing so runs synchronously inside
     // the effect and triggers a cascading render.
     try {
-      const [p, t] = await Promise.all([fetchPlans(), fetchPasses()]);
+      const [p, t, a] = await Promise.all([
+        fetchPlans(),
+        fetchPasses(),
+        // Needed for the pricing signals: what resales actually settled at.
+        fetchActivity(500),
+      ]);
       setPlans(p);
       setPasses(t);
+      setActivity(a);
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -81,6 +90,10 @@ export default function Dashboard() {
     }
     return { active, soon, listed, expired };
   }, [mine, nowMs]);
+
+  // What resales of each plan have actually settled at. Empty until there is
+  // history, which the oracle reports rather than papers over.
+  const signals = useMemo(() => planSignals(activity, passes), [activity, passes]);
 
   const wrongNetwork = isConnected && chainId !== arbitrumSepolia.id;
 
@@ -162,6 +175,7 @@ export default function Dashboard() {
                   key={pass.tokenId.toString()}
                   pass={pass}
                   plan={planById.get(pass.planId.toString())}
+                  signal={signals.get(pass.planId.toString())}
                   busy={busy === `t-${pass.tokenId}`}
                   disabled={wrongNetwork}
                   onList={(price) =>
@@ -239,6 +253,7 @@ function Stat({ label, value, tone }: { label: string; value: number; tone: stri
 function OwnedPass({
   pass,
   plan,
+  signal,
   busy,
   disabled,
   onList,
@@ -246,6 +261,7 @@ function OwnedPass({
 }: {
   pass: Pass;
   plan?: Plan;
+  signal?: PlanSignal;
   busy: boolean;
   disabled: boolean;
   onList: (price: bigint) => void;
@@ -376,18 +392,13 @@ function OwnedPass({
               autoFocus
               className="tnum w-full rounded-lg border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
             />
-            {fair !== null && fair > 0n && (
-              <button
-                type="button"
-                onClick={() => setPrice(formatEthShort(fair))}
-                className="tnum block text-left text-[11px] text-faint underline underline-offset-2 hover:text-muted"
-              >
-                use time value: {formatEthShort(fair)} ETH
-                <span className="ml-1 no-underline">
-                  ({formatRemaining(left)} of {formatEther(pass.paid)} ETH)
-                </span>
-              </button>
-            )}
+            <PricingOracle
+              pass={pass}
+              plan={plan}
+              signal={signal}
+              nowMs={now}
+              onUse={setPrice}
+            />
             {priceError && (
               <p className="text-[11px] text-life-crit">{priceError}</p>
             )}

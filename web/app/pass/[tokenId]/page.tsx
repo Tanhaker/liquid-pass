@@ -198,8 +198,12 @@ export default function PassDetail({
               v={pass.paid > 0n ? `${formatEther(pass.paid)} ETH` : "issued directly"}
             />
             <Row
-              k="Resale price"
-              v={pass.listed > 0n ? `${formatEther(pass.listed)} ETH` : "not listed"}
+              k="Opening ask"
+              v={pass.listed > 0n ? `${formatEthShort(pass.listed)} ETH` : "not listed"}
+            />
+            <Row
+              k="Price now"
+              v={pass.current > 0n ? `${formatEthShort(pass.current)} ETH` : "—"}
             />
           </dl>
 
