@@ -254,9 +254,9 @@ function PlanCard({
   return (
     <motion.div
       variants={CARD}
-      whileHover={{ y: -4 }}
-      transition={{ duration: 0.2 }}
-      className="hairline flex flex-col rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-line-bright hover:shadow-[0_18px_50px_-24px_rgba(0,0,0,.9)]"
+      whileHover={{ y: -4, scale: 1.02 }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      className="flex flex-col rounded-3xl border border-line/60 bg-surface/40 backdrop-blur-xl p-6 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.2)] hover:border-line hover:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5)]"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -328,9 +328,9 @@ function ResaleCard({
   return (
     <motion.div
       variants={CARD}
-      whileHover={{ y: -4 }}
-      transition={{ duration: 0.2 }}
-      className="hairline flex flex-col rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-line-bright hover:shadow-[0_18px_50px_-24px_rgba(0,0,0,.9)]"
+      whileHover={{ y: -4, scale: 1.02 }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      className="flex flex-col rounded-3xl border border-line/60 bg-surface/40 backdrop-blur-xl p-6 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.2)] hover:border-line hover:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5)]"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -343,11 +343,11 @@ function ResaleCard({
         </div>
         {off !== null &&
           (off >= 40 ? (
-            <span className="tnum flex items-center gap-1 rounded-md bg-life-low/15 px-2 py-1 text-[10px] font-semibold text-life-low">
-              <span aria-hidden>🔥</span> STEAL · {off}%
+            <span className="tnum flex items-center gap-1.5 rounded-full border border-life-full/30 bg-life-full/10 px-2.5 py-1 text-[10px] font-bold text-life-full tracking-wide shadow-[0_0_10px_rgba(183,255,60,0.2)]">
+              🔥 STEAL · {off}%
             </span>
           ) : (
-            <span className="tnum rounded-md bg-life-full/10 px-2 py-1 text-[10px] font-medium text-life-full">
+            <span className="tnum rounded-full border border-line-bright bg-surface/80 px-2.5 py-1 text-[10px] font-medium text-muted">
               {off}% below original
             </span>
           ))}

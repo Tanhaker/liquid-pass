@@ -13,16 +13,16 @@ import { useEffect, useState } from "react";
  */
 
 const STOPS = [
-  { at: 1.0, color: "var(--color-life-full)" },
-  { at: 0.5, color: "var(--color-life-mid)" },
-  { at: 0.25, color: "var(--color-life-low)" },
-  { at: 0.1, color: "var(--color-life-crit)" },
+  { at: 0.7, color: "var(--color-life-full)" },
+  { at: 0.4, color: "var(--color-life-mid)" },
+  { at: 0.15, color: "var(--color-life-low)" },
+  { at: 0.01, color: "var(--color-life-crit)" },
 ];
 
 /** Colour follows how much life is LEFT, so it warms as it drains. */
 export function lifeColor(fraction: number): string {
   for (const s of STOPS) if (fraction >= s.at) return s.color;
-  return STOPS[STOPS.length - 1].color;
+  return "var(--color-faint)"; // expired
 }
 
 export function DecayRing({

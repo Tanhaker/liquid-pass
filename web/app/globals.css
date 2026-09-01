@@ -1,62 +1,29 @@
 @import "tailwindcss";
 
-/**
- * Liquid Pass.
- *
- * The product is about time draining away, so the palette is built around one
- * idea: a pass starts cool and confident and grows warm and urgent as it
- * expires. Those four stops are the only accent colours in the system, which
- * is what stops the UI reading as generic "crypto dashboard" -- every colour
- * on screen means something about remaining time.
- */
 @theme {
-  --color-ink: var(--theme-ink);
-  --color-surface: var(--theme-surface);
-  --color-raised: var(--theme-raised);
-  --color-line: var(--theme-line);
-  --color-line-bright: var(--theme-line-bright);
+  --color-ink: #050605;
+  --color-surface: #0D100F;
+  --color-raised: #1A1F1D;
+  --color-line: #262E2A;
+  --color-line-bright: #39453F;
 
-  --color-text: var(--theme-text);
-  --color-muted: var(--theme-muted);
-  --color-faint: var(--theme-faint);
+  --color-text: #F4F7F4;
+  --color-muted: #A6ADA7;
+  --color-faint: #636864;
 
-  /* Life remaining, from full to nearly gone. */
-  --color-life-full: #0ea5e9;
-  --color-life-mid: #8b5cf6;
-  --color-life-low: #f59e0b;
-  --color-life-crit: #ef4444;
+  /* Premium Liquid Pass Palette */
+  --color-life-full: #B7FF3C;
+  --color-life-mid: #B7FF3C;
+  --color-life-low: #FFB547;
+  --color-life-crit: #FF6B5F;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
-:root {
-  --theme-ink: #08080b;
-  --theme-surface: #101016;
-  --theme-raised: #16161e;
-  --theme-line: #23232e;
-  --theme-line-bright: #32323f;
-  --theme-text: #f2f2f5;
-  --theme-muted: #9a9aa8;
-  --theme-faint: #6a6a78;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --theme-ink: #f8fafc;
-    --theme-surface: #ffffff;
-    --theme-raised: #f1f5f9;
-    --theme-line: #e2e8f0;
-    --theme-line-bright: #cbd5e1;
-    --theme-text: #0f172a;
-    --theme-muted: #475569;
-    --theme-faint: #94a3b8;
-  }
-}
-
 html {
   background: var(--color-ink);
-  color-scheme: dark light;
+  color-scheme: dark;
 }
 
 body {
@@ -67,68 +34,37 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Numbers that change (countdowns, prices) must not reflow as digits tick. */
 .tnum {
   font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
 }
 
-@keyframes mesh-drift {
-  0% { background-position: 0% 0%; }
-  50% { background-position: 100% 100%; }
-  100% { background-position: 0% 0%; }
-}
-
-.aurora {
-  background:
-    radial-gradient(80% 80% at 10% 10%, color-mix(in oklab, var(--color-life-full) 20%, transparent), transparent 70%),
-    radial-gradient(90% 90% at 90% 90%, color-mix(in oklab, var(--color-life-mid) 25%, transparent), transparent 70%),
-    radial-gradient(70% 70% at 50% 50%, color-mix(in oklab, var(--color-life-low) 18%, transparent), transparent 70%);
-  background-size: 150% 150%;
-  animation: mesh-drift 25s ease-in-out infinite;
-}
-
-/* Hairline that reads as engraved rather than drawn. */
 .hairline {
   box-shadow: inset 0 1px 0 0 color-mix(in oklab, white 6%, transparent);
 }
 
-/**
- * Entrance motion that cannot hide content.
- *
- * Deliberately NOT `animation-fill-mode: both` and deliberately not driven by
- * requestAnimationFrame. The element's resting state is fully visible; the
- * keyframes only move it there faster. If the animation is throttled, skipped,
- * or JS never hydrates, the text is still on screen at full opacity -- which is
- * the opposite of what a JS `initial={{ opacity: 0 }}` gives you.
- */
 @keyframes rise {
   from {
     transform: translateY(14px);
+    opacity: 0;
   }
   to {
     transform: none;
+    opacity: 1;
   }
 }
 
-/*
- * Opacity is deliberately absent from the keyframes. A displaced element is
- * still readable; a transparent one is not. This animation therefore has no
- * state in which the content is invisible, no matter how badly it is throttled
- * or whether it runs at all.
- */
 .rise {
-  animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
 }
 
-/* Idle drift on the hero pass, so it feels held rather than pinned. */
 @keyframes liquid-float {
-  0%,
-  100% {
-    translate: 0 0;
+  0%, 100% {
+    transform: translateY(0);
   }
   50% {
-    translate: 0 -8px;
+    transform: translateY(-8px);
   }
 }
 
@@ -136,16 +72,8 @@ body {
   animation: liquid-float 6s ease-in-out infinite;
 }
 
-/*
- * `translate` is a separate property from `transform`, so the float composes
- * with the pointer-tilt rotateX/rotateY instead of overwriting it. Animating
- * `transform` here would fight the tilt every frame.
- */
-
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

@@ -1,251 +1,192 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
-import { DecayRing, lifeColor } from "@/components/DecayRing";
-import { Constellation } from "@/components/Constellation";
-import { LiveStats } from "@/components/LiveStats";
+import { useEffect, useRef } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { LiquidPassCard } from "@/components/LiquidPassCard";
-import gsap from "gsap";
+import { LiveStats } from "@/components/LiveStats";
+import { Constellation } from "@/components/Constellation";
 import { EXPLORER, LIQUID_PASS_ADDRESS, shortAddress } from "@/lib/contract";
 
-/**
- * The landing page has one job: make the idea obvious in ten seconds.
- *
- * It does that by showing the same pass at four points in its life, side by
- * side, so "the thing you own is draining" is visible before any text is read.
- */
-
-const STAGES = [
-  { days: 30, total: 30, price: "0.0020" },
-  { days: 18, total: 30, price: "0.0012" },
-  { days: 7, total: 30, price: "0.0005" },
-  { days: 2, total: 30, price: "0.0001" },
-];
+gsap.registerPlugin(ScrollTrigger);
 
 export default function Home() {
-  // Cycles the highlighted stage so the decay reads as motion, not a static
-  // row of four cards. Paused for reduced-motion users via the CSS guard.
-  const [active, setActive] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
   useEffect(() => {
-    const id = setInterval(() => setActive((a) => (a + 1) % STAGES.length), 2200);
-    return () => clearInterval(id);
-  }, []);
+    // Disable heavy scroll effects on mobile/reduced motion
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || window.innerWidth < 768) {
+      return;
+    }
 
-  /**
-   * Hero choreography.
-   *
-   * GSAP earns its place here because this is a coordinated multi-element
-   * sequence, which is exactly what a timeline is for -- the CSS `rise`
-   * classes elsewhere handle the single-element cases.
-   *
-   * Two rules this obeys, both from hard experience earlier in this build:
-   * it only animates elements that are ALREADY painted (no opacity-0 start
-   * state that can strand content invisible), and it is scoped + reverted on
-   * unmount so no timeline outlives the component.
-   */
-  const heroRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const ctx = gsap.context(() => {
-      gsap
-        .timeline({ defaults: { ease: "power3.out" } })
-        .from("[data-hero='card']", { yPercent: 8, scale: 0.96, duration: 0.9 }, 0.15)
-        .from("[data-hero='stats']", { yPercent: 12, duration: 0.7 }, 0.35);
-    }, heroRef);
+      // 1. Hero Reveal
+      gsap.from(".hero-element", {
+        y: 40,
+        opacity: 0,
+        duration: 1.2,
+        stagger: 0.2,
+        ease: "power3.out",
+        delay: 0.1
+      });
+
+      // 2. Scroll Storytelling Timeline
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: ".story-container",
+          start: "top top",
+          end: "+=4000",
+          scrub: 1,
+          pin: true,
+          anticipatePin: 1,
+        }
+      });
+
+      // Stage 1: "Subscriptions expire."
+      tl.to(".stage-1-text", { opacity: 1, y: 0, duration: 1 })
+        .to(".story-pass", { scale: 1.1, y: -50, duration: 2 }, "<")
+        // Time visually drains (this would be driven by a React state tied to scroll, 
+        // but we'll simulate the text/opacity shifts here)
+        .to(".stage-1-text", { opacity: 0, y: -30, duration: 1 }, "+=1")
+
+      // Stage 2: "Unused time doesn't have to disappear."
+      tl.to(".stage-2-text", { opacity: 1, y: 0, duration: 1 })
+        .to(".story-pass", { x: -200, scale: 0.9, duration: 2 }, "<")
+        .to(".stage-2-text", { opacity: 0, y: -30, duration: 1 }, "+=1")
+
+      // Stage 3: Marketplace & Ownership Transfer
+      tl.to(".stage-3-text", { opacity: 1, y: 0, duration: 1 })
+        .to(".alice-avatar", { x: 50, opacity: 0, duration: 1 }, "<")
+        .to(".bob-avatar", { x: 0, opacity: 1, duration: 1 }, "<")
+        .to(".stage-3-text", { opacity: 0, y: -30, duration: 1 }, "+=1")
+
+      // Stage 4: "Time moves. Ownership moves."
+      tl.to(".stage-4-text", { opacity: 1, y: 0, duration: 1 })
+        .to(".story-pass", { x: 0, scale: 1, duration: 2 }, "<")
+        
+    }, containerRef);
+
     return () => ctx.revert();
   }, []);
 
   return (
-    <>
-      <section className="aurora relative overflow-hidden border-b border-line/50 bg-ink">
-        <Constellation className="opacity-100 mix-blend-screen" />
+    <div ref={containerRef} className="bg-ink min-h-screen text-text selection:bg-life-full/30">
+      {/* Cinematic Hero */}
+      <section className="relative min-h-[90vh] flex flex-col items-center justify-center pt-24 pb-12 overflow-hidden">
+        <Constellation className="opacity-40" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-ink/20 to-ink pointer-events-none" />
         
-        {/* Massive Luxury Ambient Glowing Orb */}
-        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[800px] w-[1000px] rounded-[100%] bg-gradient-to-tr from-life-full/20 via-life-mid/10 to-transparent blur-[120px] mix-blend-screen opacity-70 animate-pulse" style={{ animationDuration: '8s' }} />
-
-        {/* Fades the particle field out under the copy so text stays legible. */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-ink/60 to-ink" />
-        
-        <div ref={heroRef} className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 gap-14 px-6 pb-24 pt-32 lg:grid-cols-[1.2fr_.8fr] lg:items-center lg:gap-16">
-          <div>
-          <p className="rise mb-6 inline-flex items-center gap-3 rounded-full border border-life-full/30 bg-surface/40 backdrop-blur-md px-4 py-1.5 text-[12px] uppercase tracking-[0.2em] text-life-full font-medium shadow-[0_0_20px_rgba(14,165,233,0.15)]">
-            <span className="size-2 rounded-full bg-life-full animate-pulse" />
-            Arbitrum Stylus · Rust
-          </p>
-
-          <h1
-            className="rise max-w-4xl text-[clamp(3.2rem,8.5vw,6.5rem)] font-bold leading-[0.92] tracking-[-0.04em] drop-shadow-2xl"
-            style={{ animationDelay: "60ms" }}
-          >
-            Buy time.
-            <br />
-            Use it.{" "}
-            <span className="bg-gradient-to-br from-life-full via-life-mid to-life-low bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(139,92,246,0.3)]">
-              Sell what&rsquo;s left.
-            </span>
+        <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
+          <h1 className="hero-element text-[clamp(3.5rem,10vw,8rem)] font-bold tracking-tighter leading-[0.9] text-text">
+            STOP PAYING<br/>
+            <span className="text-muted">FOR UNUSED</span><br/>
+            TIME.
           </h1>
-
-          <p
-            className="rise mt-8 max-w-xl text-[17px] leading-relaxed text-muted/90"
-            style={{ animationDelay: "130ms" }}
-          >
-            A subscription is time you paid for. Cancel halfway and the rest just
-            evaporates. Liquid Pass makes that remaining time an asset you can
-            hand to someone else — and the buyer inherits your expiry date, not a
-            fresh one.
+          
+          <p className="hero-element mt-10 text-[20px] md:text-[24px] font-medium text-muted max-w-2xl mx-auto leading-snug">
+            Buy a subscription.<br/>
+            Use what you need.<br/>
+            <span className="text-life-full">Sell what&rsquo;s left.</span>
           </p>
-
-          <div
-            className="rise mt-10 flex flex-wrap items-center gap-4"
-            style={{ animationDelay: "200ms" }}
-          >
+          
+          <div className="hero-element mt-12 flex justify-center">
             <Link
               href="/market"
-              className="relative overflow-hidden rounded-2xl bg-text px-8 py-3.5 text-[15px] font-semibold text-ink shadow-[0_0_40px_rgba(255,255,255,0.15)] transition-all hover:scale-105 hover:shadow-[0_0_60px_rgba(255,255,255,0.25)]"
+              className="group relative inline-flex items-center justify-center rounded-full bg-text px-8 py-4 text-[15px] font-semibold text-ink transition-all hover:scale-105"
             >
-              Browse the market
+              EXPLORE MARKETPLACE
+              <div className="absolute inset-0 rounded-full bg-text blur-md opacity-20 group-hover:opacity-40 transition-opacity" />
             </Link>
-            <Link
-              href="/dashboard"
-              className="rounded-2xl border border-line-bright bg-surface/50 backdrop-blur-xl px-8 py-3.5 text-[15px] font-medium text-text transition-all hover:bg-surface/80 hover:border-life-mid/50 hover:shadow-[0_0_30px_rgba(139,92,246,0.15)]"
-            >
-              My passes
-            </Link>
-          </div>
-
-          </div>
-
-          <div data-hero="card" className="flex justify-center lg:justify-end">
-            <LiquidPassCard
-              name="Figma Pro"
-              tokenId="PASS-0042"
-              fraction={19 / 30}
-              daysLeft={19}
-              price="0.0012"
-            />
           </div>
         </div>
 
-        <div
-          data-hero="stats"
-          className="relative mx-auto max-w-6xl px-6 pb-16"
-        >
+        <div className="hero-element mt-20 relative z-10 w-full max-w-sm mx-auto">
+          <LiquidPassCard
+            name="Figma Pro"
+            tokenId="PASS-0042"
+            fraction={1}
+            daysLeft={30}
+            price="0.0020"
+          />
+        </div>
+      </section>
+
+      {/* GSAP Scroll Storytelling Section */}
+      <section className="story-container relative h-screen w-full bg-ink overflow-hidden border-t border-line hidden md:block">
+        <div className="absolute inset-0 flex items-center justify-center">
+          
+          {/* Central Interactive Pass */}
+          <div className="story-pass relative z-20 w-full max-w-sm">
+            <LiquidPassCard
+              name="Cursor Pro"
+              tokenId="PASS-0089"
+              fraction={0.6}
+              daysLeft={18}
+              price="0.0012"
+            />
+            {/* Alice -> Bob avatars overlay */}
+            <div className="absolute -right-16 top-1/2 -translate-y-1/2 flex items-center">
+              <div className="alice-avatar absolute w-12 h-12 rounded-full bg-line-bright border-2 border-surface flex items-center justify-center text-xs font-bold">A</div>
+              <div className="bob-avatar absolute w-12 h-12 rounded-full bg-life-full text-ink border-2 border-surface flex items-center justify-center text-xs font-bold opacity-0 -translate-x-10">B</div>
+            </div>
+          </div>
+
+          {/* Text Layers */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+            <h2 className="stage-1-text absolute text-5xl font-bold tracking-tight opacity-0 translate-y-10">Subscriptions expire.</h2>
+            <h2 className="stage-2-text absolute text-5xl font-bold tracking-tight opacity-0 translate-y-10">Unused time doesn&apos;t have to disappear.</h2>
+            <h2 className="stage-3-text absolute text-5xl font-bold tracking-tight opacity-0 translate-y-10">Sell what&apos;s left.</h2>
+            <h2 className="stage-4-text absolute text-5xl font-bold tracking-tight text-life-full opacity-0 translate-y-10">Time moves.<br/>Ownership moves.</h2>
+          </div>
+        </div>
+      </section>
+
+      {/* Mobile Fallback for Story (when scrolljacking is disabled) */}
+      <section className="md:hidden px-6 py-24 space-y-24 border-t border-line text-center">
+        <div>
+          <h2 className="text-3xl font-bold">Subscriptions expire.</h2>
+          <p className="mt-4 text-muted">Time visually drains from a Liquid Pass.</p>
+        </div>
+        <div>
+          <h2 className="text-3xl font-bold">Sell what&apos;s left.</h2>
+          <p className="mt-4 text-muted">Unused time doesn&apos;t have to disappear.</p>
+        </div>
+        <div>
+          <h2 className="text-3xl font-bold text-life-full">Time moves. Ownership moves.</h2>
+          <p className="mt-4 text-muted">The buyer inherits your expiry date, not a fresh term.</p>
+        </div>
+      </section>
+
+      {/* Live Data / Activity Section */}
+      <section className="py-24 px-6 border-t border-line bg-surface">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-12">
+            <h2 className="text-[12px] uppercase tracking-[0.2em] text-life-full font-semibold">Live On-Chain Activity</h2>
+            <p className="mt-2 text-2xl font-semibold text-text tracking-tight">Real state. No mock data.</p>
+          </div>
           <LiveStats />
         </div>
       </section>
 
-      {/* The idea, shown rather than described. */}
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <h2 className="text-[11px] uppercase tracking-[0.16em] text-faint">
-          One pass, over thirty days
-        </h2>
-        <p className="mt-3 max-w-lg text-[14px] text-muted">
-          The same pass as it ages. As the time drains, so does what it&rsquo;s
-          worth on resale — priced against what it originally sold for.
-        </p>
+      {/* Footer / Final CTA */}
+      <section className="py-32 px-6 border-t border-line bg-ink text-center">
+        <h2 className="text-4xl font-bold tracking-tight mb-8">Ready to liquidate your time?</h2>
+        <Link
+          href="/market"
+          className="inline-block rounded-full bg-line-bright px-8 py-4 text-[14px] font-semibold text-text transition-colors hover:bg-text hover:text-ink"
+        >
+          ENTER MARKETPLACE
+        </Link>
 
-        <div className="mt-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {STAGES.map((s, i) => {
-            const fraction = s.days / s.total;
-            const isActive = i === active;
-            return (
-              <motion.div
-                key={s.days}
-                animate={{
-                  scale: isActive ? 1 : 0.975,
-                  opacity: isActive ? 1 : 0.55,
-                }}
-                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                className="hairline rounded-2xl border border-line bg-surface p-5"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[13px] font-medium">Figma Pro</span>
-                  <span className="tnum text-[11px] text-faint">#{i + 1}</span>
-                </div>
-                <div className="mt-5 grid place-items-center">
-                  <DecayRing
-                    fraction={fraction}
-                    size={104}
-                    label={`${s.days}d`}
-                    sublabel="left"
-                  />
-                </div>
-                <div className="mt-5 flex items-baseline justify-between border-t border-line pt-3">
-                  <span className="text-[11px] text-faint">resale</span>
-                  <span
-                    className="tnum text-[13px] font-medium"
-                    style={{ color: lifeColor(fraction) }}
-                  >
-                    {s.price} ETH
-                  </span>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        <p className="mt-6 text-[12px] text-faint">
-          Illustration of the lifecycle. Every number on{" "}
-          <Link href="/market" className="underline underline-offset-2 hover:text-muted">
-            the market
-          </Link>{" "}
-          is read from the contract.
-        </p>
-      </section>
-
-      {/* How the split works -- the part judges ask about. */}
-      <section className="border-t border-line bg-surface/40">
-        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 md:grid-cols-3">
-          {[
-            {
-              k: "01",
-              t: "Buy from an issuer",
-              d: "A plan sets a price and a duration. Buying mints a pass that expires at exactly that time from now. The issuer receives the full price.",
-            },
-            {
-              k: "02",
-              t: "Resell what you didn't use",
-              d: "List it at whatever you like. Ten days in on a thirty-day pass, you're selling twenty days — and the market prices it against the original.",
-            },
-            {
-              k: "03",
-              t: "90 / 10 on every resale",
-              d: "The seller takes 90%. The original issuer keeps 10%, forever, on every hand it passes through. Enforced in the contract, not by policy.",
-            },
-          ].map((c) => (
-            <div key={c.k}>
-              <span className="tnum text-[11px] text-faint">{c.k}</span>
-              <h3 className="mt-3 text-[15px] font-medium">{c.t}</h3>
-              <p className="mt-2 text-[13px] leading-relaxed text-muted">{c.d}</p>
-            </div>
-          ))}
+        <div className="mt-24 flex items-center justify-center gap-4 text-[12px] text-faint">
+          <span>Arbitrum Sepolia</span>
+          <span className="w-1 h-1 rounded-full bg-line-bright" />
+          <a href={`${EXPLORER}/address/${LIQUID_PASS_ADDRESS}`} target="_blank" rel="noreferrer" className="hover:text-muted transition-colors">
+            {shortAddress(LIQUID_PASS_ADDRESS)}
+          </a>
         </div>
       </section>
-
-      <section className="mx-auto max-w-6xl px-6 py-14">
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-5">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-faint">
-              Contract
-            </p>
-            <a
-              href={`${EXPLORER}/address/${LIQUID_PASS_ADDRESS}`}
-              target="_blank"
-              rel="noreferrer"
-              className="tnum mt-1 block text-[13px] text-muted underline underline-offset-4 hover:text-text"
-            >
-              {shortAddress(LIQUID_PASS_ADDRESS)}
-            </a>
-          </div>
-          <p className="max-w-md text-[12px] leading-relaxed text-faint">
-            Written in Rust and deployed to Arbitrum Sepolia with Stylus. The
-            expiry rule, the payment split, and the original sale price are all
-            enforced on-chain — the frontend cannot fake any of them.
-          </p>
-        </div>
-      </section>
-    </>
+    </div>
   );
 }
