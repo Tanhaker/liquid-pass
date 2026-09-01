@@ -9,6 +9,7 @@ import { DecayRing, lifeColor } from "@/components/DecayRing";
 import {
   EXPLORER,
   LIQUID_PASS_ADDRESS,
+  MARKETPLACE_ADDRESS,
   discountPct,
   fairPrice,
   formatEthShort,
@@ -17,6 +18,7 @@ import {
   lifeFraction,
   priceVsFair,
   liquidPassAbi,
+  marketplaceAbi,
   remaining,
   shortAddress,
   type Pass,
@@ -114,8 +116,8 @@ export default function Market() {
     setTx(null);
     try {
       const hash = await writeContractAsync({
-        address: LIQUID_PASS_ADDRESS,
-        abi: liquidPassAbi,
+        address: MARKETPLACE_ADDRESS,
+        abi: marketplaceAbi,
         functionName: "buy",
         args: [pass.tokenId],
         // What the contract charges now, plus a small buffer. See

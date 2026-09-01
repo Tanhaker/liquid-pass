@@ -3,7 +3,9 @@ import { publicClient } from "./publicClient";
 import {
   DEPLOY_BLOCK,
   LIQUID_PASS_ADDRESS,
+  MARKETPLACE_ADDRESS,
   liquidPassAbi,
+  marketplaceAbi,
   type Pass,
   type Plan,
 } from "./contract";
@@ -89,15 +91,8 @@ export async function fetchPasses(client: PublicClient = publicClient): Promise<
       { address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "issuerOf", args: [id] },
       { address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "planOf", args: [id] },
       { address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "paidOf", args: [id] },
-      { address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "priceOf", args: [id] },
-      // Read alongside the opening ask rather than recomputed here: the
-      // contract charges exactly what currentPrice returns, so the UI must
-      // quote the contract's own number, not its own approximation of it.
-      { address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "currentPrice", args: [id] },
-      // Asked, never inferred. A split slice has a start time as well as an
-      // expiry, and `startOf` was dropped to fit `split` under the 24KB limit,
-      // so expiry alone cannot tell a live pass from one whose window has not
-      // opened yet. Only the contract knows.
+      { address: MARKETPLACE_ADDRESS, abi: marketplaceAbi, functionName: "openingPrice", args: [id] },
+      { address: MARKETPLACE_ADDRESS, abi: marketplaceAbi, functionName: "currentPrice", args: [id] },
       { address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "isActive", args: [id] },
     ] as const),
   });

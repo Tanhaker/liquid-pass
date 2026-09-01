@@ -1,0 +1,42 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "E:\\PassKeyWallet\\contracts\\src\\Marketplace.sol": {
+      "lastModificationDate": 1788276441304,
+      "contentHash": "c98f61d563b68803299e95cafc218571",
+      "sourceName": "src/Marketplace.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "ILiquidPass",
+        "Marketplace"
+      ]
+    }
+  }
+}

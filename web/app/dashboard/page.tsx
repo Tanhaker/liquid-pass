@@ -10,7 +10,7 @@ import { Banner, Empty, SkeletonGrid, humanise, useFees, useNow } from "@/compon
 import { useDemo } from "@/lib/demo";
 import {
   EXPLORER,
-  LIQUID_PASS_ADDRESS,
+  LIQUID_PASS_ADDRESS, MARKETPLACE_ADDRESS, marketplaceAbi,
   discountPct,
   fairPrice,
   formatEthShort,
@@ -23,7 +23,8 @@ import {
 } from "@/lib/contract";
 import { fetchActivity, fetchPasses, fetchPlans, passesOf, type Activity } from "@/lib/data";
 import { AutoSell } from "@/components/AutoSell";
-import { YieldConcept } from "@/components/YieldConcept";
+import { PassBundler } from "@/components/PassBundler";
+import { YieldDashboard } from "@/components/YieldDashboard";
 import { PricingOracle } from "@/components/PricingOracle";
 import { GiftSplit } from "@/components/GiftSplit";
 import { planSignals, type PlanSignal } from "@/lib/signals";
@@ -196,9 +197,7 @@ export default function Dashboard() {
                   onList={(price) =>
                     run(`t-${pass.tokenId}`, `Listed pass #${pass.tokenId}`, async () =>
                       writeContractAsync({
-                        address: LIQUID_PASS_ADDRESS,
-                        abi: liquidPassAbi,
-                        functionName: "list",
+                        address: MARKETPLACE_ADDRESS, abi: marketplaceAbi, functionName: "list",
                         args: [pass.tokenId, price],
                         chainId: arbitrumSepolia.id,
                         ...(await fees()),
@@ -208,9 +207,7 @@ export default function Dashboard() {
                   onUnlist={() =>
                     run(`t-${pass.tokenId}`, `Unlisted pass #${pass.tokenId}`, async () =>
                       writeContractAsync({
-                        address: LIQUID_PASS_ADDRESS,
-                        abi: liquidPassAbi,
-                        functionName: "unlist",
+                        address: MARKETPLACE_ADDRESS, abi: marketplaceAbi, functionName: "unlist",
                         args: [pass.tokenId],
                         chainId: arbitrumSepolia.id,
                         ...(await fees()),
@@ -254,9 +251,7 @@ export default function Dashboard() {
             onList={(tokenId, price) =>
               run(`t-${tokenId}`, `Listed pass #${tokenId}`, async () =>
                 writeContractAsync({
-                  address: LIQUID_PASS_ADDRESS,
-                  abi: liquidPassAbi,
-                  functionName: "list",
+                  address: MARKETPLACE_ADDRESS, abi: marketplaceAbi, functionName: "list",
                   args: [tokenId, price],
                   chainId: arbitrumSepolia.id,
                   ...(await fees()),
@@ -270,7 +265,10 @@ export default function Dashboard() {
       {/* Outside the connected branch on purpose: this explains a mechanism,
           and a judge who never connects a wallet should still see it. */}
       <div className="mt-12">
-        <YieldConcept />
+        <YieldDashboard />
+        </div>
+        <div className="mt-12">
+          <PassBundler passes={passes} plans={planById} />
       </div>
     </div>
   );
