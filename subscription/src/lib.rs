@@ -15,7 +15,7 @@
 extern crate alloc;
 
 // The #[public] macro expands to code using Vec, which is not in the no_std prelude.
-use alloc::{vec, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 
 use stylus_sdk::alloy_primitives::{Address, U256};
 use stylus_sdk::alloy_sol_types::sol;
@@ -39,6 +39,13 @@ sol! {
     event PassTransferred(address indexed from, address indexed to, uint256 indexed tokenId);
     /// An address was granted or revoked the right to issue passes.
     event IssuerSet(address indexed issuer, bool allowed);
+    /// An issuer published a plan that anyone can buy a pass from.
+    event PlanCreated(uint256 indexed planId, address indexed issuer, uint256 price, uint256 durationSeconds);
+    /// A plan was opened for sale or withdrawn from sale.
+    event PlanOpenSet(uint256 indexed planId, bool open);
+    /// A pass was bought directly from its plan -- the primary sale, as
+    /// opposed to `Bought`, which is a resale between holders.
+    event PassPurchased(uint256 indexed tokenId, uint256 indexed planId, address indexed buyer, uint256 price, uint256 expiry);
 }
 
 sol_storage! {
@@ -54,6 +61,35 @@ sol_storage! {
         address admin;
         /// Only these addresses may mint.
         mapping(address => bool) allowed_issuers;
+
+        // ---- Plan catalogue: what a buyer can purchase a NEW pass from ----
+        //
+        // A plan is the product ("Figma Pro, 30 days, 0.002 ETH"); a pass is
+        // one bought instance of it. Kept as parallel mappings rather than a
+        // struct because sol_storage does not support struct values in
+        // mappings, and this keeps each field's slot layout explicit.
+        //
+        // The zero address in `plan_issuers` is the "no such plan" sentinel,
+        // mirroring how `owners` already marks a nonexistent token.
+        mapping(uint256 => address) plan_issuers;
+        mapping(uint256 => uint256) plan_prices;
+        mapping(uint256 => uint256) plan_durations;
+        /// Whether the plan still sells new passes. Closing a plan never
+        /// touches passes already sold from it -- they keep their expiry.
+        mapping(uint256 => bool) plan_open;
+        /// Held on-chain, not only in the IPFS metadata, so the marketplace
+        /// can still render a plan when IPFS is unreachable.
+        mapping(uint256 => string) plan_names;
+        mapping(uint256 => string) plan_uris;
+        uint256 next_plan_id;
+
+        /// Which plan a pass came from. Meaningless unless `token_paid` is
+        /// non-zero, since passes from `mint` have no plan.
+        mapping(uint256 => uint256) token_plans;
+        /// What the FIRST buyer paid, kept so a resale can be shown as a
+        /// discount against the original price. Never overwritten on resale;
+        /// 0 for passes issued by `mint`, which had no sale price.
+        mapping(uint256 => uint256) token_paid;
     }
 }
 
@@ -138,6 +174,178 @@ impl Subscription {
             tokenId: token_id,
         });
         Ok(token_id)
+    }
+
+    /// Publish a plan that anyone can buy a pass from. Issuer allowlist only,
+    /// the same gate as `mint`.
+    ///
+    /// `name` is stored on-chain alongside `metadata_uri` on purpose: the
+    /// marketplace must still be able to name a plan when IPFS is down.
+    pub fn create_plan(
+        &mut self,
+        name: String,
+        metadata_uri: String,
+        price: U256,
+        duration_seconds: U256,
+    ) -> Result<U256, Vec<u8>> {
+        let issuer = self.vm().msg_sender();
+        if !self.allowed_issuers.get(issuer) {
+            return Err(b"not an issuer".to_vec());
+        }
+        // A zero price would be indistinguishable from the "issued by mint,
+        // never sold" marker in `token_paid`, which the resale discount is
+        // computed against.
+        if price.is_zero() {
+            return Err(b"zero price".to_vec());
+        }
+        if duration_seconds.is_zero() {
+            return Err(b"zero duration".to_vec());
+        }
+        // Range-checked at creation, not at purchase, so a plan can never be
+        // published that would revert for every buyer.
+        let _: u64 = duration_seconds
+            .try_into()
+            .map_err(|_| b"duration too large".to_vec())?;
+
+        let plan_id = self.next_plan_id.get();
+        self.next_plan_id.set(plan_id + U256::from(1));
+        self.plan_issuers.setter(plan_id).set(issuer);
+        self.plan_prices.setter(plan_id).set(price);
+        self.plan_durations.setter(plan_id).set(duration_seconds);
+        self.plan_open.setter(plan_id).set(true);
+        self.plan_names.setter(plan_id).set_str(&name);
+        self.plan_uris.setter(plan_id).set_str(&metadata_uri);
+
+        self.vm().log(PlanCreated {
+            planId: plan_id,
+            issuer,
+            price,
+            durationSeconds: duration_seconds,
+        });
+        Ok(plan_id)
+    }
+
+    /// Open or close a plan for new sales. Passes already sold keep their
+    /// expiry and stay resellable either way.
+    pub fn set_plan_open(&mut self, plan_id: U256, open: bool) -> Result<(), Vec<u8>> {
+        let issuer = self.plan_issuers.get(plan_id);
+        if issuer.is_zero() {
+            return Err(b"no such plan".to_vec());
+        }
+        if issuer != self.vm().msg_sender() {
+            return Err(b"not plan issuer".to_vec());
+        }
+        self.plan_open.setter(plan_id).set(open);
+        self.vm().log(PlanOpenSet { planId: plan_id, open });
+        Ok(())
+    }
+
+    /// Buy a NEW pass from a plan -- the primary sale. The whole price goes to
+    /// the issuer; the 90/10 split applies only to `buy`, where there is a
+    /// seller to pay.
+    #[payable]
+    pub fn buy_pass(&mut self, plan_id: U256) -> Result<U256, Vec<u8>> {
+        let issuer = self.plan_issuers.get(plan_id);
+        if issuer.is_zero() {
+            return Err(b"no such plan".to_vec());
+        }
+        if !self.plan_open.get(plan_id) {
+            return Err(b"plan closed".to_vec());
+        }
+        let price = self.plan_prices.get(plan_id);
+        // Exact payment only, the same rule as `buy`: there is no refund path
+        // and no withdraw function, so an overpayment would be stranded.
+        if self.vm().msg_value() != price {
+            return Err(b"wrong value".to_vec());
+        }
+        // Cannot overflow the cast: create_plan already range-checked it.
+        let duration: u64 = self
+            .plan_durations
+            .get(plan_id)
+            .try_into()
+            .map_err(|_| b"duration too large".to_vec())?;
+        let expiry = self
+            .vm()
+            .block_timestamp()
+            .checked_add(duration)
+            .ok_or_else(|| b"expiry overflow".to_vec())?;
+
+        let buyer = self.vm().msg_sender();
+        let token_id = self.next_token_id.get();
+
+        // ---- EFFECTS, before the payout ----
+        // An issuer that re-enters on payment finds the token already minted
+        // and the id already consumed.
+        self.next_token_id.set(token_id + U256::from(1));
+        self.owners.setter(token_id).set(buyer);
+        self.expiries.setter(token_id).set(U256::from(expiry));
+        self.issuers.setter(token_id).set(issuer);
+        self.token_plans.setter(token_id).set(plan_id);
+        self.token_paid.setter(token_id).set(price);
+
+        // ---- INTERACTIONS ----
+        transfer_eth(self.vm(), issuer, price)?;
+
+        self.vm().log(PassPurchased {
+            tokenId: token_id,
+            planId: plan_id,
+            buyer,
+            price,
+            expiry: U256::from(expiry),
+        });
+        self.vm().log(PassTransferred {
+            from: Address::ZERO,
+            to: buyer,
+            tokenId: token_id,
+        });
+        Ok(token_id)
+    }
+
+    /// Issuer who published the plan, or the zero address if there is none.
+    pub fn plan_issuer_of(&self, plan_id: U256) -> Address {
+        self.plan_issuers.get(plan_id)
+    }
+
+    /// Price of a new pass from this plan, in wei.
+    pub fn plan_price_of(&self, plan_id: U256) -> U256 {
+        self.plan_prices.get(plan_id)
+    }
+
+    /// How long a pass bought from this plan lasts, in seconds.
+    pub fn plan_duration_of(&self, plan_id: U256) -> U256 {
+        self.plan_durations.get(plan_id)
+    }
+
+    /// Whether the plan still sells new passes.
+    pub fn plan_is_open(&self, plan_id: U256) -> bool {
+        self.plan_open.get(plan_id)
+    }
+
+    /// Display name, readable without IPFS.
+    pub fn plan_name(&self, plan_id: U256) -> String {
+        self.plan_names.getter(plan_id).get_string()
+    }
+
+    /// IPFS (or other) metadata URI for the plan's richer fields.
+    pub fn plan_uri(&self, plan_id: U256) -> String {
+        self.plan_uris.getter(plan_id).get_string()
+    }
+
+    /// Id the next created plan will use.
+    pub fn next_plan_id(&self) -> U256 {
+        self.next_plan_id.get()
+    }
+
+    /// Plan a pass was bought from. Only meaningful when `paid_of` is
+    /// non-zero; passes from `mint` have no plan.
+    pub fn plan_of(&self, token_id: U256) -> U256 {
+        self.token_plans.get(token_id)
+    }
+
+    /// What the first buyer paid, for showing a resale as a discount against
+    /// the original price. 0 means the pass was issued by `mint`, never sold.
+    pub fn paid_of(&self, token_id: U256) -> U256 {
+        self.token_paid.get(token_id)
     }
 
     /// Whether the pass still grants access.
