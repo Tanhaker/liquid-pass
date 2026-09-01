@@ -2,6 +2,7 @@
   {
     "type": "event",
     "name": "PlanCreated",
+    "anonymous": false,
     "inputs": [
       {
         "name": "planId",
@@ -28,6 +29,7 @@
   {
     "type": "event",
     "name": "PlanOpenSet",
+    "anonymous": false,
     "inputs": [
       {
         "name": "planId",
@@ -44,6 +46,7 @@
   {
     "type": "event",
     "name": "PassPurchased",
+    "anonymous": false,
     "inputs": [
       {
         "name": "tokenId",
@@ -75,6 +78,7 @@
   {
     "type": "event",
     "name": "Minted",
+    "anonymous": false,
     "inputs": [
       {
         "name": "tokenId",
@@ -100,75 +104,8 @@
   },
   {
     "type": "event",
-    "name": "Listed",
-    "inputs": [
-      {
-        "name": "tokenId",
-        "type": "uint256",
-        "indexed": true
-      },
-      {
-        "name": "seller",
-        "type": "address",
-        "indexed": true
-      },
-      {
-        "name": "price",
-        "type": "uint256",
-        "indexed": false
-      }
-    ]
-  },
-  {
-    "type": "event",
-    "name": "Unlisted",
-    "inputs": [
-      {
-        "name": "tokenId",
-        "type": "uint256",
-        "indexed": true
-      },
-      {
-        "name": "seller",
-        "type": "address",
-        "indexed": true
-      }
-    ]
-  },
-  {
-    "type": "event",
-    "name": "Bought",
-    "inputs": [
-      {
-        "name": "tokenId",
-        "type": "uint256",
-        "indexed": true
-      },
-      {
-        "name": "buyer",
-        "type": "address",
-        "indexed": true
-      },
-      {
-        "name": "seller",
-        "type": "address",
-        "indexed": true
-      },
-      {
-        "name": "price",
-        "type": "uint256",
-        "indexed": false
-      },
-      {
-        "name": "royalty",
-        "type": "uint256",
-        "indexed": false
-      }
-    ]
-  },
-  {
-    "type": "event",
     "name": "PassTransferred",
+    "anonymous": false,
     "inputs": [
       {
         "name": "from",

@@ -1,38 +1,55 @@
 [
-  { "type": "event", "name": "PlanCreated", "inputs": [
-    { "name": "planId", "type": "uint256", "indexed": true },
-    { "name": "issuer", "type": "address", "indexed": true },
-    { "name": "price", "type": "uint256", "indexed": false },
-    { "name": "durationSeconds", "type": "uint256", "indexed": false } ] },
-  { "type": "event", "name": "PlanOpenSet", "inputs": [
-    { "name": "planId", "type": "uint256", "indexed": true },
-    { "name": "open", "type": "bool", "indexed": false } ] },
-  { "type": "event", "name": "PassPurchased", "inputs": [
-    { "name": "tokenId", "type": "uint256", "indexed": true },
-    { "name": "planId", "type": "uint256", "indexed": true },
-    { "name": "buyer", "type": "address", "indexed": true },
-    { "name": "price", "type": "uint256", "indexed": false },
-    { "name": "expiry", "type": "uint256", "indexed": false } ] },
-  { "type": "event", "name": "Minted", "inputs": [
-    { "name": "tokenId", "type": "uint256", "indexed": true },
-    { "name": "to", "type": "address", "indexed": true },
-    { "name": "issuer", "type": "address", "indexed": true },
-    { "name": "expiry", "type": "uint256", "indexed": false } ] },
-  { "type": "event", "name": "Listed", "inputs": [
-    { "name": "tokenId", "type": "uint256", "indexed": true },
-    { "name": "seller", "type": "address", "indexed": true },
-    { "name": "price", "type": "uint256", "indexed": false } ] },
-  { "type": "event", "name": "Unlisted", "inputs": [
-    { "name": "tokenId", "type": "uint256", "indexed": true },
-    { "name": "seller", "type": "address", "indexed": true } ] },
-  { "type": "event", "name": "Bought", "inputs": [
-    { "name": "tokenId", "type": "uint256", "indexed": true },
-    { "name": "buyer", "type": "address", "indexed": true },
-    { "name": "seller", "type": "address", "indexed": true },
-    { "name": "price", "type": "uint256", "indexed": false },
-    { "name": "royalty", "type": "uint256", "indexed": false } ] },
-  { "type": "event", "name": "PassTransferred", "inputs": [
-    { "name": "from", "type": "address", "indexed": true },
-    { "name": "to", "type": "address", "indexed": true },
-    { "name": "tokenId", "type": "uint256", "indexed": true } ] }
+  {
+    "type": "event",
+    "name": "PlanCreated",
+    "anonymous": false,
+    "inputs": [
+      { "name": "planId", "type": "uint256", "indexed": true },
+      { "name": "issuer", "type": "address", "indexed": true },
+      { "name": "price", "type": "uint256", "indexed": false },
+      { "name": "durationSeconds", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "PlanOpenSet",
+    "anonymous": false,
+    "inputs": [
+      { "name": "planId", "type": "uint256", "indexed": true },
+      { "name": "open", "type": "bool", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "PassPurchased",
+    "anonymous": false,
+    "inputs": [
+      { "name": "tokenId", "type": "uint256", "indexed": true },
+      { "name": "planId", "type": "uint256", "indexed": true },
+      { "name": "buyer", "type": "address", "indexed": true },
+      { "name": "price", "type": "uint256", "indexed": false },
+      { "name": "expiry", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "Minted",
+    "anonymous": false,
+    "inputs": [
+      { "name": "tokenId", "type": "uint256", "indexed": true },
+      { "name": "to", "type": "address", "indexed": true },
+      { "name": "issuer", "type": "address", "indexed": true },
+      { "name": "expiry", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "PassTransferred",
+    "anonymous": false,
+    "inputs": [
+      { "name": "from", "type": "address", "indexed": true },
+      { "name": "to", "type": "address", "indexed": true },
+      { "name": "tokenId", "type": "uint256", "indexed": true }
+    ]
+  }
 ]
