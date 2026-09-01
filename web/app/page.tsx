@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { DecayRing, lifeColor } from "@/components/DecayRing";
 import { Constellation } from "@/components/Constellation";
 import { LiveStats } from "@/components/LiveStats";
+import { LiquidPassCard } from "@/components/LiquidPassCard";
+import gsap from "gsap";
 import { EXPLORER, LIQUID_PASS_ADDRESS, shortAddress } from "@/lib/contract";
 
 /**
@@ -31,6 +33,30 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
 
+  /**
+   * Hero choreography.
+   *
+   * GSAP earns its place here because this is a coordinated multi-element
+   * sequence, which is exactly what a timeline is for -- the CSS `rise`
+   * classes elsewhere handle the single-element cases.
+   *
+   * Two rules this obeys, both from hard experience earlier in this build:
+   * it only animates elements that are ALREADY painted (no opacity-0 start
+   * state that can strand content invisible), and it is scoped + reverted on
+   * unmount so no timeline outlives the component.
+   */
+  const heroRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const ctx = gsap.context(() => {
+      gsap
+        .timeline({ defaults: { ease: "power3.out" } })
+        .from("[data-hero='card']", { yPercent: 8, scale: 0.96, duration: 0.9 }, 0.15)
+        .from("[data-hero='stats']", { yPercent: 12, duration: 0.7 }, 0.35);
+    }, heroRef);
+    return () => ctx.revert();
+  }, []);
+
   return (
     <>
       <section className="aurora relative overflow-hidden border-b border-line">
@@ -48,7 +74,8 @@ export default function Home() {
           are already painted. Framer Motion still drives the decay cards below,
           where the animation IS the content rather than a reveal.
         */}
-        <div className="relative mx-auto max-w-6xl px-6 pb-16 pt-28">
+        <div ref={heroRef} className="relative mx-auto grid max-w-6xl grid-cols-1 gap-14 px-6 pb-16 pt-28 lg:grid-cols-[1.15fr_.85fr] lg:items-center lg:gap-10">
+          <div>
           <p className="rise mb-5 inline-flex items-center gap-2 rounded-full border border-line bg-raised/60 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-muted">
             <span className="size-1.5 rounded-full bg-life-full" />
             Arbitrum Stylus · Rust
@@ -94,9 +121,24 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="rise mt-14" style={{ animationDelay: "260ms" }}>
-            <LiveStats />
           </div>
+
+          <div data-hero="card" className="flex justify-center lg:justify-end">
+            <LiquidPassCard
+              name="Figma Pro"
+              tokenId="PASS-0042"
+              fraction={19 / 30}
+              daysLeft={19}
+              price="0.0012"
+            />
+          </div>
+        </div>
+
+        <div
+          data-hero="stats"
+          className="relative mx-auto max-w-6xl px-6 pb-16"
+        >
+          <LiveStats />
         </div>
       </section>
 

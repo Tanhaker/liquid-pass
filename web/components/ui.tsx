@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePublicClient } from "wagmi";
 
 /**
@@ -105,4 +105,29 @@ export function humanise(e: Error): string {
   if (/zero duration/i.test(raw)) return "Duration must be above zero.";
   if (/insufficient funds/i.test(raw)) return "Not enough ETH for the price plus gas.";
   return raw.split("\n")[0];
+}
+
+/**
+ * A clock that is safe to render.
+ *
+ * `Date.now()` called during render is impure: these pages are statically
+ * prerendered, so the build-time value ships in the HTML and disagrees with
+ * the client on hydration. Returning null until mounted makes the first client
+ * render match the server exactly, and the time appears a frame later.
+ *
+ * The initial read is deferred to a timeout rather than called straight in the
+ * effect body, so it arrives as an external-system update rather than a
+ * synchronous cascade.
+ */
+export function useNow(intervalMs = 1000): number | null {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const first = setTimeout(() => setNow(Date.now()), 0);
+    const id = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => {
+      clearTimeout(first);
+      clearInterval(id);
+    };
+  }, [intervalMs]);
+  return now;
 }

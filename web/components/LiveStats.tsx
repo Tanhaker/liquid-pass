@@ -23,7 +23,7 @@ export function LiveStats() {
     (async () => {
       try {
         const [plans, passes] = await Promise.all([fetchPlans(client), fetchPasses(client)]);
-        if (!cancelled) setStats(marketStats(plans, passes));
+        if (!cancelled) setStats(marketStats(plans, passes, Date.now()));
       } catch {
         if (!cancelled) setFailed(true);
       }

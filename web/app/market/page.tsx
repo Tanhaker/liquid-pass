@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { formatEther } from "viem";
 import { usePublicClient, useAccount, useWriteContract } from "wagmi";
 import { arbitrumSepolia } from "wagmi/chains";
@@ -18,15 +19,30 @@ import {
   type Plan,
 } from "@/lib/contract";
 import { activeListings, fetchPasses, fetchPlans } from "@/lib/data";
-import { Banner, Empty, SkeletonGrid, humanise, useFees } from "@/components/ui";
+import { Banner, Empty, SkeletonGrid, humanise, useFees, useNow } from "@/components/ui";
 
 type Tab = "plans" | "resale";
+
+/**
+ * Short stagger, per the spec's rule that entrance motion must not make the
+ * user wait: the last card in a row of three lands 90ms after the first.
+ */
+const GRID = {
+  hidden: {},
+  shown: { transition: { staggerChildren: 0.045 } },
+};
+
+const CARD = {
+  hidden: { y: 10 },
+  shown: { y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const } },
+};
 
 export default function Market() {
   const client = usePublicClient();
   const { isConnected, chainId } = useAccount();
   const { writeContractAsync } = useWriteContract();
   const fees = useFees();
+  const nowMs = useNow(1000);
 
   const [tab, setTab] = useState<Tab>("plans");
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -38,11 +54,13 @@ export default function Market() {
 
   const load = useCallback(async () => {
     if (!client) return;
-    setError(null);
+    // No setState before the first await: doing so runs synchronously inside
+    // the effect and triggers a cascading render.
     try {
       const [p, t] = await Promise.all([fetchPlans(client), fetchPasses(client)]);
       setPlans(p);
       setPasses(t);
+      setError(null);
     } catch (e) {
       // Surfaced, never swallowed: an empty market and an unreachable RPC must
       // not look the same.
@@ -56,7 +74,7 @@ export default function Market() {
     void load();
   }, [load]);
 
-  const listings = useMemo(() => activeListings(passes), [passes]);
+  const listings = useMemo(() => activeListings(passes, nowMs), [passes, nowMs]);
   const planById = useMemo(
     () => new Map(plans.map((p) => [p.id.toString(), p])),
     [plans],
@@ -169,7 +187,12 @@ export default function Market() {
             body="An issuer needs to publish one before anything can be bought."
           />
         ) : (
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <motion.div
+            initial="hidden"
+            animate="shown"
+            variants={GRID}
+            className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          >
             {plans.map((plan) => (
               <PlanCard
                 key={plan.id.toString()}
@@ -179,7 +202,7 @@ export default function Market() {
                 onBuy={() => buyPlan(plan)}
               />
             ))}
-          </div>
+          </motion.div>
         )
       ) : listings.length === 0 ? (
         <Empty
@@ -187,7 +210,12 @@ export default function Market() {
           body="When a holder lists a pass, the remaining time shows up here."
         />
       ) : (
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <motion.div
+          initial="hidden"
+          animate="shown"
+          variants={GRID}
+          className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        >
           {listings.map((pass) => (
             <ResaleCard
               key={pass.tokenId.toString()}
@@ -198,7 +226,7 @@ export default function Market() {
               onBuy={() => buyResale(pass)}
             />
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );
@@ -217,7 +245,12 @@ function PlanCard({
 }) {
   const days = Number(plan.duration) / 86400;
   return (
-    <div className="hairline flex flex-col rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-line-bright">
+    <motion.div
+      variants={CARD}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.2 }}
+      className="hairline flex flex-col rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-line-bright hover:shadow-[0_18px_50px_-24px_rgba(0,0,0,.9)]"
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-[15px] font-medium">{plan.name || `Plan #${plan.id}`}</h3>
@@ -254,7 +287,7 @@ function PlanCard({
           {busy ? "Confirm…" : "Buy pass"}
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -272,19 +305,19 @@ function ResaleCard({
   onBuy: () => void;
 }) {
   // Ticks locally so the countdown is alive without hammering the RPC.
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const left = remaining(pass.expiry, now);
+  const now = useNow();
+  const left = remaining(pass.expiry, now ?? Number(pass.expiry) * 1000);
   const fraction = lifeFraction(pass.expiry, plan?.duration ?? 0n);
   const off = discountPct(pass.paid, pass.listed);
   const urgent = left > 0 && left <= 7 * 86400;
 
   return (
-    <div className="hairline flex flex-col rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-line-bright">
+    <motion.div
+      variants={CARD}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.2 }}
+      className="hairline flex flex-col rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-line-bright hover:shadow-[0_18px_50px_-24px_rgba(0,0,0,.9)]"
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-[15px] font-medium">
@@ -294,11 +327,16 @@ function ResaleCard({
             #{pass.tokenId.toString()} · {shortAddress(pass.owner)}
           </p>
         </div>
-        {off !== null && (
-          <span className="tnum rounded-md bg-life-full/10 px-2 py-1 text-[10px] font-medium text-life-full">
-            {off}% off
-          </span>
-        )}
+        {off !== null &&
+          (off >= 40 ? (
+            <span className="tnum flex items-center gap-1 rounded-md bg-life-low/15 px-2 py-1 text-[10px] font-semibold text-life-low">
+              <span aria-hidden>🔥</span> STEAL · {off}%
+            </span>
+          ) : (
+            <span className="tnum rounded-md bg-life-full/10 px-2 py-1 text-[10px] font-medium text-life-full">
+              {off}% below original
+            </span>
+          ))}
       </div>
 
       <div className="my-6 grid place-items-center">
@@ -336,6 +374,6 @@ function ResaleCard({
           </p>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

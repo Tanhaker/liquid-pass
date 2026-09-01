@@ -6,7 +6,7 @@ import { formatEther, parseEther } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { arbitrumSepolia } from "wagmi/chains";
 import { DecayRing, lifeColor } from "@/components/DecayRing";
-import { Banner, Empty, SkeletonGrid, humanise, useFees } from "@/components/ui";
+import { Banner, Empty, SkeletonGrid, humanise, useFees, useNow } from "@/components/ui";
 import {
   EXPLORER,
   LIQUID_PASS_ADDRESS,
@@ -25,6 +25,7 @@ export default function Dashboard() {
   const { address, isConnected, chainId } = useAccount();
   const { writeContractAsync } = useWriteContract();
   const fees = useFees();
+  const nowMs = useNow(1000);
 
   const [plans, setPlans] = useState<Plan[]>([]);
   const [passes, setPasses] = useState<Pass[]>([]);
@@ -35,11 +36,13 @@ export default function Dashboard() {
 
   const load = useCallback(async () => {
     if (!client) return;
-    setError(null);
+    // No setState before the first await: doing so runs synchronously inside
+    // the effect and triggers a cascading render.
     try {
       const [p, t] = await Promise.all([fetchPlans(client), fetchPasses(client)]);
       setPlans(p);
       setPasses(t);
+      setError(null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -58,7 +61,7 @@ export default function Dashboard() {
   );
 
   const stats = useMemo(() => {
-    const now = Math.floor(Date.now() / 1000);
+    const now = Math.floor((nowMs ?? 0) / 1000);
     let active = 0;
     let soon = 0;
     let listed = 0;
@@ -73,7 +76,7 @@ export default function Dashboard() {
       if (p.listed > 0n) listed++;
     }
     return { active, soon, listed, expired };
-  }, [mine]);
+  }, [mine, nowMs]);
 
   const wrongNetwork = isConnected && chainId !== arbitrumSepolia.id;
 
@@ -219,17 +222,15 @@ function OwnedPass({
   onList: (price: bigint) => void;
   onUnlist: () => void;
 }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
+  const now = useNow();
 
   const [listing, setListing] = useState(false);
   const [price, setPrice] = useState("");
   const [priceError, setPriceError] = useState<string | null>(null);
 
-  const left = remaining(pass.expiry, now);
+  // Before the clock mounts, fall back to the expiry itself so the pass reads
+  // as "just expiring" rather than flashing a wrong number.
+  const left = remaining(pass.expiry, now ?? Number(pass.expiry) * 1000);
   const fraction = lifeFraction(pass.expiry, plan?.duration ?? 0n);
   const expired = left <= 0;
   const isListed = pass.listed > 0n;

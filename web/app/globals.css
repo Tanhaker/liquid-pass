@@ -92,6 +92,27 @@ body {
   animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
+/* Idle drift on the hero pass, so it feels held rather than pinned. */
+@keyframes liquid-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -8px;
+  }
+}
+
+.liquid-float {
+  animation: liquid-float 6s ease-in-out infinite;
+}
+
+/*
+ * `translate` is a separate property from `transform`, so the float composes
+ * with the pointer-tilt rotateX/rotateY instead of overwriting it. Animating
+ * `transform` here would fight the tilt every frame.
+ */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

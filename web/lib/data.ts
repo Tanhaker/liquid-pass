@@ -115,8 +115,10 @@ export async function fetchPasses(client: PublicClient): Promise<Pass[]> {
  * sell them, so showing one would be offering something unbuyable -- and there
  * is at least one such pass on chain already, left listed by a test run.
  */
-export function activeListings(passes: Pass[]): Pass[] {
-  const now = Math.floor(Date.now() / 1000);
+export function activeListings(passes: Pass[], nowMs: number | null): Pass[] {
+  // The caller supplies the clock. Reading Date.now() here made every useMemo
+  // that called this impure, which is a hydration hazard on prerendered pages.
+  const now = Math.floor((nowMs ?? 0) / 1000);
   return passes.filter((p) => p.listed > 0n && Number(p.expiry) > now);
 }
 
@@ -198,8 +200,8 @@ export type MarketStats = {
  * read back from a view call. Labelling this "total volume" would inflate it
  * with a number nothing on chain supports.
  */
-export function marketStats(plans: Plan[], passes: Pass[]): MarketStats {
-  const now = Math.floor(Date.now() / 1000);
+export function marketStats(plans: Plan[], passes: Pass[], nowMs: number): MarketStats {
+  const now = Math.floor(nowMs / 1000);
   let issued = 0;
   let active = 0;
   let listed = 0;

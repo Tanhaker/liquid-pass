@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatEther, parseEther } from "viem";
 import { useAccount, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { arbitrumSepolia } from "wagmi/chains";
-import { Banner, Empty, SkeletonGrid, humanise, useFees } from "@/components/ui";
+import { Banner, Empty, SkeletonGrid, humanise, useFees, useNow } from "@/components/ui";
 import {
   EXPLORER,
   LIQUID_PASS_ADDRESS,
@@ -22,6 +22,7 @@ export default function Issuer() {
   const { address, isConnected, chainId } = useAccount();
   const { writeContractAsync } = useWriteContract();
   const fees = useFees();
+  const nowMs = useNow(1000);
 
   const [plans, setPlans] = useState<Plan[]>([]);
   const [passes, setPasses] = useState<Pass[]>([]);
@@ -42,11 +43,13 @@ export default function Issuer() {
 
   const load = useCallback(async () => {
     if (!client) return;
-    setError(null);
+    // No setState before the first await: doing so runs synchronously inside
+    // the effect and triggers a cascading render.
     try {
       const [p, t] = await Promise.all([fetchPlans(client), fetchPasses(client)]);
       setPlans(p);
       setPasses(t);
+      setError(null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -73,7 +76,7 @@ export default function Issuer() {
    * be fabricating revenue, so resale income is labelled as not tracked here.
    */
   const statsByPlan = useMemo(() => {
-    const now = Math.floor(Date.now() / 1000);
+    const now = Math.floor((nowMs ?? 0) / 1000);
     const m = new Map<string, { issued: number; active: number; expired: number; earned: bigint }>();
     for (const plan of plans) m.set(plan.id.toString(), { issued: 0, active: 0, expired: 0, earned: 0n });
     for (const pass of passes) {
@@ -87,7 +90,7 @@ export default function Issuer() {
       s.earned += pass.paid;
     }
     return m;
-  }, [plans, passes]);
+  }, [plans, passes, nowMs]);
 
   const wrongNetwork = isConnected && chainId !== arbitrumSepolia.id;
 
