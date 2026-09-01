@@ -28,6 +28,8 @@ const abi = parseAbi([
   "function ownerOf(uint256 tokenId) view returns (address)",
   "function expiryOf(uint256 tokenId) view returns (uint256)",
   "function priceOf(uint256 tokenId) view returns (uint256)",
+  "function currentPrice(uint256 tokenId) view returns (uint256)",
+  "function openingPrice(uint256 tokenId) view returns (uint256)",
   "function issuerOf(uint256 tokenId) view returns (address)",
   "function nextTokenId() view returns (uint256)",
   "function isIssuer(address who) view returns (bool)",
@@ -63,6 +65,10 @@ const seller = privateKeyToAccount("0x" + readFileSync("seller.key", "utf8").tri
 const issuerW = createWalletClient({ account: issuer, chain: arbitrumSepolia, transport: http(RPC) });
 const sellerW = createWalletClient({ account: seller, chain: arbitrumSepolia, transport: http(RPC) });
 
+// 0.1% over the quote. The refund is a conditional transfer, so paying the
+// exact price makes the gas estimate skip it -- and by execution the price has
+// fallen, the refund is non-zero, and the transaction dies out of gas.
+const buffered = (p) => p + p / 1000n + 1n;
 const wait = (h) => pub.waitForTransactionReceipt({ hash: h });
 const evs = (r) => r.logs.map((l) => { try { return decodeEventLog({ abi, ...l }); } catch { return null; } }).filter(Boolean);
 const read = (fn, args = []) => pub.readContract({ address: CONTRACT, abi, functionName: fn, args });
@@ -118,7 +124,17 @@ console.log(`  tx ${r.transactionHash} status=${r.status} gas=${r.gasUsed}`);
 console.log(`  events: ${evs(r).map((e) => e.eventName).join(", ")}   priceOf=${formatEther(await read("priceOf", [tokenId]))} ETH`);
 
 console.log(`\n=== BUY (issuer buys from seller) ===`);
-r = await wait(await issuerW.writeContract({ address: CONTRACT, abi, functionName: "buy", args: [tokenId], value: PRICE, ...(await fees()) }));
+// The ask decays from the moment of listing, so the opening price is already
+// stale by the time this runs. buy() demands exact payment against
+// currentPrice, and sending PRICE reverts with "wrong value".
+const nowPrice = await read("currentPrice", [tokenId]);
+console.log(`  opening ${formatEther(PRICE)} ETH -> current ${formatEther(nowPrice)} ETH`);
+// Overpaying is ACCEPTED and refunded -- exact payment is impossible against
+// a price that falls between quoting and mining. What must still fail is
+// underpaying.
+await mustRevert("buy below the current price", () =>
+  pub.simulateContract({ address: CONTRACT, abi, functionName: "buy", args: [tokenId], value: nowPrice / 2n, account: issuer }));
+r = await wait(await issuerW.writeContract({ address: CONTRACT, abi, functionName: "buy", args: [tokenId], value: buffered(nowPrice), ...(await fees()) }));
 console.log(`  tx ${r.transactionHash} status=${r.status} gas=${r.gasUsed}`);
 const names = evs(r).map((e) => e.eventName);
 console.log(`  events: ${names.join(", ")}`);
@@ -128,7 +144,11 @@ console.log(`  Bought: price=${formatEther(bought.args.price)} royalty=${formatE
 const sB = await pub.getBalance({ address: seller.address, blockNumber: r.blockNumber - 1n });
 const sA = await pub.getBalance({ address: seller.address, blockNumber: r.blockNumber });
 console.log(`\n  seller delta across buy block: +${formatEther(sA - sB)} ETH`);
-console.log(`  expected 90%                 :  ${formatEther(PRICE - PRICE / 10n)} ETH   MATCH=${sA - sB === PRICE - PRICE / 10n}`);
+// Against the price the contract ACTUALLY charged, from the event -- not the
+// quote read beforehand, which the decay has already made stale.
+const charged = bought.args.price;
+console.log(`  charged (from event)         :  ${formatEther(charged)} ETH`);
+console.log(`  expected 90%                 :  ${formatEther(charged - charged / 10n)} ETH   MATCH=${sA - sB === charged - charged / 10n}`);
 console.log(`  ownerOf after    = ${await read("ownerOf", [tokenId])}`);
 console.log(`  priceOf after    = ${await read("priceOf", [tokenId])} (0 = delisted)`);
 console.log(`  contract balance = ${formatEther(await pub.getBalance({ address: CONTRACT }))} ETH (must be 0)`);
@@ -234,7 +254,8 @@ console.log(`  before resale: expiry=${expiryBefore} remaining=${remainingBefore
 await wait(await sellerW.writeContract({ address: CONTRACT, abi, functionName: "list", args: [boughtId, RESALE_PRICE], ...(await fees()) }));
 console.log(`  listed at ${formatEther(RESALE_PRICE)} ETH`);
 
-r = await wait(await issuerW.writeContract({ address: CONTRACT, abi, functionName: "buy", args: [boughtId], value: RESALE_PRICE, ...(await fees()) }));
+const resaleNow = await read("currentPrice", [boughtId]);
+r = await wait(await issuerW.writeContract({ address: CONTRACT, abi, functionName: "buy", args: [boughtId], value: buffered(resaleNow), ...(await fees()) }));
 console.log(`  resold: tx ${r.transactionHash} status=${r.status}`);
 const resold = evs(r).find((e) => e.eventName === "Bought");
 
@@ -251,5 +272,9 @@ const discountPct = Number(((PLAN_PRICE - RESALE_PRICE) * 100n) / PLAN_PRICE);
 console.log(`\n  resale ${formatEther(RESALE_PRICE)} ETH vs original ${formatEther(PLAN_PRICE)} ETH`);
 console.log(`  => "${discountPct}% below original" -- computed from chain data, not invented`);
 console.log(`\n  Bought.royalty = ${formatEther(resold.args.royalty)} ETH`);
-console.log(`  expected 10%   = ${formatEther(RESALE_PRICE / 10n)} ETH   MATCH=${resold.args.royalty === RESALE_PRICE / 10n}`);
+// Same reason as above: derive from the price the event records, not the
+// quote taken beforehand.
+const chargedResale = resold.args.price;
+console.log(`  charged        = ${formatEther(chargedResale)} ETH`);
+console.log(`  expected 10%   = ${formatEther(chargedResale / 10n)} ETH   MATCH=${resold.args.royalty === chargedResale / 10n}`);
 console.log(`  contract balance = ${formatEther(await pub.getBalance({ address: CONTRACT }))} ETH (must be 0)`);

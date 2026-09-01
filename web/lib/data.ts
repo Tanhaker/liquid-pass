@@ -90,12 +90,16 @@ export async function fetchPasses(client: PublicClient = publicClient): Promise<
       { address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "planOf", args: [id] },
       { address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "paidOf", args: [id] },
       { address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "priceOf", args: [id] },
+      // Read alongside the opening ask rather than recomputed here: the
+      // contract charges exactly what currentPrice returns, so the UI must
+      // quote the contract's own number, not its own approximation of it.
+      { address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "currentPrice", args: [id] },
     ] as const),
   });
 
   return ids
     .map((tokenId, i) => {
-      const o = i * 6;
+      const o = i * 7;
       return {
         tokenId,
         owner: results[o] as `0x${string}`,
@@ -104,6 +108,7 @@ export async function fetchPasses(client: PublicClient = publicClient): Promise<
         planId: results[o + 3] as bigint,
         paid: results[o + 4] as bigint,
         listed: results[o + 5] as bigint,
+        current: results[o + 6] as bigint,
       };
     })
     .reverse();

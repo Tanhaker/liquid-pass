@@ -28,10 +28,10 @@ for as long as the pass keeps trading.
 
 | | |
 |---|---|
-| Contract | [`0xe67078be99dec98b9788a0e6c2054d03b361f84a`](https://sepolia.arbiscan.io/address/0xe67078be99dec98b9788a0e6c2054d03b361f84a) |
+| Contract | [`0x8f3138daa0fff0fced0f8d0c59817594daf0c8a2`](https://sepolia.arbiscan.io/address/0x8f3138daa0fff0fced0f8d0c59817594daf0c8a2) |
 | Chain | Arbitrum Sepolia (421614) |
-| Deploy tx | `0x1265a1db61a50a41fb08cf7399c332ab6ee3f0716d480e56af1679e54267746b` |
-| Size | 22366 / 24576 bytes (`wasm-opt 131 -Oz`) |
+| Deploy tx | `0xff81bca0ebc0602432162237b92c79db0b0eb685ac06677c14836e8b0a8cf999` |
+| Size | 23254 / 24576 bytes (`wasm-opt 131 -Oz`) |
 
 Testnet only. The ETH has no monetary value.
 

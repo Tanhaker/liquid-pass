@@ -8,11 +8,11 @@ dataSources:
     name: LiquidPass
     network: arbitrum-sepolia
     source:
-      address: "0xe67078be99dec98b9788a0e6c2054d03b361f84a"
+      address: "0x8f3138daa0fff0fced0f8d0c59817594daf0c8a2"
       abi: LiquidPass
       # The deployment block. Starting from 0 would scan the whole chain for
       # nothing and take hours to sync.
-      startBlock: 304198700
+      startBlock: 304281600
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9

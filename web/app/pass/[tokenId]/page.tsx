@@ -13,6 +13,8 @@ import {
   EXPLORER,
   LIQUID_PASS_ADDRESS,
   discountPct,
+  formatEthShort,
+  withBuffer,
   formatRemaining,
   lifeFraction,
   liquidPassAbi,
@@ -96,7 +98,7 @@ export default function PassDetail({
   const expiry = pass ? shiftExpiry(pass.expiry) : 0n;
   const left = pass ? remaining(expiry, nowMs ?? Number(expiry) * 1000) : 0;
   const fraction = pass ? lifeFraction(expiry, plan?.duration ?? 0n) : 0;
-  const off = pass ? discountPct(pass.paid, pass.listed) : null;
+  const off = pass ? discountPct(pass.paid, pass.current) : null;
 
   async function run(what: string, fn: () => Promise<`0x${string}`>) {
     setBusy(true);
@@ -162,7 +164,7 @@ export default function PassDetail({
             tokenId={`PASS-${pass.tokenId.toString().padStart(4, "0")}`}
             fraction={fraction}
             daysLeft={Math.floor(left / 86400)}
-            price={pass.listed > 0n ? formatEther(pass.listed) : undefined}
+            price={pass.current > 0n ? formatEthShort(pass.current) : undefined}
           />
         </div>
 
@@ -220,7 +222,7 @@ export default function PassDetail({
                       abi: liquidPassAbi,
                       functionName: "buy",
                       args: [pass.tokenId],
-                      value: pass.listed,
+                      value: withBuffer(pass.current),
                       chainId: arbitrumSepolia.id,
                       ...(await fees()),
                     }),
@@ -375,7 +377,7 @@ export default function PassDetail({
         <QrPanel
           tokenId={pass.tokenId}
           name={name}
-          price={formatEther(pass.listed)}
+          price={formatEthShort(pass.current)}
           remainingLabel={formatRemaining(left)}
           onClose={() => setShowQr(false)}
         />

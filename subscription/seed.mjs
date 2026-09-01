@@ -13,7 +13,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { arbitrumSepolia } from "viem/chains";
 import { readFileSync } from "node:fs";
 
-const CONTRACT = process.env.LIQUID_PASS_ADDRESS ?? "0xe67078be99dec98b9788a0e6c2054d03b361f84a";
+const CONTRACT = process.env.LIQUID_PASS_ADDRESS ?? "0x8f3138daa0fff0fced0f8d0c59817594daf0c8a2";
 const RPC = "https://sepolia-rollup.arbitrum.io/rpc";
 
 const DAY = 86400n;

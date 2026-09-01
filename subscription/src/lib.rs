@@ -54,8 +54,12 @@ sol_storage! {
         mapping(uint256 => address) owners;
         mapping(uint256 => uint256) expiries;
         mapping(uint256 => address) issuers;
-        /// 0 means "not for sale", so a listing price of 0 is rejected.
+        /// The OPENING ask -- what the seller wanted when they listed. 0 means
+        /// "not for sale", so a listing price of 0 is rejected. What a buyer
+        /// actually pays is `current_price`, which decays from this.
         mapping(uint256 => uint256) prices;
+        /// When the listing opened. The start of the decay ramp.
+        mapping(uint256 => uint256) listed_at;
         uint256 next_token_id;
         /// Controls the issuer allowlist. Set once, at construction.
         address admin;
@@ -378,6 +382,13 @@ impl Subscription {
             return Err(b"zero price".to_vec());
         }
         self.prices.setter(token_id).set(price);
+        // Read the clock before taking the setter: `setter` borrows self
+        // mutably and `vm()` borrows it immutably, so both in one expression
+        // does not compile.
+        let now = U256::from(self.vm().block_timestamp());
+        // Re-listing restarts the ramp from the time left now, not from the
+        // pass's original term.
+        self.listed_at.setter(token_id).set(now);
         self.vm().log(Listed {
             tokenId: token_id,
             seller: owner,
@@ -397,6 +408,7 @@ impl Subscription {
             return Err(b"not owner".to_vec());
         }
         self.prices.setter(token_id).set(U256::ZERO);
+        self.listed_at.setter(token_id).set(U256::ZERO);
         self.vm().log(Unlisted {
             tokenId: token_id,
             seller: owner,
@@ -404,12 +416,48 @@ impl Subscription {
         Ok(())
     }
 
-    /// Buy a listed pass. Pays 90% to the seller and 10% to the issuer.
+    /// What the pass costs right now.
+    ///
+    /// The ask falls in proportion to the access still left, measured from the
+    /// moment of listing: a pass listed at 0.003 with 30 days to run costs
+    /// 0.001 once 10 days remain. Time is the good being sold, so the price
+    /// tracks how much of it survives.
+    ///
+    /// Straight-line, because a buyer has to be able to predict it. Integer
+    /// maths throughout, multiplying before dividing so the ratio does not
+    /// truncate to zero.
+    pub fn current_price(&self, token_id: U256) -> U256 {
+        let opening = self.prices.get(token_id);
+        if opening.is_zero() {
+            return U256::ZERO;
+        }
+        let expiry = self.expiries.get(token_id);
+        let start = self.listed_at.get(token_id);
+        let now = U256::from(self.vm().block_timestamp());
+        if now >= expiry || expiry <= start {
+            return U256::ZERO;
+        }
+        opening * (expiry - now) / (expiry - start)
+    }
+
+    /// What the seller originally asked, before any decay.
+    pub fn opening_price(&self, token_id: U256) -> U256 {
+        self.prices.get(token_id)
+    }
+
+    /// Buy a listed pass at its CURRENT price. Pays 90% to the seller and 10%
+    /// to the issuer.
     #[payable]
     pub fn buy(&mut self, token_id: U256) -> Result<(), Vec<u8>> {
-        let price = self.prices.get(token_id);
-        if price.is_zero() {
+        if self.prices.get(token_id).is_zero() {
             return Err(b"not listed".to_vec());
+        }
+        // The decayed price, not the opening one. Charging the opening price
+        // would bill the buyer for time already consumed -- the exact thing
+        // this product exists to stop.
+        let price = self.current_price(token_id);
+        if price.is_zero() {
+            return Err(b"no time left".to_vec());
         }
         // Re-checked at purchase, not just at listing: a pass can expire while
         // it sits on the market, and buying zero remaining access is a loss
@@ -422,11 +470,23 @@ impl Subscription {
         if buyer == seller {
             return Err(b"already owner".to_vec());
         }
-        // Exact payment only: no refund path, so overpayment would otherwise
-        // be stranded in the contract.
-        if self.vm().msg_value() != price {
+        // At least the current price, and change is returned.
+        //
+        // NOT exact payment, which is what the pre-decay version required.
+        // Exact payment and a continuously falling price are incompatible: a
+        // buyer reads the price, builds a transaction, and by the time it is
+        // mined the price has dropped, so msg.value no longer equals
+        // current_price and every purchase reverts. Simulation hides this
+        // because it executes in the current block.
+        //
+        // Since the price only ever falls, a value read moments ago is always
+        // at least the price at execution -- so accepting an overpayment and
+        // refunding the difference makes the race harmless instead of fatal.
+        let paid = self.vm().msg_value();
+        if paid < price {
             return Err(b"wrong value".to_vec());
         }
+        let refund = paid - price;
         let issuer = self.issuers.get(token_id);
 
         // ---- EFFECTS, before any external call ----
@@ -434,6 +494,7 @@ impl Subscription {
         // that re-enters on payment finds the token already sold and delisted.
         self.owners.setter(token_id).set(buyer);
         self.prices.setter(token_id).set(U256::ZERO);
+        self.listed_at.setter(token_id).set(U256::ZERO);
 
         // Royalty is taken as a remainder, not a second percentage, so the
         // two payouts always sum to exactly `price` with no dust left behind.
@@ -443,6 +504,12 @@ impl Subscription {
         // ---- INTERACTIONS ----
         transfer_eth(self.vm(), seller, proceeds)?;
         transfer_eth(self.vm(), issuer, royalty)?;
+        // Change last. Sending it first would let a buyer re-enter before the
+        // seller has been paid, and the contract must never end a call holding
+        // value -- proceeds + royalty + refund is exactly msg.value.
+        if !refund.is_zero() {
+            transfer_eth(self.vm(), buyer, refund)?;
+        }
 
         self.vm().log(Bought {
             tokenId: token_id,

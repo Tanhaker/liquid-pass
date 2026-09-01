@@ -11,7 +11,7 @@
  */
 
 const RPC = "https://sepolia-rollup.arbitrum.io/rpc";
-const CONTRACT = "0xe67078be99dec98b9788a0e6c2054d03b361f84a";
+const CONTRACT = "0x8f3138daa0fff0fced0f8d0c59817594daf0c8a2";
 const SITE = "https://liquid-pass.vercel.app";
 
 /**
@@ -28,6 +28,10 @@ const SEL = {
   planOf: "0x5e2246ee",
   priceOf: "0xb9186d7d",
   planName: "0xc10250ff",
+  // The ask decays; priceOf is the opening figure, currentPrice is what a
+  // buyer pays now. Both computed with keccak256 and checked on chain.
+  currentPrice: "0x7a3c4c17",
+  openingPrice: "0xd069ee42",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -105,7 +109,7 @@ async function loadFor(address) {
     if (owner.toLowerCase() !== address.toLowerCase()) continue;
     const expiry = asBigInt(await call(SEL.expiryOf + encUint(i)));
     const planId = asBigInt(await call(SEL.planOf + encUint(i)));
-    const listed = asBigInt(await call(SEL.priceOf + encUint(i)));
+    const listed = asBigInt(await call(SEL.currentPrice + encUint(i)));
     let name = `Pass #${i}`;
     try {
       const n = asString(await call(SEL.planName + encUint(planId)));

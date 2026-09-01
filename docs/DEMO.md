@@ -1,6 +1,6 @@
 # Liquid Pass — demo script
 
-Deployed contract: `0xe67078be99dec98b9788a0e6c2054d03b361f84a` (Arbitrum Sepolia)
+Deployed contract: `0x8f3138daa0fff0fced0f8d0c59817594daf0c8a2` (Arbitrum Sepolia)
 
 ## Before you present
 

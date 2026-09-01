@@ -9,10 +9,10 @@ import { parseAbi } from "viem";
  * product path.
  */
 export const LIQUID_PASS_ADDRESS =
-  "0xe67078be99dec98b9788a0e6c2054d03b361f84a" as const;
+  "0x8f3138daa0fff0fced0f8d0c59817594daf0c8a2" as const;
 
 /** Block the contract was deployed in, so getLogs never scans from genesis. */
-export const DEPLOY_BLOCK = 304198700n;
+export const DEPLOY_BLOCK = 304281600n;
 
 export const EXPLORER = "https://sepolia.arbiscan.io";
 
@@ -52,6 +52,10 @@ export const liquidPassAbi = parseAbi([
   "function unlist(uint256 tokenId)",
   "function buy(uint256 tokenId) payable",
   "function priceOf(uint256 tokenId) view returns (uint256)",
+  // The ask decays with the time left. `priceOf`/`openingPrice` is what the
+  // seller first asked; `currentPrice` is what buy() actually charges now.
+  "function currentPrice(uint256 tokenId) view returns (uint256)",
+  "function openingPrice(uint256 tokenId) view returns (uint256)",
 
   // --- admin ---
   "function admin() view returns (address)",
@@ -87,8 +91,16 @@ export type Pass = {
   expiry: bigint;
   /** What the FIRST buyer paid. 0 for passes issued by mint, never sold. */
   paid: bigint;
-  /** Resale price in wei, or 0 when not for sale. */
+  /** The seller's opening ask in wei, or 0 when not for sale. */
   listed: bigint;
+  /**
+   * What `buy()` charges right now: the opening ask decayed in proportion to
+   * the access still left. This is the number to display and to send as
+   * msg.value. The contract requires AT LEAST this and refunds the change --
+   * exact payment is impossible against a continuously falling price, because
+   * the value decays between reading it and the transaction being mined.
+   */
+  current: bigint;
 };
 
 /** Seconds left, clamped at 0. Computed client-side so the ring can tick. */
@@ -174,6 +186,27 @@ export function priceVsFair(listed: bigint, fair: bigint | null): number | null 
  * Six significant digits keeps testnet-sized amounts legible without rounding
  * a real price into something the contract would reject.
  */
+/**
+ * What to actually send as msg.value when buying.
+ *
+ * A 0.1% buffer over the quoted price, for a reason that is not obvious and
+ * cost a reverted transaction to find:
+ *
+ * `buy()` refunds any overpayment, and that refund is a conditional transfer.
+ * When msg.value equals the price exactly, the refund is zero, the branch is
+ * skipped, and the gas estimate excludes it. But the price keeps falling
+ * between estimating and mining, so by execution the refund IS non-zero, the
+ * extra transfer runs, and the transaction dies out of gas -- an estimate made
+ * on one code path, executed on another.
+ *
+ * Sending slightly more makes the refund non-zero at estimate time as well, so
+ * both paths match. The surplus comes straight back, so it costs the buyer
+ * nothing.
+ */
+export function withBuffer(price: bigint): bigint {
+  return price + price / 1000n + 1n;
+}
+
 export function formatEthShort(wei: bigint): string {
   if (wei === 0n) return "0";
   const eth = Number(wei) / 1e18;

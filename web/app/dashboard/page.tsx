@@ -344,12 +344,12 @@ function OwnedPass({
                 className="tnum text-[14px] font-medium"
                 style={{ color: lifeColor(fraction) }}
               >
-                {formatEther(pass.listed)} ETH
+                {formatEthShort(pass.current)} ETH
               </span>
             </div>
-            {pass.paid > 0n && discountPct(pass.paid, pass.listed) !== null && (
+            {pass.paid > 0n && discountPct(pass.paid, pass.current) !== null && (
               <p className="tnum text-[11px] text-faint">
-                {discountPct(pass.paid, pass.listed)}% below the{" "}
+                {discountPct(pass.paid, pass.current)}% below the{" "}
                 {formatEther(pass.paid)} ETH original
               </p>
             )}

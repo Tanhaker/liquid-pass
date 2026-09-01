@@ -12,6 +12,7 @@ import {
   discountPct,
   fairPrice,
   formatEthShort,
+  withBuffer,
   formatRemaining,
   lifeFraction,
   priceVsFair,
@@ -117,7 +118,9 @@ export default function Market() {
         abi: liquidPassAbi,
         functionName: "buy",
         args: [pass.tokenId],
-        value: pass.listed,
+        // What the contract charges now, plus a small buffer. See
+        // withBuffer -- the surplus is refunded by the contract.
+        value: withBuffer(pass.current),
         chainId: arbitrumSepolia.id,
         ...(await fees()),
       });
@@ -317,9 +320,9 @@ function ResaleCard({
   const expiry = shiftExpiry(pass.expiry);
   const left = remaining(expiry, now ?? Number(expiry) * 1000);
   const fraction = lifeFraction(expiry, plan?.duration ?? 0n);
-  const off = discountPct(pass.paid, pass.listed);
+  const off = discountPct(pass.paid, pass.current);
   const fair = fairPrice(pass.paid, expiry, plan?.duration ?? 0n, now);
-  const vsFair = priceVsFair(pass.listed, fair);
+  const vsFair = priceVsFair(pass.current, fair);
   const urgent = left > 0 && left <= 7 * 86400;
 
   return (
@@ -368,7 +371,7 @@ function ResaleCard({
       <div className="mt-auto border-t border-line pt-4">
         <div className="flex items-baseline justify-between">
           <span className="tnum text-[15px] font-medium" style={{ color: lifeColor(fraction) }}>
-            {formatEther(pass.listed)} <span className="text-[11px] text-faint">ETH</span>
+            {formatEthShort(pass.current)} <span className="text-[11px] text-faint">ETH</span>
           </span>
           <button
             onClick={onBuy}
