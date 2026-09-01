@@ -59,42 +59,36 @@ export default function Home() {
 
   return (
     <>
-      <section className="aurora relative overflow-hidden border-b border-line">
-        <Constellation className="opacity-70" />
-        {/* Fades the particle field out under the copy so text stays legible. */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-ink/50 to-ink" />
-        {/*
-          The hero renders at full opacity with no JS gate.
+      <section className="aurora relative overflow-hidden border-b border-line/50 bg-ink">
+        <Constellation className="opacity-100 mix-blend-screen" />
+        
+        {/* Massive Luxury Ambient Glowing Orb */}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[800px] w-[1000px] rounded-[100%] bg-gradient-to-tr from-life-full/20 via-life-mid/10 to-transparent blur-[120px] mix-blend-screen opacity-70 animate-pulse" style={{ animationDuration: '8s' }} />
 
-          It was briefly built with framer-motion entrance animations, and the
-          headline got stuck at 8% opacity whenever requestAnimationFrame was
-          throttled -- a backgrounded tab is enough to trigger it. An animation
-          that can leave the entire pitch invisible is not worth the polish, so
-          entrance motion here is CSS-only and additive: it moves elements that
-          are already painted. Framer Motion still drives the decay cards below,
-          where the animation IS the content rather than a reveal.
-        */}
-        <div ref={heroRef} className="relative mx-auto grid max-w-6xl grid-cols-1 gap-14 px-6 pb-16 pt-28 lg:grid-cols-[1.15fr_.85fr] lg:items-center lg:gap-10">
+        {/* Fades the particle field out under the copy so text stays legible. */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-ink/60 to-ink" />
+        
+        <div ref={heroRef} className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 gap-14 px-6 pb-24 pt-32 lg:grid-cols-[1.2fr_.8fr] lg:items-center lg:gap-16">
           <div>
-          <p className="rise mb-5 inline-flex items-center gap-2 rounded-full border border-line bg-raised/60 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-muted">
-            <span className="size-1.5 rounded-full bg-life-full" />
+          <p className="rise mb-6 inline-flex items-center gap-3 rounded-full border border-life-full/30 bg-surface/40 backdrop-blur-md px-4 py-1.5 text-[12px] uppercase tracking-[0.2em] text-life-full font-medium shadow-[0_0_20px_rgba(14,165,233,0.15)]">
+            <span className="size-2 rounded-full bg-life-full animate-pulse" />
             Arbitrum Stylus · Rust
           </p>
 
           <h1
-            className="rise max-w-4xl text-[clamp(2.9rem,8vw,5.8rem)] font-semibold leading-[0.94] tracking-[-0.04em]"
+            className="rise max-w-4xl text-[clamp(3.2rem,8.5vw,6.5rem)] font-bold leading-[0.92] tracking-[-0.04em] drop-shadow-2xl"
             style={{ animationDelay: "60ms" }}
           >
             Buy time.
             <br />
             Use it.{" "}
-            <span className="bg-gradient-to-r from-life-full via-life-mid to-life-low bg-clip-text text-transparent">
+            <span className="bg-gradient-to-br from-life-full via-life-mid to-life-low bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(139,92,246,0.3)]">
               Sell what&rsquo;s left.
             </span>
           </h1>
 
           <p
-            className="rise mt-7 max-w-xl text-[16px] leading-relaxed text-muted"
+            className="rise mt-8 max-w-xl text-[17px] leading-relaxed text-muted/90"
             style={{ animationDelay: "130ms" }}
           >
             A subscription is time you paid for. Cancel halfway and the rest just
@@ -104,18 +98,18 @@ export default function Home() {
           </p>
 
           <div
-            className="rise mt-9 flex flex-wrap items-center gap-3"
+            className="rise mt-10 flex flex-wrap items-center gap-4"
             style={{ animationDelay: "200ms" }}
           >
             <Link
               href="/market"
-              className="rounded-xl bg-text px-5 py-2.5 text-[14px] font-medium text-ink transition-opacity hover:opacity-90"
+              className="relative overflow-hidden rounded-2xl bg-text px-8 py-3.5 text-[15px] font-semibold text-ink shadow-[0_0_40px_rgba(255,255,255,0.15)] transition-all hover:scale-105 hover:shadow-[0_0_60px_rgba(255,255,255,0.25)]"
             >
               Browse the market
             </Link>
             <Link
               href="/dashboard"
-              className="rounded-xl border border-line bg-raised px-5 py-2.5 text-[14px] text-muted transition-colors hover:border-line-bright hover:text-text"
+              className="rounded-2xl border border-line-bright bg-surface/50 backdrop-blur-xl px-8 py-3.5 text-[15px] font-medium text-text transition-all hover:bg-surface/80 hover:border-life-mid/50 hover:shadow-[0_0_30px_rgba(139,92,246,0.15)]"
             >
               My passes
             </Link>
