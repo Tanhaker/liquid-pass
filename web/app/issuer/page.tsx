@@ -270,7 +270,56 @@ function NewPlan({
   const [uri, setUri] = useState("");
   const [price, setPrice] = useState("");
   const [days, setDays] = useState("30");
+  const [description, setDescription] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [ipfsReady, setIpfsReady] = useState<boolean | null>(null);
+  const [pinning, setPinning] = useState(false);
+
+  // Asked once so the button can explain itself instead of failing on click.
+  useEffect(() => {
+    fetch("/api/ipfs")
+      .then((r) => r.json())
+      .then((j) => setIpfsReady(Boolean(j.configured)))
+      .catch(() => setIpfsReady(false));
+  }, []);
+
+  /**
+   * Pins the metadata and drops the resulting ipfs:// URI into the field.
+   *
+   * Deliberately a separate step from publishing rather than folded into it:
+   * pinning can fail, and a failed pin must not cost the issuer a transaction
+   * or block them from publishing with no metadata at all.
+   */
+  async function pin() {
+    if (!name.trim()) {
+      setErr("Name the plan first — it goes into the metadata.");
+      return;
+    }
+    setErr(null);
+    setPinning(true);
+    try {
+      const res = await fetch("/api/ipfs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim(),
+          category: "subscription",
+          durationDays: Number(days) || undefined,
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok) {
+        setErr(j.detail ? `${j.error}: ${j.detail}` : (j.error ?? "Pinning failed."));
+        return;
+      }
+      setUri(j.uri);
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setPinning(false);
+    }
+  }
 
   function submit() {
     setErr(null);
@@ -312,11 +361,35 @@ function NewPlan({
           />
         </Field>
         <Field label="Metadata URI" hint="Optional. IPFS is never required to render a plan.">
+          <div className="flex gap-2">
+            <input
+              value={uri}
+              onChange={(e) => setUri(e.target.value)}
+              placeholder="ipfs://…"
+              className="tnum min-w-0 flex-1 rounded-lg border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
+            />
+            <button
+              type="button"
+              onClick={pin}
+              disabled={pinning || ipfsReady === false}
+              title={
+                ipfsReady === false
+                  ? "PINATA_JWT is not set on the server, so pinning is unavailable"
+                  : "Pin this plan's metadata to IPFS"
+              }
+              className="shrink-0 rounded-lg border border-line px-3 py-2 text-[12px] text-muted transition-colors hover:text-text disabled:opacity-40"
+            >
+              {pinning ? "Pinning…" : "Pin to IPFS"}
+            </button>
+          </div>
+        </Field>
+
+        <Field label="Description" hint="Stored in the IPFS metadata, not on chain.">
           <input
-            value={uri}
-            onChange={(e) => setUri(e.target.value)}
-            placeholder="ipfs://…"
-            className="tnum w-full rounded-lg border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Full access to Figma Pro for the duration of the pass."
+            className="w-full rounded-lg border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
           />
         </Field>
         <Field label="Price (ETH)" hint="Paid in full to you on every new pass.">
@@ -339,6 +412,13 @@ function NewPlan({
         </Field>
       </div>
 
+      {ipfsReady === false && (
+        <p className="mt-3 text-[11px] text-faint">
+          IPFS pinning is unavailable — <code className="tnum">PINATA_JWT</code>{" "}
+          isn&rsquo;t set on the server. You can still publish; the marketplace
+          reads names and prices from the chain.
+        </p>
+      )}
       {err && <p className="mt-3 text-[12px] text-life-crit">{err}</p>}
 
       <button

@@ -11,6 +11,7 @@ import {
   shortAddress,
 } from "@/lib/contract";
 import { fetchActivity, type Activity } from "@/lib/data";
+import { fetchActivityFromSubgraph, subgraphConfigured, type Source } from "@/lib/graph";
 
 /**
  * On-chain event explorer.
@@ -57,10 +58,27 @@ export default function ExplorerPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [liveCount, setLiveCount] = useState(0);
+  const [source, setSource] = useState<Source>("chain");
 
   const load = useCallback(async () => {
     try {
-      const a = await fetchActivity(100);
+      // Subgraph first when one is configured, chain reads otherwise -- and
+      // chain reads again if the indexer errors or is still syncing. Whichever
+      // answered is recorded so the badge can say so honestly rather than
+      // claiming indexed data it did not use.
+      let a: Activity[];
+      if (subgraphConfigured()) {
+        try {
+          a = await fetchActivityFromSubgraph(100);
+          setSource("subgraph");
+        } catch {
+          a = await fetchActivity(100);
+          setSource("chain");
+        }
+      } else {
+        a = await fetchActivity(100);
+        setSource("chain");
+      }
       setEvents(a);
       setError(null);
     } catch (e) {
@@ -104,7 +122,7 @@ export default function ExplorerPage() {
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-life-full opacity-60" />
             <span className="relative inline-flex size-1.5 rounded-full bg-life-full" />
           </span>
-          Direct chain data via viem
+          {source === "subgraph" ? "Indexed by The Graph" : "Direct chain data via viem"}
           {liveCount > 0 && (
             <span className="tnum text-faint">· {liveCount} live</span>
           )}

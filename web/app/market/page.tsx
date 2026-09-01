@@ -21,6 +21,7 @@ import {
 import { activeListings, fetchPasses, fetchPlans } from "@/lib/data";
 import { Banner, Empty, SkeletonGrid, humanise, useFees, useNow } from "@/components/ui";
 import { useDemo } from "@/lib/demo";
+import { PlanMeta } from "@/components/PlanMeta";
 
 type Tab = "plans" | "resale";
 
@@ -264,6 +265,8 @@ function PlanCard({
           </span>
         )}
       </div>
+
+      <PlanMeta uri={plan.uri} />
 
       <div className="my-6 grid place-items-center">
         <DecayRing
