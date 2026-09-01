@@ -11,7 +11,7 @@ import { QrPanel } from "@/components/QrPanel";
 import { Banner, Empty, humanise, useFees, useNow } from "@/components/ui";
 import {
   EXPLORER,
-  LIQUID_PASS_ADDRESS,
+  LIQUID_PASS_ADDRESS, MARKETPLACE_ADDRESS, marketplaceAbi,
   discountPct,
   formatEthShort,
   withBuffer,
@@ -233,11 +233,7 @@ export default function PassDetail({
                 onClick={() =>
                   run(`Bought pass #${pass.tokenId}`, async () =>
                     writeContractAsync({
-                      address: LIQUID_PASS_ADDRESS,
-                      abi: liquidPassAbi,
-                      functionName: "buy",
-                      args: [pass.tokenId],
-                      value: withBuffer(pass.current),
+                      address: MARKETPLACE_ADDRESS, abi: marketplaceAbi, functionName: "buy", args: [pass.tokenId], value: withBuffer(pass.current),
                       chainId: arbitrumSepolia.id,
                       ...(await fees()),
                     }),
@@ -265,11 +261,7 @@ export default function PassDetail({
                 onClick={() =>
                   run(`Unlisted pass #${pass.tokenId}`, async () =>
                     writeContractAsync({
-                      address: LIQUID_PASS_ADDRESS,
-                      abi: liquidPassAbi,
-                      functionName: "unlist",
-                      args: [pass.tokenId],
-                      chainId: arbitrumSepolia.id,
+                      address: MARKETPLACE_ADDRESS, abi: marketplaceAbi, functionName: "unlist", args: [pass.tokenId], chainId: arbitrumSepolia.id,
                       ...(await fees()),
                     }),
                   )
@@ -326,10 +318,7 @@ export default function PassDetail({
                     setListing(false);
                     void run(`Listed pass #${pass.tokenId}`, async () =>
                       writeContractAsync({
-                        address: LIQUID_PASS_ADDRESS,
-                        abi: liquidPassAbi,
-                        functionName: "list",
-                        args: [pass.tokenId, wei],
+                        address: MARKETPLACE_ADDRESS, abi: marketplaceAbi, functionName: "list", args: [pass.tokenId, wei],
                         chainId: arbitrumSepolia.id,
                         ...(await fees()),
                       }),
