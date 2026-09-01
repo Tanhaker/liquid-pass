@@ -1,26 +1,12 @@
 import { BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
-  Bought,
-  Listed,
   Minted,
   PassPurchased,
   PlanCreated,
   PlanOpenSet,
-  Unlisted,
+  PassTransferred,
 } from "../generated/LiquidPass/LiquidPass";
 import { Marketplace, Pass, PassEvent, Plan } from "../generated/schema";
-
-/**
- * Handlers mirror the contract's own semantics exactly.
- *
- * The two that matter, because getting either wrong would misrepresent the
- * product:
- *
- *   - `Bought` must NOT touch `expiry`. The whole premise is that a resale
- *     transfers ownership and leaves the expiry alone.
- *   - `originalPrice` is written once, at the primary sale, and never again.
- *     It is what every "% below original" figure is computed against.
- */
 
 const GLOBAL = "global";
 
@@ -48,8 +34,6 @@ function recordEvent(
   price: BigInt | null,
   royalty: BigInt | null,
 ): void {
-  // logIndex keeps the id unique when one transaction emits several events for
-  // the same pass -- buyPass emits both PassPurchased and PassTransferred.
   const id = event.transaction.hash.toHex() + "-" + event.logIndex.toString();
   const e = new PassEvent(id);
   e.pass = passId;
@@ -94,7 +78,6 @@ export function handlePassPurchased(event: PassPurchased): void {
   pass.plan = event.params.planId.toString();
   pass.owner = event.params.buyer;
   pass.expiry = event.params.expiry;
-  // Written once. Never overwritten on resale -- that is the point of it.
   pass.originalPrice = event.params.price;
   pass.listedPrice = null;
   pass.issuedAt = event.block.timestamp;
@@ -121,8 +104,6 @@ export function handleMinted(event: Minted): void {
   pass.owner = event.params.to;
   pass.issuer = event.params.issuer;
   pass.expiry = event.params.expiry;
-  // Deliberately null, not zero: this pass was issued directly and never had a
-  // sale price, so no discount can ever be computed against it.
   pass.originalPrice = null;
   pass.listedPrice = null;
   pass.issuedAt = event.block.timestamp;
@@ -136,52 +117,10 @@ export function handleMinted(event: Minted): void {
   m.save();
 }
 
-export function handleListed(event: Listed): void {
+export function handlePassTransferred(event: PassTransferred): void {
   const id = event.params.tokenId.toString();
   const pass = Pass.load(id);
   if (pass == null) return;
-  pass.listedPrice = event.params.price;
+  pass.owner = event.params.to;
   pass.save();
-
-  recordEvent(id, "LISTED", event, event.params.seller, null, event.params.price, null);
-}
-
-export function handleUnlisted(event: Unlisted): void {
-  const id = event.params.tokenId.toString();
-  const pass = Pass.load(id);
-  if (pass == null) return;
-  pass.listedPrice = null;
-  pass.save();
-
-  recordEvent(id, "UNLISTED", event, event.params.seller, null, null, null);
-}
-
-export function handleBought(event: Bought): void {
-  const id = event.params.tokenId.toString();
-  const pass = Pass.load(id);
-  if (pass == null) return;
-
-  pass.owner = event.params.buyer;
-  // Listing clears on sale, mirroring the contract.
-  pass.listedPrice = null;
-  pass.resaleCount = pass.resaleCount + 1;
-  // `expiry` and `originalPrice` are untouched on purpose. The buyer inherits
-  // the remaining time, and the original price stays the benchmark.
-  pass.save();
-
-  recordEvent(
-    id,
-    "RESOLD",
-    event,
-    event.params.seller,
-    event.params.buyer,
-    event.params.price,
-    event.params.royalty,
-  );
-
-  const m = marketplace();
-  m.resales = m.resales + 1;
-  m.resaleVolume = m.resaleVolume.plus(event.params.price);
-  m.royaltiesPaid = m.royaltiesPaid.plus(event.params.royalty);
-  m.save();
 }

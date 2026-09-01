@@ -2,7 +2,7 @@ specVersion: 1.0.0
 description: Liquid Pass — resellable, time-bound subscription passes on Arbitrum Stylus
 repository: https://github.com/Tanhaker/liquid-pass
 schema:
-  file: ./schema.graphql
+  file: schema.graphql
 dataSources:
   - kind: ethereum
     name: LiquidPass
@@ -15,7 +15,7 @@ dataSources:
       kind: ethereum/events
       apiVersion: 0.0.9
       language: wasm/assemblyscript
-      file: ./src/mapping.ts
+      file: LiquidPass\LiquidPass.wasm
       entities:
         - Plan
         - Pass
@@ -23,7 +23,7 @@ dataSources:
         - Marketplace
       abis:
         - name: LiquidPass
-          file: ./abis/LiquidPass.json
+          file: LiquidPass\LiquidPass.json
       eventHandlers:
         - event: PlanCreated(indexed uint256,indexed address,uint256,uint256)
           handler: handlePlanCreated
@@ -46,14 +46,14 @@ dataSources:
       kind: ethereum/events
       apiVersion: 0.0.9
       language: wasm/assemblyscript
-      file: ./src/marketplace.ts
+      file: Marketplace\Marketplace.wasm
       entities:
         - Pass
         - PassEvent
         - Marketplace
       abis:
         - name: Marketplace
-          file: ./abis/Marketplace.json
+          file: Marketplace\Marketplace.json
       eventHandlers:
         - event: Listed(indexed uint256,indexed address,uint256)
           handler: handleListed
