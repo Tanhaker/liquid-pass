@@ -19,7 +19,7 @@ const LINKS = [
   { href: "/dashboard", label: "My Passes", icon: RingIcon },
   { href: "/explorer", label: "Explorer", icon: PulseIcon },
   { href: "/analytics", label: "Analytics", icon: ChartIcon },
-  { href: "/assistant", label: "AI", icon: SparkIcon },
+  { href: "/verify", label: "Verify", icon: CheckIcon },
   { href: "/issuer", label: "Issuer", icon: KeyIcon },
 ];
 
@@ -159,10 +159,10 @@ function ChartIcon() {
   );
 }
 
-function SparkIcon() {
+function CheckIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
-      <path d="M7 1.5 8.3 5.2 12 6.5 8.3 7.8 7 11.5 5.7 7.8 2 6.5l3.7-1.3z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M2 7.4 5.4 10.8 12 4.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

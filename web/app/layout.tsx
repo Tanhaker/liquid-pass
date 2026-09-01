@@ -3,6 +3,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { Nav } from "@/components/Nav";
 import { DemoBar } from "@/components/DemoBar";
+import { FloatingAI } from "@/components/FloatingAI";
 import { DemoProvider } from "@/lib/demo";
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="tnum">Rust + Stylus · secp256r1-free by design</span>
             </div>
             </footer>
+            <FloatingAI />
           </DemoProvider>
         </Providers>
       </body>
