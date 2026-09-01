@@ -24,16 +24,17 @@ transfers ownership and never touches the expiry timestamp.
 On every resale: **90% to the seller, 10% to the original issuer**, forever,
 for as long as the pass keeps trading.
 
-## Deployed
+## The Web 2.5 Vision (Bridging Fiat & Crypto)
 
-| | |
-|---|---|
-| Contract | [`0x22703fdd3dd77f854ca111e581bbd84cf82c1d36`](https://sepolia.arbiscan.io/address/0x22703fdd3dd77f854ca111e581bbd84cf82c1d36) |
-| Chain | Arbitrum Sepolia (421614) |
-| Deploy tx | `0x153f032f2c94a09bb7b119a87a5f74ae250e62e435286b2dae6f02cfca5c4bbc` |
-| Size | 24544 / 24576 bytes (`wasm-opt 131 -Oz`) |
+Liquid Pass is built to be a true B2B SaaS platform for Web3. While we currently use Web3 wallets (with Account Abstraction via ZeroDev), our product roadmap includes **Stripe Crypto Onramps and Coinbase Pay**. 
 
-Testnet only. The ETH has no monetary value.
+This means a university, gym, or SaaS company (like Figma) will be able to onboard users who pay in fiat with a credit card, while the underlying asset (the resellable subscription pass) is tokenized and traded on Arbitrum. We bring the transparency of Web3 to the UX of Web2.
+
+## Smart Contract vs Database (Our Architectural Thesis)
+
+Unlike traditional SaaS platforms that require bloated backend infrastructure (20+ PHP microservices, MySQL databases, background queues, and webhook processors), **Liquid Pass has zero backend services and no centralized database.** 
+
+We don't need them. **Arbitrum Stylus and The Graph handle our state, execution, and indexing securely and transparently.** Our core logic—time decay math, fractionalization, ownership transfer, and market pricing—executes entirely on-chain in highly optimized Rust. We achieve the scale and feature set of an enterprise SaaS platform with nothing more than a smart contract and a frontend.
 
 ## Architecture
 

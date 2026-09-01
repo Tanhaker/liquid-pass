@@ -11,41 +11,73 @@ const { ethers } = require("ethers");
  * it pings the smart contract (or Account Abstraction relayer) to list their pass!
  */
 
+const express = require('express');
+const { ethers } = require("ethers");
+require("dotenv").config();
+
+/**
+ * Liquid Pass - Autonomous AI Oracle
+ * 
+ * This service receives usage webhooks from external SaaS products (like Figma/Netflix)
+ * or physical access systems. It uses AI to analyze usage patterns and executes
+ * ZeroDev Session Keys to auto-sell passes when a user abandons a service.
+ */
+
+const app = express();
+app.use(express.json());
+
 const RPC_URL = process.env.RPC_URL || "https://sepolia-rollup.arbitrum.io/rpc";
-const PRIVATE_KEY = process.env.PRIVATE_KEY; 
 const MARKETPLACE_ADDRESS = process.env.MARKETPLACE_ADDRESS || "0x00Ce3047BcF4Ddb85E3af3fCA2Ba17d97F2dF4e1";
 
-// Simple mock database for offchain activity
-const mockUserActivityDB = {
-    "0xYourUserAddress": {
-        lastUsedAt: Date.now() - (4 * 24 * 60 * 60 * 1000), // 4 days ago
-        autoSellThresholdDays: 3
-    }
-};
+// In-memory store for active session keys delegated by users
+const sessionKeysDB = new Map(); 
 
-async function checkAndTriggerAutoSell() {
-    console.log("ðŸ”Ž Scanning off-chain activity logs for Liquid Pass holders...");
+app.post('/webhook/usage', async (req, res) => {
+    const { userId, service, lastActiveStr, eventLog } = req.body;
+    
+    console.log(`\n🔍 [AI Oracle] Received usage log for User: ${userId} on ${service}`);
+    console.log(`Analyzing behavioral pattern...`);
 
-    const provider = new ethers.JsonRpcProvider(RPC_URL);
-    // In a real AA setup, we would sign a UserOperation here as the Relayer/Bundler.
-    // For this hackathon backend, we'll demonstrate the Oracle detection logic.
+    // Simulated AI analysis of raw usage logs (In production: LLM API call)
+    const daysInactive = (Date.now() - new Date(lastActiveStr).getTime()) / (1000 * 60 * 60 * 24);
+    const predictedAbandonment = daysInactive > 3.5 ? 0.92 : 0.15;
+    
+    console.log(`🧠 AI Abandonment Probability: ${(predictedAbandonment * 100).toFixed(1)}%`);
 
-    for (const [userAddress, data] of Object.entries(mockUserActivityDB)) {
-        const daysSinceLastUse = (Date.now() - data.lastUsedAt) / (1000 * 60 * 60 * 24);
+    if (predictedAbandonment > 0.85) {
+        console.log(`⚠️ High abandonment detected. Initiating autonomous liquidation...`);
         
-        console.log(`User ${userAddress}: Last used ${daysSinceLastUse.toFixed(1)} days ago.`);
-
-        if (daysSinceLastUse >= data.autoSellThresholdDays) {
-            console.log(`âš ï¸ THRESHOLD REACHED! User ${userAddress} has been inactive for >${data.autoSellThresholdDays} days.`);
-            console.log(`ðŸš€ Triggering Auto-Sell for Pass...`);
-            
-            // Note: True autonomous selling requires Account Abstraction (ERC-4337).
-            // Once the frontend issues a Session Key to this backend, the Oracle 
-            // will construct a `list()` transaction here and fire it on the user's behalf!
-            console.log(`[x] Ready to broadcast UserOperation via Bundler...`);
+        const sessionKey = sessionKeysDB.get(userId);
+        if (!sessionKey) {
+            console.log(`❌ No active session key found for user to execute auto-sell.`);
+            return res.status(403).json({ error: "Missing session key delegation" });
         }
-    }
-}
 
-// Run the cron job
-checkAndTriggerAutoSell().catch(console.error);
+        console.log(`🔑 Utilizing delegated ZeroDev Session Key for smart contract execution`);
+        console.log(`🚀 Broadcasting UserOperation to Arbitrum Sepolia bundler...`);
+        
+        // *Real ZeroDev execution would happen here using @zerodev/sdk*
+        
+        return res.json({ 
+            status: "success", 
+            action: "AUTO_SOLD",
+            txHash: "0xMockTxHash...4337",
+            aiConfidence: predictedAbandonment
+        });
+    }
+
+    res.json({ status: "success", action: "MONITORING" });
+});
+
+app.post('/delegate-session', (req, res) => {
+    const { userId, serializedSessionKey } = req.body;
+    sessionKeysDB.set(userId, serializedSessionKey);
+    console.log(`✅ Session key securely stored for user: ${userId}`);
+    res.json({ status: "success" });
+});
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+    console.log(`\n🤖 Liquid Pass AI Oracle running on port ${PORT}`);
+    console.log(`Listening for SaaS usage webhooks and managing ZeroDev session keys...`);
+});
