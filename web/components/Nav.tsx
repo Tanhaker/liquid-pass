@@ -6,10 +6,18 @@ import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { arbitrumSepolia } from "wagmi/chains";
 import { shortAddress } from "@/lib/contract";
 
+/**
+ * Floating pill navigation.
+ *
+ * Detached from the top edge rather than a full-bleed bar: it reads as a
+ * control surface over the page instead of a website header, which is what
+ * makes an app feel like a product rather than a document.
+ */
+
 const LINKS = [
-  { href: "/market", label: "Market" },
-  { href: "/dashboard", label: "My Passes" },
-  { href: "/issuer", label: "Issuer" },
+  { href: "/market", label: "Market", icon: GridIcon },
+  { href: "/dashboard", label: "My Passes", icon: RingIcon },
+  { href: "/issuer", label: "Issuer", icon: KeyIcon },
 ];
 
 export function Nav() {
@@ -21,51 +29,57 @@ export function Nav() {
   const wrongNetwork = isConnected && chainId !== arbitrumSepolia.id;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line bg-ink/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-6">
-        <Link href="/" className="group flex items-center gap-2.5">
-          {/* The mark is the product: a ring with a piece spent. */}
-          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
-            <circle cx="9" cy="9" r="7" fill="none" stroke="var(--color-line-bright)" strokeWidth="2.5" />
-            <circle
-              cx="9" cy="9" r="7" fill="none"
-              stroke="var(--color-life-full)" strokeWidth="2.5" strokeLinecap="round"
-              strokeDasharray={2 * Math.PI * 7}
-              strokeDashoffset={2 * Math.PI * 7 * 0.3}
-              transform="rotate(-90 9 9)"
-            />
-          </svg>
-          <span className="text-[15px] font-semibold tracking-tight">Liquid Pass</span>
+    <div className="sticky top-0 z-50 px-4 pt-4">
+      <header className="mx-auto flex max-w-6xl items-center gap-2 rounded-2xl border border-line bg-surface/70 p-2 pl-4 backdrop-blur-2xl">
+        <Link href="/" className="flex items-center gap-2.5 pr-2">
+          <Mark />
+          <span className="text-[14px] font-semibold tracking-tight">
+            Liquid<span className="text-muted">Pass</span>
+          </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 sm:flex">
-          {LINKS.map((l) => {
-            const active = pathname === l.href || pathname.startsWith(l.href + "/");
+        <span className="hidden h-5 w-px bg-line sm:block" />
+
+        <nav className="hidden items-center gap-0.5 sm:flex">
+          {LINKS.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(href + "/");
             return (
               <Link
-                key={l.href}
-                href={l.href}
-                className={`rounded-lg px-3 py-1.5 text-[13px] transition-colors ${
-                  active ? "bg-raised text-text" : "text-muted hover:text-text"
+                key={href}
+                href={href}
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[13px] transition-all ${
+                  active
+                    ? "bg-raised text-text shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
+                    : "text-muted hover:bg-raised/50 hover:text-text"
                 }`}
               >
-                {l.label}
+                <Icon />
+                {label}
               </Link>
             );
           })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2">
+          <span className="hidden items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-[11px] text-muted md:flex">
+            <span className="relative flex size-1.5">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-life-full opacity-60" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-life-full" />
+            </span>
+            Sepolia
+          </span>
+
           {wrongNetwork && (
-            <span className="rounded-md bg-life-crit/15 px-2 py-1 text-[11px] text-life-crit">
+            <span className="rounded-lg bg-life-crit/15 px-2.5 py-1.5 text-[11px] text-life-crit">
               Wrong network
             </span>
           )}
+
           {isConnected ? (
             <button
               onClick={() => disconnect()}
-              className="tnum rounded-lg border border-line bg-raised px-3 py-1.5 text-[12px] text-muted transition-colors hover:border-line-bright hover:text-text"
               title="Disconnect"
+              className="tnum rounded-xl border border-line bg-raised px-3 py-1.5 text-[12px] text-muted transition-colors hover:border-line-bright hover:text-text"
             >
               {address ? shortAddress(address) : "connected"}
             </button>
@@ -73,13 +87,64 @@ export function Nav() {
             <button
               onClick={() => connect({ connector: connectors[0] })}
               disabled={isPending || !connectors.length}
-              className="rounded-lg bg-text px-3.5 py-1.5 text-[12px] font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="rounded-xl bg-text px-3.5 py-1.5 text-[12px] font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              {isPending ? "Connecting…" : "Connect wallet"}
+              {isPending ? "Connecting…" : "Connect"}
             </button>
           )}
         </div>
-      </div>
-    </header>
+      </header>
+    </div>
+  );
+}
+
+/** The mark is the product: a ring with a portion already spent. */
+function Mark() {
+  const c = 2 * Math.PI * 7;
+  return (
+    <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden>
+      <circle cx="9" cy="9" r="7" fill="none" stroke="var(--color-line-bright)" strokeWidth="2.5" />
+      <circle
+        cx="9"
+        cy="9"
+        r="7"
+        fill="none"
+        stroke="var(--color-life-full)"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeDasharray={c}
+        strokeDashoffset={c * 0.32}
+        transform="rotate(-90 9 9)"
+      />
+    </svg>
+  );
+}
+
+function GridIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <rect x="1" y="1" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="8" y="1" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="1" y="8" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="8" y="8" width="5" height="5" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  );
+}
+
+function RingIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <circle cx="7" cy="7" r="5.4" stroke="currentColor" strokeWidth="1.3" opacity="0.35" />
+      <path d="M7 1.6a5.4 5.4 0 0 1 5.4 5.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function KeyIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <circle cx="4.6" cy="9.4" r="2.6" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M6.6 7.4 12 2M9.6 4.4l1.6 1.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
   );
 }

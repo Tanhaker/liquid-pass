@@ -179,3 +179,39 @@ export async function fetchActivity(
 
   return decoded.reverse().slice(0, limit);
 }
+
+export type MarketStats = {
+  plans: number;
+  issued: number;
+  active: number;
+  listed: number;
+  /** Wei taken across primary sales. Resales are not included -- see below. */
+  primaryVolume: bigint;
+};
+
+/**
+ * Headline numbers for the landing page.
+ *
+ * `primaryVolume` sums `paidOf`, which is the original sale price of every
+ * pass. It deliberately excludes resale volume: the contract stores the
+ * original price per token, not a running total, so resale turnover cannot be
+ * read back from a view call. Labelling this "total volume" would inflate it
+ * with a number nothing on chain supports.
+ */
+export function marketStats(plans: Plan[], passes: Pass[]): MarketStats {
+  const now = Math.floor(Date.now() / 1000);
+  let issued = 0;
+  let active = 0;
+  let listed = 0;
+  let primaryVolume = 0n;
+  for (const p of passes) {
+    if (p.paid === 0n) continue; // minted directly, never sold
+    issued++;
+    if (Number(p.expiry) > now) {
+      active++;
+      if (p.listed > 0n) listed++;
+    }
+    primaryVolume += p.paid;
+  }
+  return { plans: plans.length, issued, active, listed, primaryVolume };
+}

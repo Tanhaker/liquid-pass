@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { DecayRing, lifeColor } from "@/components/DecayRing";
+import { Constellation } from "@/components/Constellation";
+import { LiveStats } from "@/components/LiveStats";
 import { EXPLORER, LIQUID_PASS_ADDRESS, shortAddress } from "@/lib/contract";
 
 /**
@@ -32,6 +34,9 @@ export default function Home() {
   return (
     <>
       <section className="aurora relative overflow-hidden border-b border-line">
+        <Constellation className="opacity-70" />
+        {/* Fades the particle field out under the copy so text stays legible. */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-ink/50 to-ink" />
         {/*
           The hero renders at full opacity with no JS gate.
 
@@ -43,14 +48,14 @@ export default function Home() {
           are already painted. Framer Motion still drives the decay cards below,
           where the animation IS the content rather than a reveal.
         */}
-        <div className="mx-auto max-w-6xl px-6 pb-20 pt-24">
+        <div className="relative mx-auto max-w-6xl px-6 pb-16 pt-28">
           <p className="rise mb-5 inline-flex items-center gap-2 rounded-full border border-line bg-raised/60 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-muted">
             <span className="size-1.5 rounded-full bg-life-full" />
             Arbitrum Stylus · Rust
           </p>
 
           <h1
-            className="rise max-w-3xl text-[clamp(2.4rem,6vw,4.2rem)] font-semibold leading-[1.02] tracking-[-0.03em]"
+            className="rise max-w-4xl text-[clamp(2.9rem,8vw,5.8rem)] font-semibold leading-[0.94] tracking-[-0.04em]"
             style={{ animationDelay: "60ms" }}
           >
             Buy time.
@@ -62,7 +67,7 @@ export default function Home() {
           </h1>
 
           <p
-            className="rise mt-6 max-w-xl text-[15px] leading-relaxed text-muted"
+            className="rise mt-7 max-w-xl text-[16px] leading-relaxed text-muted"
             style={{ animationDelay: "130ms" }}
           >
             A subscription is time you paid for. Cancel halfway and the rest just
@@ -87,6 +92,10 @@ export default function Home() {
             >
               My passes
             </Link>
+          </div>
+
+          <div className="rise mt-14" style={{ animationDelay: "260ms" }}>
+            <LiveStats />
           </div>
         </div>
       </section>
