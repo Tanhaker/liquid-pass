@@ -42,11 +42,10 @@ export default function Issuer() {
   });
 
   const load = useCallback(async () => {
-    if (!client) return;
     // No setState before the first await: doing so runs synchronously inside
     // the effect and triggers a cascading render.
     try {
-      const [p, t] = await Promise.all([fetchPlans(client), fetchPasses(client)]);
+      const [p, t] = await Promise.all([fetchPlans(), fetchPasses()]);
       setPlans(p);
       setPasses(t);
       setError(null);
@@ -55,7 +54,7 @@ export default function Issuer() {
     } finally {
       setLoading(false);
     }
-  }, [client]);
+  }, []);
 
   useEffect(() => {
     void load();

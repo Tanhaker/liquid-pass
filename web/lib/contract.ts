@@ -12,7 +12,7 @@ export const LIQUID_PASS_ADDRESS =
   "0xe67078be99dec98b9788a0e6c2054d03b361f84a" as const;
 
 /** Block the contract was deployed in, so getLogs never scans from genesis. */
-export const DEPLOY_BLOCK = 304190000n;
+export const DEPLOY_BLOCK = 304198700n;
 
 export const EXPLORER = "https://sepolia.arbiscan.io";
 

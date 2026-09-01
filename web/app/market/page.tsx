@@ -53,11 +53,10 @@ export default function Market() {
   const [tx, setTx] = useState<{ hash: string; what: string } | null>(null);
 
   const load = useCallback(async () => {
-    if (!client) return;
     // No setState before the first await: doing so runs synchronously inside
     // the effect and triggers a cascading render.
     try {
-      const [p, t] = await Promise.all([fetchPlans(client), fetchPasses(client)]);
+      const [p, t] = await Promise.all([fetchPlans(), fetchPasses()]);
       setPlans(p);
       setPasses(t);
       setError(null);
@@ -68,7 +67,7 @@ export default function Market() {
     } finally {
       setLoading(false);
     }
-  }, [client]);
+  }, []);
 
   useEffect(() => {
     void load();

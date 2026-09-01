@@ -1,4 +1,5 @@
 import type { PublicClient } from "viem";
+import { publicClient } from "./publicClient";
 import {
   DEPLOY_BLOCK,
   LIQUID_PASS_ADDRESS,
@@ -25,7 +26,7 @@ import {
  */
 
 /** Every plan in the catalogue, newest first. */
-export async function fetchPlans(client: PublicClient): Promise<Plan[]> {
+export async function fetchPlans(client: PublicClient = publicClient): Promise<Plan[]> {
   const count = await client.readContract({
     address: LIQUID_PASS_ADDRESS,
     abi: liquidPassAbi,
@@ -70,7 +71,7 @@ export async function fetchPlans(client: PublicClient): Promise<Plan[]> {
 }
 
 /** Every pass ever issued, newest first. */
-export async function fetchPasses(client: PublicClient): Promise<Pass[]> {
+export async function fetchPasses(client: PublicClient = publicClient): Promise<Pass[]> {
   const count = await client.readContract({
     address: LIQUID_PASS_ADDRESS,
     abi: liquidPassAbi,
@@ -128,6 +129,26 @@ export function passesOf(passes: Pass[], owner?: string): Pass[] {
   return passes.filter((p) => p.owner.toLowerCase() === lower);
 }
 
+/**
+ * The subset of contract events the activity feed renders, as viem needs them:
+ * decoded ABI items, not signature strings. Pulled from the full ABI so the
+ * two can never drift apart.
+ */
+const ACTIVITY_EVENT_NAMES = [
+  "PassPurchased",
+  "Listed",
+  "Unlisted",
+  "Bought",
+  "PlanCreated",
+  "Minted",
+] as const;
+
+const ACTIVITY_EVENTS = liquidPassAbi.filter(
+  (item): item is Extract<typeof item, { type: "event" }> =>
+    item.type === "event" &&
+    (ACTIVITY_EVENT_NAMES as readonly string[]).includes(item.name),
+);
+
 export type Activity = {
   kind: "PassPurchased" | "Listed" | "Unlisted" | "Bought" | "PlanCreated" | "Minted";
   tokenId?: bigint;
@@ -145,41 +166,63 @@ export type Activity = {
  * throws and the caller shows a connection warning rather than inventing a
  * plausible-looking feed.
  */
+/** Public RPCs cap getLogs ranges; 9k stays under the common 10k limit. */
+const LOG_WINDOW = 9_000n;
+
 export async function fetchActivity(
-  client: PublicClient,
   limit = 25,
+  client: PublicClient = publicClient,
 ): Promise<Activity[]> {
-  const logs = await client.getLogs({
-    address: LIQUID_PASS_ADDRESS,
-    fromBlock: DEPLOY_BLOCK,
-    toBlock: "latest",
-  });
+  // `getLogs` must be given the event definitions to decode against. Without
+  // them it returns RAW logs -- no `eventName`, no `args` -- and any code that
+  // reads `log.eventName` silently drops every entry. An earlier version did
+  // exactly that and always returned [], which is indistinguishable from "no
+  // activity yet" and so never surfaced.
+  const latest = await client.getBlockNumber();
+
+  // Walked in windows rather than one request. A single span from the deploy
+  // block to head is already past the 10k-block limit most public endpoints
+  // enforce, and the request neither resolves nor rejects promptly when it is
+  // -- it just hangs, which strands the caller on a loading skeleton.
+  const ranges: Array<{ from: bigint; to: bigint }> = [];
+  for (let from = DEPLOY_BLOCK; from <= latest; from += LOG_WINDOW) {
+    const to = from + LOG_WINDOW - 1n;
+    ranges.push({ from, to: to > latest ? latest : to });
+  }
+
+  const batches = await Promise.all(
+    ranges.map((r) =>
+      client
+        .getLogs({
+          address: LIQUID_PASS_ADDRESS,
+          events: ACTIVITY_EVENTS,
+          fromBlock: r.from,
+          toBlock: r.to,
+        })
+        // One bad window must not lose the whole history.
+        .catch(() => []),
+    ),
+  );
 
   const decoded: Activity[] = [];
-  for (const log of logs) {
-    // Topic-matching is done by viem's parseEventLogs upstream; here we accept
-    // whatever decodes and skip what does not, so an unknown event added later
-    // degrades to "not shown" rather than throwing.
-    const ev = log as unknown as {
-      eventName?: string;
-      args?: Record<string, unknown>;
-      blockNumber: bigint;
-      transactionHash: `0x${string}`;
-    };
-    if (!ev.eventName) continue;
-    const a = (ev.args ?? {}) as Record<string, bigint | `0x${string}`>;
+  for (const log of batches.flat()) {
+    const eventName = log.eventName as Activity["kind"] | undefined;
+    if (!eventName) continue;
+    const a = (log.args ?? {}) as Record<string, unknown>;
     decoded.push({
-      kind: ev.eventName as Activity["kind"],
+      kind: eventName,
       tokenId: a.tokenId as bigint | undefined,
       planId: a.planId as bigint | undefined,
+      // Ordered most-specific first so a Bought log reports the buyer.
       who: (a.buyer ?? a.seller ?? a.to ?? a.issuer) as `0x${string}` | undefined,
       price: a.price as bigint | undefined,
-      blockNumber: ev.blockNumber,
-      txHash: ev.transactionHash,
+      blockNumber: log.blockNumber ?? 0n,
+      txHash: log.transactionHash ?? ("0x" as `0x${string}`),
     });
   }
 
-  return decoded.reverse().slice(0, limit);
+  decoded.sort((x, y) => Number(y.blockNumber - x.blockNumber));
+  return decoded.slice(0, limit);
 }
 
 export type MarketStats = {
