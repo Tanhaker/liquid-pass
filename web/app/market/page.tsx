@@ -18,6 +18,7 @@ import {
   type Plan,
 } from "@/lib/contract";
 import { activeListings, fetchPasses, fetchPlans } from "@/lib/data";
+import { Banner, Empty, SkeletonGrid, humanise, useFees } from "@/components/ui";
 
 type Tab = "plans" | "resale";
 
@@ -25,6 +26,7 @@ export default function Market() {
   const client = usePublicClient();
   const { isConnected, chainId } = useAccount();
   const { writeContractAsync } = useWriteContract();
+  const fees = useFees();
 
   const [tab, setTab] = useState<Tab>("plans");
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -60,13 +62,6 @@ export default function Market() {
     [plans],
   );
 
-  /** Fee cap with headroom: Sepolia's base fee drifts between build and send. */
-  const fees = useCallback(async () => {
-    if (!client) return {};
-    const block = await client.getBlock();
-    const base = block.baseFeePerGas ?? 100_000_000n;
-    return { maxFeePerGas: base * 4n + 1_000_000n, maxPriorityFeePerGas: 1_000_000n };
-  }, [client]);
 
   async function buyPlan(plan: Plan) {
     setBusy(`plan-${plan.id}`);
@@ -343,62 +338,4 @@ function ResaleCard({
       </div>
     </div>
   );
-}
-
-function Banner({
-  tone,
-  children,
-}: {
-  tone: "warn" | "error" | "ok";
-  children: React.ReactNode;
-}) {
-  const styles = {
-    warn: "border-life-low/30 bg-life-low/10 text-life-low",
-    error: "border-life-crit/30 bg-life-crit/10 text-life-crit",
-    ok: "border-life-full/30 bg-life-full/10 text-life-full",
-  }[tone];
-  return (
-    <div className={`mt-6 rounded-xl border px-4 py-3 text-[13px] ${styles}`}>
-      {children}
-    </div>
-  );
-}
-
-function Empty({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="mt-10 rounded-2xl border border-dashed border-line px-6 py-20 text-center">
-      <p className="text-[15px] font-medium">{title}</p>
-      <p className="mx-auto mt-2 max-w-sm text-[13px] text-muted">{body}</p>
-    </div>
-  );
-}
-
-function SkeletonGrid() {
-  return (
-    <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="h-64 animate-pulse rounded-2xl border border-line bg-surface"
-        />
-      ))}
-    </div>
-  );
-}
-
-/**
- * Contract reverts reach the user as sentences, not as CALL_EXCEPTION.
- * The raw error still goes to the console for debugging.
- */
-function humanise(e: Error): string {
-  const raw = (e as Error & { shortMessage?: string }).shortMessage ?? e.message;
-  console.error(e);
-  if (/User rejected|denied/i.test(raw)) return "You rejected the transaction.";
-  if (/not listed/i.test(raw)) return "That pass is no longer for sale.";
-  if (/expired/i.test(raw)) return "That pass has expired and can no longer be bought.";
-  if (/plan closed/i.test(raw)) return "The issuer has closed this plan to new sales.";
-  if (/wrong value/i.test(raw)) return "The price changed. Refresh and try again.";
-  if (/already owner/i.test(raw)) return "You already own this pass.";
-  if (/insufficient funds/i.test(raw)) return "Not enough ETH for the price plus gas.";
-  return raw.split("\n")[0];
 }
