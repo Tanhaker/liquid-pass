@@ -40,28 +40,33 @@ export default function Home() {
       {/* Cinematic Hero */}
       <section className="relative min-h-[90vh] flex flex-col items-center justify-center pt-24 pb-12 overflow-hidden">
         <Constellation className="opacity-40" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-ink/20 to-ink pointer-events-none" />
+        
+        {/* Dynamic Glows */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[var(--theme-accent)]/20 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[var(--theme-life-full)]/20 rounded-full blur-[120px] pointer-events-none" />
+        
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--theme-ink)]/50 to-[var(--theme-ink)] pointer-events-none" />
         
         <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
-          <h1 className="hero-element text-[clamp(3.5rem,10vw,8rem)] font-bold tracking-tighter leading-[0.9] text-text">
+          <h1 className="hero-element text-[clamp(3.5rem,10vw,8rem)] font-bold tracking-tighter leading-[0.9] text-text drop-shadow-xl">
             STOP PAYING<br/>
-            <span className="text-muted">FOR UNUSED</span><br/>
-            TIME.
+            <span className="text-muted mix-blend-luminosity">FOR UNUSED</span><br/>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--theme-life-full)] to-[var(--theme-accent)]">TIME.</span>
           </h1>
           
-          <p className="hero-element mt-10 text-[20px] md:text-[24px] font-medium text-muted max-w-2xl mx-auto leading-snug">
+          <p className="hero-element mt-10 text-[20px] md:text-[24px] font-medium text-muted max-w-2xl mx-auto leading-snug drop-shadow-md">
             Buy a subscription.<br/>
             Use what you need.<br/>
-            <span className="text-life-full">Sell what&rsquo;s left.</span>
+            <span className="text-[var(--theme-life-full)] drop-shadow-[0_0_15px_var(--theme-glow)]">Sell what&rsquo;s left.</span>
           </p>
           
           <div className="hero-element mt-12 flex justify-center">
             <Link
               href="/market"
-              className="group relative inline-flex items-center justify-center rounded-full bg-text px-8 py-4 text-[15px] font-semibold text-ink transition-all hover:scale-105"
+              className="group relative inline-flex items-center justify-center rounded-full bg-text px-8 py-4 text-[15px] font-bold text-ink transition-all hover:scale-110 hover:shadow-[0_0_40px_var(--theme-glow)]"
             >
               EXPLORE MARKETPLACE
-              <div className="absolute inset-0 rounded-full bg-text blur-md opacity-20 group-hover:opacity-40 transition-opacity" />
+              <div className="absolute inset-0 rounded-full bg-[var(--theme-life-full)] blur-lg opacity-0 group-hover:opacity-40 transition-opacity" />
             </Link>
           </div>
         </div>

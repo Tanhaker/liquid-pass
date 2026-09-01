@@ -54,37 +54,44 @@ export function LiquidPassCard({
   const C = 2 * Math.PI * R;
 
   return (
-    <div className="[perspective:1400px] mx-auto" style={{ width: "min(100%, 340px)" }}>
+    <div className="mx-auto" style={{ width: "min(100%, 340px)", perspective: "800px" }}>
       <div
         ref={ref}
-        className="liquid-float relative aspect-[1.58/1] w-full rounded-3xl p-[1px] transition-transform duration-500 ease-out will-change-transform z-10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]"
+        className="liquid-float relative aspect-[1.58/1] w-full rounded-3xl p-[1px] transition-transform duration-200 ease-out will-change-transform z-10"
         style={{
           transformStyle: "preserve-3d",
           transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-          background: `linear-gradient(135deg, color-mix(in srgb, ${color} 40%, transparent), var(--color-line) 40%, color-mix(in srgb, ${color} 10%, transparent))`,
+          background: `linear-gradient(135deg, color-mix(in srgb, ${color} 80%, transparent), var(--color-line) 40%, color-mix(in srgb, ${color} 30%, transparent))`,
+          boxShadow: `${-tilt.y * 2}px ${tilt.x * 2 + 20}px 40px -10px color-mix(in srgb, ${color} 30%, transparent), 0 30px 60px -15px rgba(0,0,0,0.5)`,
         }}
       >
         <div 
-          className="relative h-full w-full overflow-hidden rounded-[23px] bg-surface/80 backdrop-blur-2xl"
+          className="relative h-full w-full overflow-hidden rounded-[23px] bg-surface/90 backdrop-blur-3xl"
           style={{ transformStyle: "preserve-3d" }}
         >
-          {/* Subtle noise/texture layer could go here */}
+          {/* Dynamic Glare */}
+          <div 
+            className="absolute inset-0 pointer-events-none mix-blend-overlay transition-transform duration-200"
+            style={{
+              background: `radial-gradient(circle at ${50 + tilt.y * 3}% ${50 - tilt.x * 3}%, rgba(255,255,255,0.2) 0%, transparent 50%)`,
+            }}
+          />
           
           <div 
             className="relative flex h-full flex-col justify-between p-6"
-            style={{ transform: "translateZ(20px)" }}
+            style={{ transform: "translateZ(40px)" }}
           >
             <div className="flex items-start justify-between">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-faint font-medium">
+              <div style={{ transform: "translateZ(20px)" }}>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-faint font-bold drop-shadow-md">
                   Liquid Pass
                 </p>
-                <h3 className="mt-2 text-[20px] font-semibold leading-none tracking-tight text-text">
+                <h3 className="mt-2 text-[20px] font-bold leading-none tracking-tight text-text drop-shadow-md">
                   {name}
                 </h3>
               </div>
 
-              <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden>
+              <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden style={{ transform: "translateZ(30px)" }}>
                 <circle cx="28" cy="28" r={R} fill="none" stroke="var(--color-line)" strokeWidth="2.5" />
                 <circle
                   cx="28"
@@ -97,15 +104,15 @@ export function LiquidPassCard({
                   strokeDasharray={C}
                   strokeDashoffset={C * (1 - f)}
                   transform="rotate(-90 28 28)"
-                  style={{ transition: "stroke-dashoffset 900ms cubic-bezier(.22,1,.36,1), stroke 600ms linear" }}
+                  style={{ transition: "stroke-dashoffset 900ms cubic-bezier(.22,1,.36,1), stroke 600ms linear", filter: `drop-shadow(0 0 8px ${color})` }}
                 />
               </svg>
             </div>
 
             <div>
-              <div className="flex items-end justify-between">
+              <div className="flex items-end justify-between" style={{ transform: "translateZ(30px)" }}>
                 <div>
-                  <p className="tnum text-[32px] font-medium leading-none" style={{ color }}>
+                  <p className="tnum text-[32px] font-bold leading-none drop-shadow-lg" style={{ color, textShadow: `0 0 15px color-mix(in srgb, ${color} 50%, transparent)` }}>
                     {daysLeft}
                     <span className="ml-1.5 text-[12px] font-medium text-muted">
                       {daysLeft === 1 ? "day" : "days"} left
@@ -113,7 +120,7 @@ export function LiquidPassCard({
                   </p>
                 </div>
                 {price && (
-                  <p className="tnum text-right text-[14px] font-medium text-muted">
+                  <p className="tnum text-right text-[14px] font-bold text-text drop-shadow-md">
                     {price}
                     <span className="ml-1 text-[11px] text-faint">ETH</span>
                   </p>
@@ -121,26 +128,26 @@ export function LiquidPassCard({
               </div>
 
               {/* Progress Bar */}
-              <div className="mt-4 h-[3px] w-full overflow-hidden rounded-full bg-line-bright/40">
+              <div className="mt-4 h-[4px] w-full overflow-hidden rounded-full bg-line-bright/60" style={{ transform: "translateZ(20px)" }}>
                 <div
                   className="h-full rounded-full"
                   style={{
                     width: `${f * 100}%`,
                     background: color,
                     transition: "width 900ms cubic-bezier(.22,1,.36,1), background 600ms linear",
-                    boxShadow: `0 0 10px ${color}`,
+                    boxShadow: `0 0 15px ${color}, 0 0 5px white`,
                   }}
                 />
               </div>
 
-              <div className="mt-4 flex justify-between items-center">
-                <p className="tnum text-[11px] font-medium uppercase tracking-widest text-faint">
+              <div className="mt-4 flex justify-between items-center" style={{ transform: "translateZ(10px)" }}>
+                <p className="tnum text-[11px] font-bold uppercase tracking-widest text-faint drop-shadow-sm">
                   {tokenId}
                 </p>
                 <div className="flex space-x-1">
-                  <span className="size-1.5 rounded-full bg-line-bright" />
-                  <span className="size-1.5 rounded-full bg-line-bright" />
-                  <span className="size-1.5 rounded-full bg-line-bright" />
+                  <span className="size-1.5 rounded-full bg-text/50" />
+                  <span className="size-1.5 rounded-full bg-text/50" />
+                  <span className="size-1.5 rounded-full bg-text/50" />
                 </div>
               </div>
             </div>

@@ -1,37 +1,82 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #050605;
-  --color-surface: #0D100F;
-  --color-raised: #1A1F1D;
-  --color-line: #262E2A;
-  --color-line-bright: #39453F;
+  --color-ink: var(--theme-ink);
+  --color-surface: var(--theme-surface);
+  --color-raised: var(--theme-raised);
+  --color-line: var(--theme-line);
+  --color-line-bright: var(--theme-line-bright);
 
-  --color-text: #F4F7F4;
-  --color-muted: #A6ADA7;
-  --color-faint: #636864;
+  --color-text: var(--theme-text);
+  --color-muted: var(--theme-muted);
+  --color-faint: var(--theme-faint);
 
-  /* Premium Liquid Pass Palette */
-  --color-life-full: #B7FF3C;
-  --color-life-mid: #B7FF3C;
-  --color-life-low: #FFB547;
-  --color-life-crit: #FF6B5F;
+  /* Premium Liquid Pass Palette - Increased Colors */
+  --color-life-full: var(--theme-life-full);
+  --color-life-mid: var(--theme-life-mid);
+  --color-life-low: var(--theme-life-low);
+  --color-life-crit: var(--theme-life-crit);
+  --color-accent: var(--theme-accent);
+  --color-glow: var(--theme-glow);
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
+:root {
+  /* LIGHT MODE */
+  --theme-ink: #F9FAFB;
+  --theme-surface: #FFFFFF;
+  --theme-raised: #F3F4F6;
+  --theme-line: #E5E7EB;
+  --theme-line-bright: #D1D5DB;
+
+  --theme-text: #111827;
+  --theme-muted: #4B5563;
+  --theme-faint: #9CA3AF;
+
+  --theme-life-full: #10B981; /* Emerald 500 */
+  --theme-life-mid: #3B82F6; /* Blue 500 */
+  --theme-life-low: #F59E0B; /* Amber 500 */
+  --theme-life-crit: #EF4444; /* Red 500 */
+  
+  --theme-accent: #6366F1; /* Indigo 500 */
+  --theme-glow: rgba(99, 102, 241, 0.4);
+}
+
+.dark {
+  /* DARK MODE */
+  --theme-ink: #050605;
+  --theme-surface: #0D100F;
+  --theme-raised: #1A1F1D;
+  --theme-line: #262E2A;
+  --theme-line-bright: #39453F;
+
+  --theme-text: #F4F7F4;
+  --theme-muted: #A6ADA7;
+  --theme-faint: #636864;
+
+  --theme-life-full: #00FF88; /* Neon Aqua/Green */
+  --theme-life-mid: #00D4FF; /* Neon Cyan */
+  --theme-life-low: #FFB547; /* Neon Orange */
+  --theme-life-crit: #FF3366; /* Neon Pink/Red */
+  
+  --theme-accent: #B7FF3C; /* Signature Green */
+  --theme-glow: rgba(183, 255, 60, 0.3);
+}
+
 html {
-  background: var(--color-ink);
-  color-scheme: dark;
+  background: var(--theme-ink);
+  color-scheme: light dark;
 }
 
 body {
   margin: 0;
-  background: var(--color-ink);
-  color: var(--color-text);
+  background: var(--theme-ink);
+  color: var(--theme-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .tnum {
@@ -45,11 +90,11 @@ body {
 
 @keyframes rise {
   from {
-    transform: translateY(14px);
+    transform: translateY(14px) scale(0.98);
     opacity: 0;
   }
   to {
-    transform: none;
+    transform: translateY(0) scale(1);
     opacity: 1;
   }
 }
@@ -61,15 +106,39 @@ body {
 
 @keyframes liquid-float {
   0%, 100% {
-    transform: translateY(0);
+    transform: translateY(0) rotateX(2deg) rotateY(-2deg);
+  }
+  25% {
+    transform: translateY(-5px) rotateX(-2deg) rotateY(1deg);
   }
   50% {
-    transform: translateY(-8px);
+    transform: translateY(-10px) rotateX(1deg) rotateY(3deg);
+  }
+  75% {
+    transform: translateY(-5px) rotateX(-1deg) rotateY(-1deg);
   }
 }
 
 .liquid-float {
-  animation: liquid-float 6s ease-in-out infinite;
+  animation: liquid-float 8s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+/* Enhancing the 3D Perspective */
+.perspective-container {
+  perspective: 2000px;
+}
+
+.card-3d-wrapper {
+  transform-style: preserve-3d;
+}
+
+.card-3d-content {
+  transform: translateZ(40px);
+}
+
+.card-3d-bg {
+  transform: translateZ(-20px) scale(1.05);
 }
 
 @media (prefers-reduced-motion: reduce) {
