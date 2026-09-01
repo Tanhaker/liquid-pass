@@ -1,21 +1,28 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import { Nav } from "@/components/Nav";
 
 export const metadata: Metadata = {
-  title: "PassKey Wallet",
-  description: "Seedless smart account on Arbitrum Stylus, secp256r1 on-chain",
+  title: "Liquid Pass",
+  description:
+    "Buy time. Use it. Sell what's left. Resellable subscription passes on Arbitrum Stylus.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <Providers>{children}</Providers>
+      <body className="min-h-screen bg-ink text-text antialiased">
+        <Providers>
+          <Nav />
+          <main>{children}</main>
+          <footer className="mt-24 border-t border-line px-6 py-8 text-xs text-faint">
+            <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+              <span>Liquid Pass — Arbitrum Sepolia. Testnet only.</span>
+              <span className="tnum">Rust + Stylus · secp256r1-free by design</span>
+            </div>
+          </footer>
+        </Providers>
       </body>
     </html>
   );

@@ -1,40 +1,103 @@
-* { box-sizing: border-box; }
+@import "tailwindcss";
+
+/**
+ * Liquid Pass.
+ *
+ * The product is about time draining away, so the palette is built around one
+ * idea: a pass starts cool and confident and grows warm and urgent as it
+ * expires. Those four stops are the only accent colours in the system, which
+ * is what stops the UI reading as generic "crypto dashboard" -- every colour
+ * on screen means something about remaining time.
+ */
+@theme {
+  --color-ink: #08080b;
+  --color-surface: #101016;
+  --color-raised: #16161e;
+  --color-line: #23232e;
+  --color-line-bright: #32323f;
+
+  --color-text: #f2f2f5;
+  --color-muted: #9a9aa8;
+  --color-faint: #6a6a78;
+
+  /* Life remaining, from full to nearly gone. */
+  --color-life-full: #5eead4;
+  --color-life-mid: #a78bfa;
+  --color-life-low: #fbbf24;
+  --color-life-crit: #fb7185;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+html {
+  background: var(--color-ink);
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
-  padding: 2rem 1.5rem;
-  font: 14px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  background: #0e0e11;
-  color: #e6e6e9;
+  background: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
-main { max-width: 760px; margin: 0 auto; }
-h1 { font-size: 1.15rem; margin: 0 0 .25rem; }
-h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .08em;
-     color: #8a8a95; margin: 2rem 0 .6rem; font-weight: 600; }
-.sub { color: #8a8a95; margin: 0 0 1.5rem; }
-button {
-  font: inherit; background: #2b2b33; color: #e6e6e9;
-  border: 1px solid #3d3d47; border-radius: 6px;
-  padding: .5rem .9rem; cursor: pointer;
+
+/* Numbers that change (countdowns, prices) must not reflow as digits tick. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
 }
-button:hover:not(:disabled) { background: #363640; }
-button:disabled { opacity: .4; cursor: not-allowed; }
-button.primary { background: #2f6f4f; border-color: #3d8a63; }
-button.primary:hover:not(:disabled) { background: #38855e; }
-input {
-  font: inherit; background: #17171c; color: #e6e6e9;
-  border: 1px solid #3d3d47; border-radius: 6px;
-  padding: .45rem .6rem; width: 100%;
+
+/*
+ * A single soft light source behind the hero. Kept in CSS rather than a canvas
+ * so it costs nothing and cannot fail the way a WebGL context can.
+ */
+.aurora {
+  background:
+    radial-gradient(60% 50% at 20% 0%, color-mix(in oklab, var(--color-life-full) 12%, transparent), transparent 70%),
+    radial-gradient(50% 45% at 85% 15%, color-mix(in oklab, var(--color-life-mid) 14%, transparent), transparent 70%);
 }
-label { display: block; color: #8a8a95; margin: .6rem 0 .2rem; font-size: .8rem; }
-pre {
-  background: #17171c; border: 1px solid #26262e; border-radius: 6px;
-  padding: .7rem .8rem; overflow-x: auto; margin: .4rem 0; font-size: 12px;
+
+/* Hairline that reads as engraved rather than drawn. */
+.hairline {
+  box-shadow: inset 0 1px 0 0 color-mix(in oklab, white 6%, transparent);
 }
-.row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
-.ok { color: #6cc48f; }
-.bad { color: #e5766c; }
-.warn { color: #d8b061; }
-.muted { color: #8a8a95; }
-a { color: #7fb2e5; }
-.card { border: 1px solid #26262e; border-radius: 8px; padding: 1rem; margin-bottom: .8rem; }
-.log { max-height: 260px; overflow-y: auto; }
+
+/**
+ * Entrance motion that cannot hide content.
+ *
+ * Deliberately NOT `animation-fill-mode: both` and deliberately not driven by
+ * requestAnimationFrame. The element's resting state is fully visible; the
+ * keyframes only move it there faster. If the animation is throttled, skipped,
+ * or JS never hydrates, the text is still on screen at full opacity -- which is
+ * the opposite of what a JS `initial={{ opacity: 0 }}` gives you.
+ */
+@keyframes rise {
+  from {
+    transform: translateY(14px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/*
+ * Opacity is deliberately absent from the keyframes. A displaced element is
+ * still readable; a transparent one is not. This animation therefore has no
+ * state in which the content is invisible, no matter how badly it is throttled
+ * or whether it runs at all.
+ */
+.rise {
+  animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

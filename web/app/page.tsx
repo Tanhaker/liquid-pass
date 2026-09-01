@@ -1,360 +1,206 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useAccount, useConnect, useDisconnect, usePublicClient, useWriteContract } from "wagmi";
-import { arbitrumSepolia } from "wagmi/chains";
-import { PASSKEY_WALLET_ADDRESS, REQUIRED_ORIGIN, passKeyWalletAbi } from "@/lib/abi";
-import type { Bytes } from "@/lib/passkey";
-import {
-  bytesToHex,
-  createPasskey,
-  hexToBytes,
-  signChallenge,
-  toHex32,
-} from "@/lib/passkey";
-
-const STORAGE_KEY = "passkey-wallet-credential-id";
-const EXPLORER = "https://sepolia.arbiscan.io";
-
-type LogLine = { text: string; kind?: "ok" | "bad" | "warn" };
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { DecayRing, lifeColor } from "@/components/DecayRing";
+import { EXPLORER, LIQUID_PASS_ADDRESS, shortAddress } from "@/lib/contract";
 
 /**
- * Explicit fee cap with headroom.
+ * The landing page has one job: make the idea obvious in ten seconds.
  *
- * Arbitrum Sepolia's base fee moves between the moment the wallet builds a
- * transaction and the moment the sequencer receives it. MetaMask's default cap
- * sits too close to the current base fee, so the node rejects the submission
- * with "max fee per gas less than block base fee" -- which viem surfaces as
- * "the contract function reverted", pointing at the contract rather than the
- * fee. Overpaying the cap is free: you are charged the actual base fee plus
- * tip, and the difference is never taken.
+ * It does that by showing the same pass at four points in its life, side by
+ * side, so "the thing you own is draining" is visible before any text is read.
  */
-async function feeOverrides(client: NonNullable<ReturnType<typeof usePublicClient>>) {
-  const block = await client.getBlock();
-  const base = block.baseFeePerGas ?? 100_000_000n;
-  const tip = 1_000_000n;
-  return { maxFeePerGas: base * 4n + tip, maxPriorityFeePerGas: tip };
-}
 
-export default function Page() {
-  const { address, isConnected, chainId } = useAccount();
-  const { connect, connectors } = useConnect();
-  const { disconnect } = useDisconnect();
-  const publicClient = usePublicClient();
-  const { writeContractAsync } = useWriteContract();
+const STAGES = [
+  { days: 30, total: 30, price: "0.0020" },
+  { days: 18, total: 30, price: "0.0012" },
+  { days: 7, total: 30, price: "0.0005" },
+  { days: 2, total: 30, price: "0.0001" },
+];
 
-  const [credentialId, setCredentialId] = useState<Bytes | null>(null);
-  const [log, setLog] = useState<LogLine[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
-  const [onChain, setOnChain] = useState<{ nonce: bigint; x: bigint; y: bigint } | null>(null);
-  const [target, setTarget] = useState("");
-
-  const say = useCallback((text: string, kind?: LogLine["kind"]) => {
-    setLog((prev) => [...prev, { text, kind }]);
+export default function Home() {
+  // Cycles the highlighted stage so the decay reads as motion, not a static
+  // row of four cards. Paused for reduced-motion users via the CSS guard.
+  const [active, setActive] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setActive((a) => (a + 1) % STAGES.length), 2200);
+    return () => clearInterval(id);
   }, []);
-
-  // Restore the credential id across reloads; without it we cannot re-sign.
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) setCredentialId(hexToBytes(stored));
-  }, []);
-
-  useEffect(() => {
-    if (address && !target) setTarget(address);
-  }, [address, target]);
-
-  const refresh = useCallback(async () => {
-    if (!publicClient) return;
-    try {
-      const [nonce, pubkey] = await Promise.all([
-        publicClient.readContract({
-          address: PASSKEY_WALLET_ADDRESS,
-          abi: passKeyWalletAbi,
-          functionName: "nonce",
-        }),
-        publicClient.readContract({
-          address: PASSKEY_WALLET_ADDRESS,
-          abi: passKeyWalletAbi,
-          functionName: "pubkey",
-        }),
-      ]);
-      setOnChain({ nonce, x: pubkey[0], y: pubkey[1] });
-    } catch (e) {
-      say(`read failed: ${(e as Error).message}`, "bad");
-    }
-  }, [publicClient, say]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  /**
-   * The fastest possible check that the SHA-256 precompile works: getChallenge
-   * is a view that calls 0x02 internally, so a free eth_call proves the
-   * precompile path before any passkey or gas is involved.
-   */
-  const probePrecompile = async () => {
-    if (!publicClient) return;
-    setBusy(true);
-    try {
-      say("eth_call getChallenge(0x0, 0, 0x) -- exercises the 0x02 precompile...");
-      const digest = await publicClient.readContract({
-        address: PASSKEY_WALLET_ADDRESS,
-        abi: passKeyWalletAbi,
-        functionName: "getChallenge",
-        args: ["0x0000000000000000000000000000000000000000", 0n, "0x"],
-      });
-      say(`digest = ${digest}`, "ok");
-      say("SHA-256 precompile works: the contract hashed and returned.", "ok");
-    } catch (e) {
-      say(`precompile probe FAILED: ${(e as Error).message}`, "bad");
-      say("execute() cannot succeed until this does.", "bad");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onCreate = async () => {
-    setBusy(true);
-    try {
-      say("navigator.credentials.create, ES256 (-7) only...");
-      const { credentialId: id, x, y } = await createPasskey();
-      setCredentialId(id);
-      localStorage.setItem(STORAGE_KEY, bytesToHex(id).slice(2));
-      say(`passkey created, credential id ${bytesToHex(id).slice(0, 18)}...`, "ok");
-      say(`x = ${toHex32(x)}`);
-      say(`y = ${toHex32(y)}`);
-      // localStorage, not sessionStorage: a reload between "create" and
-      // "register" would otherwise lose the pubkey and force a new passkey.
-      localStorage.setItem("pk-x", x.toString());
-      localStorage.setItem("pk-y", y.toString());
-    } catch (e) {
-      say(`create failed: ${(e as Error).message}`, "bad");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onRegister = async () => {
-    const xs = localStorage.getItem("pk-x");
-    const ys = localStorage.getItem("pk-y");
-    if (!xs || !ys) {
-      say("create a passkey first", "bad");
-      return;
-    }
-    setBusy(true);
-    try {
-      say("register(x, y)...");
-      const fees = await feeOverrides(publicClient!);
-      say(`maxFeePerGas ${fees.maxFeePerGas} wei`);
-      const hash = await writeContractAsync({
-        address: PASSKEY_WALLET_ADDRESS,
-        abi: passKeyWalletAbi,
-        functionName: "register",
-        chainId: arbitrumSepolia.id,
-        args: [BigInt(xs), BigInt(ys)],
-        ...fees,
-      });
-      say(`register tx ${hash}`, "ok");
-      await publicClient?.waitForTransactionReceipt({ hash });
-      say("registered.", "ok");
-      await refresh();
-    } catch (e) {
-      say(`register failed: ${(e as Error).message}`, "bad");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onSend = async () => {
-    if (!credentialId) {
-      say("no passkey on this device yet", "bad");
-      return;
-    }
-    if (!publicClient) return;
-    setBusy(true);
-    setTxHash(null);
-    try {
-      const to = (target || address) as `0x${string}`;
-      const value = 0n;
-      const data = "0x" as const;
-
-      // 1. Ask the contract what the passkey must sign. The preimage binds the
-      //    contract address and the current nonce (rule 6), so this has to be
-      //    read fresh, not constructed client-side.
-      say(`getChallenge(${to.slice(0, 10)}..., 0, 0x)...`);
-      const challenge = await publicClient.readContract({
-        address: PASSKEY_WALLET_ADDRESS,
-        abi: passKeyWalletAbi,
-        functionName: "getChallenge",
-        args: [to, value, data],
-      });
-      say(`challenge = ${challenge}`, "ok");
-
-      // 2. Sign it with the passkey.
-      say("navigator.credentials.get -- touch your authenticator...");
-      const assertion = await signChallenge(hexToBytes(challenge), credentialId);
-      say(
-        assertion.wasHighS
-          ? "authenticator returned HIGH-s; normalised to n - s"
-          : "authenticator returned low-s already",
-        assertion.wasHighS ? "warn" : "ok",
-      );
-      say(`r = ${toHex32(assertion.r)}`);
-      say(`s = ${toHex32(assertion.s)} (submitted)`);
-
-      // 3. Relay it. The connected wallet pays gas; the passkey authorises.
-      say("execute(...)...");
-      const fees = await feeOverrides(publicClient);
-      const hash = await writeContractAsync({
-        address: PASSKEY_WALLET_ADDRESS,
-        abi: passKeyWalletAbi,
-        functionName: "execute",
-        chainId: arbitrumSepolia.id,
-        ...fees,
-        args: [
-          to,
-          value,
-          data,
-          bytesToHex(assertion.authenticatorData),
-          bytesToHex(assertion.clientDataJSON),
-          toHex32(assertion.r),
-          toHex32(assertion.s),
-        ],
-      });
-      setTxHash(hash);
-      say(`execute tx ${hash}`, "ok");
-
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      if (receipt.status === "success") {
-        say("EXECUTE SUCCEEDED -- P-256 verified on chain.", "ok");
-      } else {
-        say("execute reverted", "bad");
-      }
-      await refresh();
-    } catch (e) {
-      say(`execute failed: ${(e as Error).message}`, "bad");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const wrongOrigin =
-    typeof window !== "undefined" && window.location.origin !== REQUIRED_ORIGIN;
-  const wrongChain = isConnected && chainId !== arbitrumSepolia.id;
-  const registered = onChain !== null && !(onChain.x === 0n && onChain.y === 0n);
 
   return (
-    <main>
-      <h1>PassKey Wallet</h1>
-      <p className="sub">
-        secp256r1 verified on-chain by an Arbitrum Stylus contract.{" "}
-        <a href={`${EXPLORER}/address/${PASSKEY_WALLET_ADDRESS}`} target="_blank" rel="noreferrer">
-          {PASSKEY_WALLET_ADDRESS.slice(0, 10)}...
-        </a>
-      </p>
+    <>
+      <section className="aurora relative overflow-hidden border-b border-line">
+        {/*
+          The hero renders at full opacity with no JS gate.
 
-      {wrongOrigin && (
-        <div className="card bad">
-          Served from {typeof window !== "undefined" ? window.location.origin : "?"} but the
-          contract requires {REQUIRED_ORIGIN}. Assertions will be rejected on origin binding.
-        </div>
-      )}
-      {wrongChain && (
-        <div className="card bad">Wrong network. Switch to Arbitrum Sepolia (421614).</div>
-      )}
+          It was briefly built with framer-motion entrance animations, and the
+          headline got stuck at 8% opacity whenever requestAnimationFrame was
+          throttled -- a backgrounded tab is enough to trigger it. An animation
+          that can leave the entire pitch invisible is not worth the polish, so
+          entrance motion here is CSS-only and additive: it moves elements that
+          are already painted. Framer Motion still drives the decay cards below,
+          where the animation IS the content rather than a reveal.
+        */}
+        <div className="mx-auto max-w-6xl px-6 pb-20 pt-24">
+          <p className="rise mb-5 inline-flex items-center gap-2 rounded-full border border-line bg-raised/60 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-muted">
+            <span className="size-1.5 rounded-full bg-life-full" />
+            Arbitrum Stylus · Rust
+          </p>
 
-      <h2>0 · Precompile probe (free)</h2>
-      <div className="card">
-        <p className="muted" style={{ margin: "0 0 .6rem" }}>
-          getChallenge is a view that calls the SHA-256 precompile at 0x02. This costs
-          nothing and proves that path works before spending gas.
-        </p>
-        <button onClick={probePrecompile} disabled={busy}>
-          Probe precompile
-        </button>
-      </div>
-
-      <h2>1 · Relayer</h2>
-      <div className="card row">
-        {isConnected ? (
-          <>
-            <span className="ok">{address}</span>
-            <button onClick={() => disconnect()}>Disconnect</button>
-          </>
-        ) : (
-          connectors.map((c) => (
-            <button key={c.uid} onClick={() => connect({ connector: c })}>
-              Connect {c.name}
-            </button>
-          ))
-        )}
-      </div>
-
-      <h2>2 · Passkey</h2>
-      <div className="card">
-        <div className="row">
-          <button onClick={onCreate} disabled={busy}>
-            Create passkey
-          </button>
-          <button onClick={onRegister} disabled={busy || !isConnected}>
-            Register on chain
-          </button>
-        </div>
-        <p className="muted" style={{ marginBottom: 0 }}>
-          {credentialId
-            ? `credential on this device: ${bytesToHex(credentialId).slice(0, 18)}...`
-            : "no credential on this device yet"}
-          {registered ? " · contract has a pubkey registered" : " · contract not registered"}
-        </p>
-      </div>
-
-      <h2>3 · Send transaction</h2>
-      <div className="card">
-        <label htmlFor="target">target (value 0, empty calldata)</label>
-        <input
-          id="target"
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
-          placeholder="0x..."
-        />
-        <div className="row" style={{ marginTop: ".8rem" }}>
-          <button
-            className="primary"
-            onClick={onSend}
-            disabled={busy || !isConnected || !credentialId}
+          <h1
+            className="rise max-w-3xl text-[clamp(2.4rem,6vw,4.2rem)] font-semibold leading-[1.02] tracking-[-0.03em]"
+            style={{ animationDelay: "60ms" }}
           >
-            Sign with passkey &amp; execute
-          </button>
+            Buy time.
+            <br />
+            Use it.{" "}
+            <span className="bg-gradient-to-r from-life-full via-life-mid to-life-low bg-clip-text text-transparent">
+              Sell what&rsquo;s left.
+            </span>
+          </h1>
+
+          <p
+            className="rise mt-6 max-w-xl text-[15px] leading-relaxed text-muted"
+            style={{ animationDelay: "130ms" }}
+          >
+            A subscription is time you paid for. Cancel halfway and the rest just
+            evaporates. Liquid Pass makes that remaining time an asset you can
+            hand to someone else — and the buyer inherits your expiry date, not a
+            fresh one.
+          </p>
+
+          <div
+            className="rise mt-9 flex flex-wrap items-center gap-3"
+            style={{ animationDelay: "200ms" }}
+          >
+            <Link
+              href="/market"
+              className="rounded-xl bg-text px-5 py-2.5 text-[14px] font-medium text-ink transition-opacity hover:opacity-90"
+            >
+              Browse the market
+            </Link>
+            <Link
+              href="/dashboard"
+              className="rounded-xl border border-line bg-raised px-5 py-2.5 text-[14px] text-muted transition-colors hover:border-line-bright hover:text-text"
+            >
+              My passes
+            </Link>
+          </div>
         </div>
-      </div>
+      </section>
 
-      {txHash && (
-        <div className="card">
-          <a href={`${EXPLORER}/tx/${txHash}`} target="_blank" rel="noreferrer">
-            View {txHash.slice(0, 18)}... on Arbiscan
-          </a>
+      {/* The idea, shown rather than described. */}
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <h2 className="text-[11px] uppercase tracking-[0.16em] text-faint">
+          One pass, over thirty days
+        </h2>
+        <p className="mt-3 max-w-lg text-[14px] text-muted">
+          The same pass as it ages. As the time drains, so does what it&rsquo;s
+          worth on resale — priced against what it originally sold for.
+        </p>
+
+        <div className="mt-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {STAGES.map((s, i) => {
+            const fraction = s.days / s.total;
+            const isActive = i === active;
+            return (
+              <motion.div
+                key={s.days}
+                animate={{
+                  scale: isActive ? 1 : 0.975,
+                  opacity: isActive ? 1 : 0.55,
+                }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="hairline rounded-2xl border border-line bg-surface p-5"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] font-medium">Figma Pro</span>
+                  <span className="tnum text-[11px] text-faint">#{i + 1}</span>
+                </div>
+                <div className="mt-5 grid place-items-center">
+                  <DecayRing
+                    fraction={fraction}
+                    size={104}
+                    label={`${s.days}d`}
+                    sublabel="left"
+                  />
+                </div>
+                <div className="mt-5 flex items-baseline justify-between border-t border-line pt-3">
+                  <span className="text-[11px] text-faint">resale</span>
+                  <span
+                    className="tnum text-[13px] font-medium"
+                    style={{ color: lifeColor(fraction) }}
+                  >
+                    {s.price} ETH
+                  </span>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
-      )}
 
-      <h2>State</h2>
-      <pre>
-        {onChain
-          ? `nonce = ${onChain.nonce}\nx     = ${toHex32(onChain.x)}\ny     = ${toHex32(onChain.y)}`
-          : "reading..."}
-      </pre>
+        <p className="mt-6 text-[12px] text-faint">
+          Illustration of the lifecycle. Every number on{" "}
+          <Link href="/market" className="underline underline-offset-2 hover:text-muted">
+            the market
+          </Link>{" "}
+          is read from the contract.
+        </p>
+      </section>
 
-      <h2>Log</h2>
-      <pre className="log">
-        {log.length === 0
-          ? "(nothing yet)"
-          : log.map((l, i) => (
-              <div key={i} className={l.kind ?? ""}>
-                {l.text}
-              </div>
-            ))}
-      </pre>
-    </main>
+      {/* How the split works -- the part judges ask about. */}
+      <section className="border-t border-line bg-surface/40">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 md:grid-cols-3">
+          {[
+            {
+              k: "01",
+              t: "Buy from an issuer",
+              d: "A plan sets a price and a duration. Buying mints a pass that expires at exactly that time from now. The issuer receives the full price.",
+            },
+            {
+              k: "02",
+              t: "Resell what you didn't use",
+              d: "List it at whatever you like. Ten days in on a thirty-day pass, you're selling twenty days — and the market prices it against the original.",
+            },
+            {
+              k: "03",
+              t: "90 / 10 on every resale",
+              d: "The seller takes 90%. The original issuer keeps 10%, forever, on every hand it passes through. Enforced in the contract, not by policy.",
+            },
+          ].map((c) => (
+            <div key={c.k}>
+              <span className="tnum text-[11px] text-faint">{c.k}</span>
+              <h3 className="mt-3 text-[15px] font-medium">{c.t}</h3>
+              <p className="mt-2 text-[13px] leading-relaxed text-muted">{c.d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 py-14">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-5">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-faint">
+              Contract
+            </p>
+            <a
+              href={`${EXPLORER}/address/${LIQUID_PASS_ADDRESS}`}
+              target="_blank"
+              rel="noreferrer"
+              className="tnum mt-1 block text-[13px] text-muted underline underline-offset-4 hover:text-text"
+            >
+              {shortAddress(LIQUID_PASS_ADDRESS)}
+            </a>
+          </div>
+          <p className="max-w-md text-[12px] leading-relaxed text-faint">
+            Written in Rust and deployed to Arbitrum Sepolia with Stylus. The
+            expiry rule, the payment split, and the original sale price are all
+            enforced on-chain — the frontend cannot fake any of them.
+          </p>
+        </div>
+      </section>
+    </>
   );
 }
