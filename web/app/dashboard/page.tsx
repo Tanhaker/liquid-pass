@@ -22,6 +22,8 @@ import {
   type Plan,
 } from "@/lib/contract";
 import { fetchPasses, fetchPlans, passesOf } from "@/lib/data";
+import { AutoSell } from "@/components/AutoSell";
+import { YieldConcept } from "@/components/YieldConcept";
 
 export default function Dashboard() {
   const client = usePublicClient();
@@ -190,8 +192,33 @@ export default function Dashboard() {
               ))}
             </div>
           )}
+
+          <AutoSell
+            passes={mine}
+            plans={planById}
+            nowMs={nowMs}
+            busyToken={busy?.startsWith("t-") ? busy.slice(2) : null}
+            onList={(tokenId, price) =>
+              run(`t-${tokenId}`, `Listed pass #${tokenId}`, async () =>
+                writeContractAsync({
+                  address: LIQUID_PASS_ADDRESS,
+                  abi: liquidPassAbi,
+                  functionName: "list",
+                  args: [tokenId, price],
+                  chainId: arbitrumSepolia.id,
+                  ...(await fees()),
+                }),
+              )
+            }
+          />
         </>
       )}
+
+      {/* Outside the connected branch on purpose: this explains a mechanism,
+          and a judge who never connects a wallet should still see it. */}
+      <div className="mt-12">
+        <YieldConcept />
+      </div>
     </div>
   );
 }

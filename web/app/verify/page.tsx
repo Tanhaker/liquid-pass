@@ -17,6 +17,7 @@ import {
 } from "@/lib/contract";
 import { fetchPasses, fetchPlans } from "@/lib/data";
 import { useDemo } from "@/lib/demo";
+import { markUsed } from "@/lib/autosell";
 
 /**
  * The access gate.
@@ -116,6 +117,12 @@ export default function Verify() {
       left: best.left,
     };
   }, [checked, who, planId, passes, plans, nowMs, shiftExpiry]);
+
+  // A granted check is the only usage signal this product can honestly
+  // observe, so it is what the auto-sell "idle" condition measures against.
+  useEffect(() => {
+    if (result?.state === "granted") markUsed(result.pass.tokenId.toString());
+  }, [result]);
 
   const selectedPlan = planId === "any" ? null : plans.find((p) => p.id.toString() === planId);
 
