@@ -1,0 +1,65 @@
+# Liquid Pass subgraph schema.
+#
+# Mirrors what the contract actually emits. Note there is no ERC-721 Transfer
+# entity: the contract deliberately does not implement ERC-721 and emits
+# PassTransferred instead, so indexing a Transfer would be indexing an event
+# that never fires.
+
+type Plan @entity(immutable: false) {
+  id: ID!                      # planId
+  issuer: Bytes!
+  price: BigInt!
+  durationSeconds: BigInt!
+  open: Boolean!
+  createdAt: BigInt!
+  createdTx: Bytes!
+  passes: [Pass!]! @derivedFrom(field: "plan")
+}
+
+type Pass @entity(immutable: false) {
+  id: ID!                      # tokenId
+  plan: Plan
+  owner: Bytes!
+  issuer: Bytes!
+  expiry: BigInt!
+  "What the first buyer paid. Null for passes minted directly, never sold."
+  originalPrice: BigInt
+  "Current asking price, or null when not listed."
+  listedPrice: BigInt
+  issuedAt: BigInt!
+  resaleCount: Int!
+  events: [PassEvent!]! @derivedFrom(field: "pass")
+}
+
+enum PassEventKind {
+  MINTED
+  PURCHASED
+  LISTED
+  UNLISTED
+  RESOLD
+}
+
+type PassEvent @entity(immutable: true) {
+  id: ID!
+  pass: Pass!
+  kind: PassEventKind!
+  from: Bytes
+  to: Bytes
+  price: BigInt
+  royalty: BigInt
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  tx: Bytes!
+}
+
+"Running totals, single row with id 'global'."
+type Marketplace @entity(immutable: false) {
+  id: ID!
+  plans: Int!
+  passesIssued: Int!
+  passesSold: Int!
+  resales: Int!
+  primaryVolume: BigInt!
+  resaleVolume: BigInt!
+  royaltiesPaid: BigInt!
+}

@@ -1,0 +1,43 @@
+specVersion: 1.0.0
+description: Liquid Pass — resellable, time-bound subscription passes on Arbitrum Stylus
+repository: https://github.com/Tanhaker/liquid-pass
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: LiquidPass
+    network: arbitrum-sepolia
+    source:
+      address: "0xe67078be99dec98b9788a0e6c2054d03b361f84a"
+      abi: LiquidPass
+      # The deployment block. Starting from 0 would scan the whole chain for
+      # nothing and take hours to sync.
+      startBlock: 304198700
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/mapping.ts
+      entities:
+        - Plan
+        - Pass
+        - PassEvent
+        - Marketplace
+      abis:
+        - name: LiquidPass
+          file: ./abis/LiquidPass.json
+      eventHandlers:
+        - event: PlanCreated(indexed uint256,indexed address,uint256,uint256)
+          handler: handlePlanCreated
+        - event: PlanOpenSet(indexed uint256,bool)
+          handler: handlePlanOpenSet
+        - event: PassPurchased(indexed uint256,indexed uint256,indexed address,uint256,uint256)
+          handler: handlePassPurchased
+        - event: Minted(indexed uint256,indexed address,indexed address,uint256)
+          handler: handleMinted
+        - event: Listed(indexed uint256,indexed address,uint256)
+          handler: handleListed
+        - event: Unlisted(indexed uint256,indexed address)
+          handler: handleUnlisted
+        - event: Bought(indexed uint256,indexed address,indexed address,uint256,uint256)
+          handler: handleBought

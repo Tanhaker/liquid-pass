@@ -19,6 +19,7 @@ const LINKS = [
   { href: "/dashboard", label: "My Passes", icon: RingIcon },
   { href: "/explorer", label: "Explorer", icon: PulseIcon },
   { href: "/analytics", label: "Analytics", icon: ChartIcon },
+  { href: "/assistant", label: "AI", icon: SparkIcon },
   { href: "/issuer", label: "Issuer", icon: KeyIcon },
 ];
 
@@ -154,6 +155,14 @@ function ChartIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
       <path d="M2 12V8M6 12V3M10 12V6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SparkIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path d="M7 1.5 8.3 5.2 12 6.5 8.3 7.8 7 11.5 5.7 7.8 2 6.5l3.7-1.3z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
     </svg>
   );
 }

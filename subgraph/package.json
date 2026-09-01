@@ -1,0 +1,14 @@
+{
+  "name": "liquid-pass-subgraph",
+  "private": true,
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy": "graph deploy liquid-pass",
+    "auth": "graph auth"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.97.0",
+    "@graphprotocol/graph-ts": "^0.38.0"
+  }
+}
