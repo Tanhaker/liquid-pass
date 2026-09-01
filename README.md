@@ -66,14 +66,33 @@ every list view is assembled in `web/lib/data.ts` from counters plus batched
 createPlan(name, metadataUri, price, durationSeconds) -> planId   issuer only
 setPlanOpen(planId, open)                                          plan issuer
 buyPass(planId) payable -> tokenId          primary sale, 100% to the issuer
-list(tokenId, price)                                              owner only
+list(tokenId, price)                       owner only; sets the OPENING ask
 unlist(tokenId)                          allowed after expiry, to clear stale
-buy(tokenId) payable                          resale, 90% seller / 10% issuer
+buy(tokenId) payable        resale at currentPrice, 90% seller / 10% issuer
+transferPass(to, tokenId)               gift; owner only, clears any listing
+split(tokenId, parts) -> firstId    burns one pass into `parts` consecutive
+                                    slices, 2..24, owner only, must be unlisted
 ```
 
 Views: `planName` `planUri` `planPriceOf` `planDurationOf` `planIsOpen`
-`ownerOf` `expiryOf` `issuerOf` `planOf` `paidOf` `priceOf` `isActive`
-`remainingSeconds` `nextPlanId` `nextTokenId` `isIssuer` `admin`
+`ownerOf` `expiryOf` `issuerOf` `planOf` `paidOf` `priceOf` `openingPrice`
+`currentPrice` `isActive` `remainingSeconds` `nextPlanId` `nextTokenId`
+`isIssuer` `admin`
+
+**Prices decay.** `openingPrice` is what the seller asked; `currentPrice` is
+what `buy()` charges now, falling in proportion to the access still left:
+
+```
+currentPrice = openingPrice x (expiry - now) / (expiry - listedAt)
+```
+
+`buy()` takes **at least** `currentPrice` and refunds the change. Exact payment
+is impossible against a falling price -- the value decays between quoting and
+mining -- so callers send a small buffer and get the surplus back.
+
+**Splitting is sequential.** `split(id, 4)` on a 60-day pass produces four
+passes of ~15 days that activate one after another, not four simultaneous
+passes. Parallel slices would be four times the access, minted from nothing.
 
 `paidOf` records what the **first** buyer paid and is never overwritten. It is
 what every "% below original" figure is computed against — the discount is
@@ -141,6 +160,11 @@ cd web && npm run build              # production build
 
 Do not run `npm run build` while `next dev` is live — it overwrites `.next` and
 the running dev server starts 404ing on its own chunks.
+
+## Testing
+
+[`docs/TESTING.md`](docs/TESTING.md) lists every working feature with the exact
+steps to verify it yourself, plus what is not implemented and why.
 
 ## Demo
 

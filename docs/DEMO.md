@@ -5,6 +5,7 @@ Deployed contract: `0x22703fdd3dd77f854ca111e581bbd84cf82c1d36` (Arbitrum Sepoli
 ## Before you present
 
 - [ ] Two wallets funded with Sepolia ETH, both on Arbitrum Sepolia
+- [ ] Walk `docs/TESTING.md` once — it verifies every feature end to end
 - [ ] Vercel Deployment Protection **off**, or the audience sees a login wall
 - [ ] One pass listed below its original price, so the STEAL badge has data
 - [ ] `/explorer` loaded once to confirm the RPC is responding
@@ -27,20 +28,35 @@ to the issuer; there's no seller yet.
 
 **2:15 — Own.** `/dashboard`. The pass is there with its remaining time.
 
-**2:45 — The invariant.** List it below what you paid. Switch to the second
-wallet, `/market` → Resale tab. The card says **"50% below original"** — that
-number comes from `paidOf` on chain, not the frontend. Buy it.
+**2:45 — The price falls by itself.** List it. On `/market` → Resale the card
+shows **"opened at X"** struck through and **"now Y"** below it, and Y drops on
+every refresh. The seller set an opening ask; the contract charges less as the
+pass drains. Say the line: *"nobody is adjusting this — the contract prices the
+time that's left."*
 
-**3:30 — The point.** Open `/pass/<id>`. Ownership changed; **the expiry did
+**3:00 — The invariant.** Switch to the second wallet, buy it. The card also
+says **"50% below original"** — from `paidOf` on chain, not the frontend.
+
+**3:20 — The point.** Open `/pass/<id>`. Ownership changed; **the expiry did
 not**. The buyer got the remaining time, not a fresh term. Show the lifecycle
-strip — it's built from that pass's own events.
+strip — built from that pass's own events.
+
+**3:40 — Prove it means something.** `/verify` — paste the seller's address:
+**NO ACTIVE PASS**. Paste the buyer's: **ACCESS GRANTED**, same expiry. This is
+what a real service runs, and it is two view calls: no transaction, no wallet.
 
 **4:00 — The split.** 90% went to the seller, 10% to the original issuer, and
 the issuer keeps earning it on every future resale. Enforced in the contract.
 
+**4:00 — Gift and split.** `/dashboard` → **Split** a 60-day pass into four.
+Four consecutive slices appear and **only the first is active** — month one,
+then month two. Then **Gift** one to a colleague's address. No payment, no
+marketplace.
+
 **4:30 — On chain.** `/explorer` — every event with an Arbiscan link.
-`/analytics` — volumes and royalties, all derived. `/assistant` — ask "why
-doesn't the buyer get another 30 days?"
+`/analytics` — volumes and royalties, all derived. Sparkle icon, bottom right —
+ask Liquid AI *"why doesn't the buyer get another 30 days?"*, then ask it
+something it cannot know and watch it refuse.
 
 **5:00 — Close.** "Rust on Arbitrum Stylus. No server, no database. The chain
 is the only source of truth."
@@ -65,3 +81,17 @@ assistant, and the product works with neither.
 
 **"What if The Graph is down?"** Nothing changes. Direct chain reads are the
 primary path, not the fallback.
+
+**"Does the AI sell my pass automatically?"** No. It watches a condition you
+describe and hands you a one-click listing to sign. Nothing can see whether you
+opened Netflix -- there is no on-chain signal -- and listing needs a signature.
+The panel says "watches, never signs".
+
+**"Is that yield counter real?"** There is no counter. The escrow-yield panel
+is labelled a concept and shows the arithmetic, because no escrow is deployed
+and nothing is earning. Resales settle atomically, so there is no escrow window
+to earn in.
+
+**"Does splitting give me twelve passes at once?"** No -- twelve consecutive
+ones. Month one is usable now, month two when month one ends. Parallel slices
+would be twelve times the access created from nothing.
