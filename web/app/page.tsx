@@ -30,41 +30,6 @@ export default function Home() {
         ease: "power3.out",
         delay: 0.1
       });
-
-      // 2. Scroll Storytelling Timeline
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: ".story-container",
-          start: "top top",
-          end: "+=4000",
-          scrub: 1,
-          pin: true,
-          anticipatePin: 1,
-        }
-      });
-
-      // Stage 1: "Subscriptions expire."
-      tl.to(".stage-1-text", { opacity: 1, y: 0, duration: 1 })
-        .to(".story-pass", { scale: 1.1, y: -50, duration: 2 }, "<")
-        // Time visually drains (this would be driven by a React state tied to scroll, 
-        // but we'll simulate the text/opacity shifts here)
-        .to(".stage-1-text", { opacity: 0, y: -30, duration: 1 }, "+=1")
-
-      // Stage 2: "Unused time doesn't have to disappear."
-      tl.to(".stage-2-text", { opacity: 1, y: 0, duration: 1 })
-        .to(".story-pass", { x: -200, scale: 0.9, duration: 2 }, "<")
-        .to(".stage-2-text", { opacity: 0, y: -30, duration: 1 }, "+=1")
-
-      // Stage 3: Marketplace & Ownership Transfer
-      tl.to(".stage-3-text", { opacity: 1, y: 0, duration: 1 })
-        .to(".alice-avatar", { x: 50, opacity: 0, duration: 1 }, "<")
-        .to(".bob-avatar", { x: 0, opacity: 1, duration: 1 }, "<")
-        .to(".stage-3-text", { opacity: 0, y: -30, duration: 1 }, "+=1")
-
-      // Stage 4: "Time moves. Ownership moves."
-      tl.to(".stage-4-text", { opacity: 1, y: 0, duration: 1 })
-        .to(".story-pass", { x: 0, scale: 1, duration: 2 }, "<")
-        
     }, containerRef);
 
     return () => ctx.revert();
@@ -112,49 +77,19 @@ export default function Home() {
         </div>
       </section>
 
-      {/* GSAP Scroll Storytelling Section */}
-      <section className="story-container relative h-screen w-full bg-ink overflow-hidden border-t border-line hidden md:block">
-        <div className="absolute inset-0 flex items-center justify-center">
-          
-          {/* Central Interactive Pass */}
-          <div className="story-pass relative z-20 w-full max-w-sm">
-            <LiquidPassCard
-              name="Cursor Pro"
-              tokenId="PASS-0089"
-              fraction={0.6}
-              daysLeft={18}
-              price="0.0012"
-            />
-            {/* Alice -> Bob avatars overlay */}
-            <div className="absolute -right-16 top-1/2 -translate-y-1/2 flex items-center">
-              <div className="alice-avatar absolute w-12 h-12 rounded-full bg-line-bright border-2 border-surface flex items-center justify-center text-xs font-bold">A</div>
-              <div className="bob-avatar absolute w-12 h-12 rounded-full bg-life-full text-ink border-2 border-surface flex items-center justify-center text-xs font-bold opacity-0 -translate-x-10">B</div>
-            </div>
-          </div>
-
-          {/* Text Layers */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-            <h2 className="stage-1-text absolute text-5xl font-bold tracking-tight opacity-0 translate-y-10">Subscriptions expire.</h2>
-            <h2 className="stage-2-text absolute text-5xl font-bold tracking-tight opacity-0 translate-y-10">Unused time doesn&apos;t have to disappear.</h2>
-            <h2 className="stage-3-text absolute text-5xl font-bold tracking-tight opacity-0 translate-y-10">Sell what&apos;s left.</h2>
-            <h2 className="stage-4-text absolute text-5xl font-bold tracking-tight text-life-full opacity-0 translate-y-10">Time moves.<br/>Ownership moves.</h2>
-          </div>
+      {/* Static Story Section (Replacing pinned scroll) */}
+      <section className="px-6 py-24 space-y-24 border-t border-line text-center bg-ink">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-3xl font-bold text-text">Subscriptions expire.</h2>
+          <p className="mt-4 text-muted text-lg">Time visually drains from a Liquid Pass.</p>
         </div>
-      </section>
-
-      {/* Mobile Fallback for Story (when scrolljacking is disabled) */}
-      <section className="md:hidden px-6 py-24 space-y-24 border-t border-line text-center">
-        <div>
-          <h2 className="text-3xl font-bold">Subscriptions expire.</h2>
-          <p className="mt-4 text-muted">Time visually drains from a Liquid Pass.</p>
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-3xl font-bold text-text">Sell what&apos;s left.</h2>
+          <p className="mt-4 text-muted text-lg">Unused time doesn&apos;t have to disappear.</p>
         </div>
-        <div>
-          <h2 className="text-3xl font-bold">Sell what&apos;s left.</h2>
-          <p className="mt-4 text-muted">Unused time doesn&apos;t have to disappear.</p>
-        </div>
-        <div>
+        <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold text-life-full">Time moves. Ownership moves.</h2>
-          <p className="mt-4 text-muted">The buyer inherits your expiry date, not a fresh term.</p>
+          <p className="mt-4 text-muted text-lg">The buyer inherits your expiry date, not a fresh term.</p>
         </div>
       </section>
 
