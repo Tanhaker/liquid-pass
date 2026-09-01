@@ -80,14 +80,18 @@ export function LiquidPassCard({
     >
       <div
         ref={ref}
-        className="liquid-float relative aspect-[1.6/1] w-full rounded-[22px] p-px transition-transform duration-300 ease-out will-change-transform"
+        className="liquid-float relative aspect-[1.6/1] w-full rounded-[22px] p-px transition-transform duration-300 ease-out will-change-transform z-10"
         style={{
+          transformStyle: "preserve-3d",
           transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
           background: `linear-gradient(145deg, color-mix(in oklab, ${color} 55%, transparent), var(--color-line) 45%, color-mix(in oklab, ${color} 22%, transparent))`,
           boxShadow: `0 24px 70px -28px color-mix(in oklab, ${color} 60%, transparent), 0 2px 10px rgba(0,0,0,.5)`,
         }}
       >
-        <div className="relative h-full w-full overflow-hidden rounded-[21px] bg-[#0c0c12]">
+        <div 
+          className="relative h-full w-full overflow-hidden rounded-[21px] bg-surface"
+          style={{ transformStyle: "preserve-3d" }}
+        >
           {/* Depth: a soft interior light biased toward the accent. */}
           <div
             className="absolute inset-0"
@@ -99,17 +103,20 @@ export function LiquidPassCard({
           <div
             className="absolute inset-0 opacity-70 transition-[background] duration-200"
             style={{
-              background: `radial-gradient(50% 40% at ${glare.x}% ${glare.y}%, rgba(255,255,255,.08), transparent 70%)`,
+              background: `radial-gradient(50% 40% at ${glare.x}% ${glare.y}%, color-mix(in oklab, var(--color-text) 15%, transparent), transparent 70%)`,
             }}
           />
 
-          <div className="relative flex h-full flex-col justify-between p-5">
+          <div 
+            className="relative flex h-full flex-col justify-between p-5"
+            style={{ transform: "translateZ(30px)" }}
+          >
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[9px] uppercase tracking-[0.22em] text-faint">
+                <p className="text-[9px] uppercase tracking-[0.22em] text-faint drop-shadow-md">
                   Liquid Pass
                 </p>
-                <h3 className="mt-1.5 text-[19px] font-semibold leading-none tracking-[-0.01em]">
+                <h3 className="mt-1.5 text-[19px] font-semibold leading-none tracking-[-0.01em] drop-shadow-lg text-text">
                   {name}
                 </h3>
               </div>

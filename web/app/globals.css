@@ -10,29 +10,53 @@
  * on screen means something about remaining time.
  */
 @theme {
-  --color-ink: #08080b;
-  --color-surface: #101016;
-  --color-raised: #16161e;
-  --color-line: #23232e;
-  --color-line-bright: #32323f;
+  --color-ink: var(--theme-ink);
+  --color-surface: var(--theme-surface);
+  --color-raised: var(--theme-raised);
+  --color-line: var(--theme-line);
+  --color-line-bright: var(--theme-line-bright);
 
-  --color-text: #f2f2f5;
-  --color-muted: #9a9aa8;
-  --color-faint: #6a6a78;
+  --color-text: var(--theme-text);
+  --color-muted: var(--theme-muted);
+  --color-faint: var(--theme-faint);
 
   /* Life remaining, from full to nearly gone. */
-  --color-life-full: #5eead4;
-  --color-life-mid: #a78bfa;
-  --color-life-low: #fbbf24;
-  --color-life-crit: #fb7185;
+  --color-life-full: #0ea5e9;
+  --color-life-mid: #8b5cf6;
+  --color-life-low: #f59e0b;
+  --color-life-crit: #ef4444;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
+:root {
+  --theme-ink: #08080b;
+  --theme-surface: #101016;
+  --theme-raised: #16161e;
+  --theme-line: #23232e;
+  --theme-line-bright: #32323f;
+  --theme-text: #f2f2f5;
+  --theme-muted: #9a9aa8;
+  --theme-faint: #6a6a78;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --theme-ink: #f8fafc;
+    --theme-surface: #ffffff;
+    --theme-raised: #f1f5f9;
+    --theme-line: #e2e8f0;
+    --theme-line-bright: #cbd5e1;
+    --theme-text: #0f172a;
+    --theme-muted: #475569;
+    --theme-faint: #94a3b8;
+  }
+}
+
 html {
   background: var(--color-ink);
-  color-scheme: dark;
+  color-scheme: dark light;
 }
 
 body {
