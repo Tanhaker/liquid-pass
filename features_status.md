@@ -14,7 +14,7 @@ A complete checklist of the entire architecture, organized by Backend (Smart Con
 | **Escrow & Real Yield** (Aave) | âœ… Implemented | `EscrowYield.sol` deposits proceeds into Aave V3 WETH Gateway to earn interest while locked. |
 | **Account Abstraction** | âœ… Implemented | ZeroDev `zerodev.ts` logic to generate ECDSA and strictly-scoped Session Key Validators. |
 | **Usage Detection Oracle** | âœ… Implemented | Node.js backend cron job (`oracle/index.js`) tracking mock off-chain inactivity. |
-| **The Graph (Subgraph)** | âŒ Not Implemented | Code exists in `subgraph/`, but it has not been deployed to The Graph Studio yet. |
+| **The Graph (Subgraph)** | ✅ Implemented | Live indexing of Core and Marketplace events deployed to The Graph Studio. |
 
 ---
 
@@ -22,12 +22,13 @@ A complete checklist of the entire architecture, organized by Backend (Smart Con
 
 | Feature | Status | Description |
 | :--- | :---: | :--- |
-| **Premium Fintech Theme** | âœ… Implemented | "Apple/Stripe" inspired dark mode (`#050605` background, `#B7FF3C` signature green). |
-| **Time-Decay Rings** | âœ… Implemented | SVG rings that visually tick down as the pass expiry approaches. |
-| **Marketplace "STEAL" Badges** | âœ… Implemented | Highlights passes selling significantly below their intrinsic fair-value price. |
-| **Yield Dashboard UI** | âœ… Implemented | Live panel pulling `lockedBalances` from Aave Escrow with a functional "Claim" button. |
-| **Pass Bundler UI** | âœ… Implemented | Grid allowing users to select multiple passes of the same plan and merge them via RPC. |
-| **Auto-Sell Rules Parsing** | âœ… Implemented | Translates plain English ("sell if not used in 7 days") into JSON rule logic. |
-| **Session Key UI** | âœ… Implemented | "Issue Session Key" button in the Auto-Sell panel powered by ZeroDev. |
-| **WalletConnect Mobile** | âœ… Implemented | RainbowKit integration for scanning QR codes (relies on Project ID). |
-| **GraphQL Data Layer** | âŒ Not Implemented | `data.ts` currently fetches via RPC `multicall` rather than querying the subgraph. |
+| **Premium Fintech Theme** | ✅ Implemented | "Apple/Stripe" inspired UI with Light/Dark mode toggle and bespoke CSS variables. |
+| **Time-Decay Rings** | ✅ Implemented | SVG rings that visually tick down as the pass expiry approaches. |
+| **Marketplace "STEAL" Badges** | ✅ Implemented | Highlights passes selling significantly below their intrinsic fair-value price. |
+| **Yield Dashboard UI** | ✅ Implemented | Live panel pulling `lockedBalances` from Aave Escrow with a functional "Claim" button. |
+| **Pass Bundler UI** | ✅ Implemented | Grid allowing users to select multiple passes of the same plan and merge them via RPC. |
+| **Auto-Sell Rules Parsing** | ✅ Implemented | Translates plain English ("sell if not used in 7 days") into JSON rule logic. |
+| **Session Key UI** | ✅ Implemented | "Issue Session Key" button in the Auto-Sell panel powered by ZeroDev. |
+| **WalletConnect Mobile** | ✅ Implemented | RainbowKit integration for scanning QR codes (relies on Project ID). |
+| **GraphQL Data Layer** | ✅ Implemented | `web/lib/graphql.ts` cleanly queries the Subgraph for all UI state. |
+| **Issuer B2B Dashboard** | ✅ Implemented | `/issuer` route providing analytics, revenue tracking, and active subscriber metrics. |
