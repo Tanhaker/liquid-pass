@@ -7,7 +7,9 @@ import { retrieve } from "@/lib/knowledge";
 /**
  * Liquid AI.
  *
- * Server-side so OPENAI_API_KEY never reaches the browser.
+ * Server-side so GEMINI_API_KEY never reaches the browser. Note the variable
+ * has no NEXT_PUBLIC_ prefix, which is what stops Next inlining it into the
+ * client bundle -- a key shipped to the browser is a key anyone can spend.
  *
  * The design rule that matters: the model is given product knowledge from the
  * repo and a live snapshot of chain state, and is told to answer ONLY from
@@ -25,7 +27,7 @@ export const maxDuration = 30;
 type Body = { question?: string; address?: string };
 
 export async function GET() {
-  return NextResponse.json({ configured: Boolean(process.env.OPENAI_API_KEY) });
+  return NextResponse.json({ configured: Boolean(process.env.GEMINI_API_KEY) });
 }
 
 export async function POST(req: Request) {
@@ -101,7 +103,7 @@ export async function POST(req: Request) {
     snapshot = "Live chain data could not be read for this question.";
   }
 
-  const key = process.env.OPENAI_API_KEY;
+  const key = process.env.GEMINI_API_KEY;
 
   if (!key) {
     // Honest fallback: the knowledge base, verbatim, clearly labelled.
@@ -111,7 +113,7 @@ export async function POST(req: Request) {
         : "I can answer questions about how Liquid Pass works — buying, reselling, expiry, and the 90/10 split. Try asking one of those.",
       sources: docs.map((d) => d.title),
       mode: "knowledge-base",
-      note: "Liquid AI is running without a language model (OPENAI_API_KEY is not set), so this is the product documentation returned directly rather than a generated answer.",
+      note: "Liquid AI is running without a language model (GEMINI_API_KEY is not set), so this is the product documentation returned directly rather than a generated answer.",
       chainFailed,
     });
   }
@@ -132,21 +134,29 @@ export async function POST(req: Request) {
     snapshot,
   ].join("\n");
 
+  // Gemini takes the system prompt as a separate `system_instruction` rather
+  // than a message with role "system", and returns text under
+  // candidates[].content.parts[].text.
+  const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+  const endpoint =
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
+        // Header rather than ?key= in the URL, so the key cannot leak through
+        // request logs or a Referer.
+        "x-goog-api-key": key,
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
-        temperature: 0.2,
-        max_tokens: 400,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: question },
-        ],
+        system_instruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: question }] }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 600,
+        },
       }),
       signal: AbortSignal.timeout(25_000),
     });
@@ -155,9 +165,13 @@ export async function POST(req: Request) {
       const text = await res.text();
       return NextResponse.json(
         {
-          error: "The language model rejected the request",
+          error:
+            res.status === 404
+              ? `Model "${model}" is not available to this key`
+              : "Gemini rejected the request",
           detail: text.slice(0, 200),
-          // The knowledge base still answers, so the user is not left empty-handed.
+          // The knowledge base still answers, so the user is not left with
+          // nothing when the model is unreachable or misconfigured.
           answer: docs.map((d) => d.text).join("\n\n") || undefined,
           mode: "knowledge-base",
         },
@@ -166,23 +180,47 @@ export async function POST(req: Request) {
     }
 
     const json = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+        finishReason?: string;
+      }>;
+      promptFeedback?: { blockReason?: string };
     };
-    const answer = json.choices?.[0]?.message?.content?.trim();
+
+    // A safety block returns 200 with no candidate, so an unchecked
+    // parts[0].text would surface as "empty response" and hide the reason.
+    const blocked =
+      json.promptFeedback?.blockReason ?? json.candidates?.[0]?.finishReason;
+    const answer = json.candidates?.[0]?.content?.parts
+      ?.map((p) => p.text ?? "")
+      .join("")
+      .trim();
+
     if (!answer) {
-      return NextResponse.json({ error: "Empty response from the model" }, { status: 502 });
+      return NextResponse.json(
+        {
+          error:
+            blocked && blocked !== "STOP"
+              ? `Gemini returned no answer (${blocked})`
+              : "Empty response from the model",
+          answer: docs.map((d) => d.text).join("\n\n") || undefined,
+          mode: "knowledge-base",
+        },
+        { status: 502 },
+      );
     }
 
     return NextResponse.json({
       answer,
       sources: docs.map((d) => d.title),
       mode: "model",
+      model,
       chainFailed,
     });
   } catch (e) {
     return NextResponse.json(
       {
-        error: "Could not reach the language model",
+        error: "Could not reach Gemini",
         detail: (e as Error).message,
         answer: docs.map((d) => d.text).join("\n\n") || undefined,
         mode: "knowledge-base",

@@ -93,7 +93,7 @@ export default function Assistant() {
         <Banner tone="warn">
           No language model is configured, so answers are returned straight from
           the product documentation rather than generated. Set{" "}
-          <code className="tnum">OPENAI_API_KEY</code> to enable it.
+          <code className="tnum">GEMINI_API_KEY</code> to enable it.
         </Banner>
       )}
       {error && <Banner tone="error">{error}</Banner>}

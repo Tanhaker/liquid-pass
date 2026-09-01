@@ -124,7 +124,7 @@ See `web/.env.example`. Everything is optional:
 | Variable | Without it |
 |---|---|
 | `PINATA_JWT` | `/api/ipfs` returns 501; plan names and prices are on chain anyway |
-| `OPENAI_API_KEY` | Liquid AI answers from the in-repo knowledge base, labelled as documentation |
+| `GEMINI_API_KEY` | Liquid AI answers from the in-repo knowledge base, labelled as documentation |
 | `NEXT_PUBLIC_SUBGRAPH_URL` | Direct chain reads, which are the primary path regardless |
 
 Server-only keys have **no** `NEXT_PUBLIC_` prefix, which is what keeps Next
