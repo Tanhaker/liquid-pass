@@ -49,14 +49,19 @@ body {
   font-family: var(--font-mono);
 }
 
-/*
- * A single soft light source behind the hero. Kept in CSS rather than a canvas
- * so it costs nothing and cannot fail the way a WebGL context can.
- */
+@keyframes mesh-drift {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
 .aurora {
   background:
-    radial-gradient(60% 50% at 20% 0%, color-mix(in oklab, var(--color-life-full) 12%, transparent), transparent 70%),
-    radial-gradient(50% 45% at 85% 15%, color-mix(in oklab, var(--color-life-mid) 14%, transparent), transparent 70%);
+    radial-gradient(80% 80% at 10% 10%, color-mix(in oklab, var(--color-life-full) 20%, transparent), transparent 70%),
+    radial-gradient(90% 90% at 90% 90%, color-mix(in oklab, var(--color-life-mid) 25%, transparent), transparent 70%),
+    radial-gradient(70% 70% at 50% 50%, color-mix(in oklab, var(--color-life-low) 18%, transparent), transparent 70%);
+  background-size: 150% 150%;
+  animation: mesh-drift 25s ease-in-out infinite;
 }
 
 /* Hairline that reads as engraved rather than drawn. */

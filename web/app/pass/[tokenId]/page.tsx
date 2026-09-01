@@ -192,7 +192,18 @@ export default function PassDetail({
 
           <dl className="mt-8 grid grid-cols-2 gap-4 border-t border-line pt-6 text-[13px]">
             <Row k="Owner" v={shortAddress(pass.owner)} />
-            <Row k="Status" v={left <= 0 ? "Expired" : pass.listed > 0n ? "Listed" : "Active"} />
+            <Row
+              k="Status"
+              v={
+                pass.active
+                  ? pass.listed > 0n
+                    ? "Listed"
+                    : "Active"
+                  : left > 0
+                    ? "Not started"
+                    : "Expired"
+              }
+            />
             <Row
               k="Originally sold for"
               v={pass.paid > 0n ? `${formatEther(pass.paid)} ETH` : "issued directly"}
@@ -217,7 +228,7 @@ export default function PassDetail({
           )}
 
           <div className="mt-7 flex flex-wrap gap-2">
-            {!isOwner && pass.listed > 0n && left > 0 && (
+            {!isOwner && pass.listed > 0n && pass.active && (
               <button
                 onClick={() =>
                   run(`Bought pass #${pass.tokenId}`, async () =>
@@ -239,7 +250,7 @@ export default function PassDetail({
               </button>
             )}
 
-            {isOwner && left > 0 && pass.listed === 0n && !listing && (
+            {isOwner && pass.active && pass.listed === 0n && !listing && (
               <button
                 onClick={() => setListing(true)}
                 disabled={wrongNetwork}
@@ -397,6 +408,9 @@ const LIFECYCLE: Record<Activity["kind"], string> = {
   Unlisted: "Listing withdrawn",
   Bought: "Resold — the buyer inherited the remaining time",
   PlanCreated: "Plan published",
+  // Gifts and split slices emit only this. Without it, a slice's lifecycle
+  // strip read "No events recorded yet" despite having been minted on chain.
+  PassTransferred: "Changed hands",
 };
 
 function Row({ k, v }: { k: string; v: string }) {

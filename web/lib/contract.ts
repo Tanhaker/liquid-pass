@@ -100,6 +100,17 @@ export type Pass = {
   /** The seller's opening ask in wei, or 0 when not for sale. */
   listed: bigint;
   /**
+   * Whether the contract considers this pass usable RIGHT NOW.
+   *
+   * Read from the chain, never inferred. A split slice has a start time as
+   * well as an expiry, and `startOf` had to be dropped to fit `split` under
+   * the 24KB limit -- so expiry alone cannot distinguish a live pass from one
+   * whose window has not opened. Deriving activity from expiry showed pending
+   * slices as usable, which is both a lie to the user and a transaction that
+   * reverts, since `list` requires is_active.
+   */
+  active: boolean;
+  /**
    * What `buy()` charges right now: the opening ask decayed in proportion to
    * the access still left. This is the number to display and to send as
    * msg.value. The contract requires AT LEAST this and refunds the change --
@@ -217,7 +228,11 @@ export function formatEthShort(wei: bigint): string {
   if (wei === 0n) return "0";
   const eth = Number(wei) / 1e18;
   if (eth >= 0.001) return String(Number(eth.toFixed(6)));
-  return String(Number(eth.toPrecision(3)));
+  // Six significant figures, not three. At testnet sizes a decaying price sits
+  // around 0.000074982, and three figures rounds that to 0.000075 -- exactly
+  // the opening ask it is supposed to differ from. The decay was real and the
+  // display was hiding it.
+  return String(Number(eth.toPrecision(6)));
 }
 
 export function formatRemaining(seconds: number): string {

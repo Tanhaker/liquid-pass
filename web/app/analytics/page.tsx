@@ -54,9 +54,14 @@ export default function AnalyticsPage() {
   const m = useMemo(() => {
     const now = Math.floor((nowMs ?? 0) / 1000);
     const sold = passes.filter((p) => p.paid > 0n);
-    const active = sold.filter((p) => Number(p.expiry) > now);
-    const expired = sold.filter((p) => Number(p.expiry) <= now);
-    const listed = sold.filter((p) => p.listed > 0n && Number(p.expiry) > now);
+    // From the contract, not expiry-vs-clock. A split slice awaiting its turn
+    // has a future expiry but is not active, and counting it inflated both the
+    // active figure and the listing count.
+    const active = sold.filter((p) => p.active);
+    const expired = sold.filter((p) => !p.active && Number(p.expiry) <= now);
+    const pending = sold.filter((p) => !p.active && Number(p.expiry) > now);
+    const listed = sold.filter((p) => p.listed > 0n && p.active);
+    void pending;
 
     // Resale volume comes from Bought logs, which carry the actual price.
     // This is the one place resale turnover IS knowable -- the contract itself

@@ -31,6 +31,17 @@ export type DemoState = {
    * untouched when not time-travelling, so live mode is unaffected.
    */
   shiftExpiry: (expiry: bigint) => bigint;
+  /**
+   * Whether a pass reads as usable under the current mode.
+   *
+   * In live mode this is simply the contract's own `isActive`. While time
+   * travelling it has to be derived from the shifted expiry instead, because
+   * the chain's answer describes real time and the scrubber does not move
+   * real time. Without this the scrubber recoloured the rings while the
+   * counters kept reporting the live figures -- visibly inconsistent, which is
+   * worse than not having the control.
+   */
+  effectiveActive: (chainActive: boolean, expiry: bigint, nowMs: number | null) => boolean;
 };
 
 const Ctx = createContext<DemoState | null>(null);
@@ -70,9 +81,18 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     [enabled, timeTravel],
   );
 
+  const effectiveActive = useCallback(
+    (chainActive: boolean, expiry: bigint, nowMs: number | null) => {
+      if (!enabled || timeTravel === null) return chainActive;
+      const shifted = Number(shiftExpiry(expiry));
+      return shifted * 1000 > (nowMs ?? Date.now());
+    },
+    [enabled, timeTravel, shiftExpiry],
+  );
+
   const value = useMemo(
-    () => ({ enabled, timeTravel, setEnabled, setTimeTravel, shiftExpiry }),
-    [enabled, timeTravel, setEnabled, shiftExpiry],
+    () => ({ enabled, timeTravel, setEnabled, setTimeTravel, shiftExpiry, effectiveActive }),
+    [enabled, timeTravel, setEnabled, shiftExpiry, effectiveActive],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -89,6 +109,7 @@ export function useDemo(): DemoState {
       setEnabled: () => {},
       setTimeTravel: () => {},
       shiftExpiry: (e) => e,
+      effectiveActive: (a) => a,
     };
   }
   return c;

@@ -40,6 +40,9 @@ const LABEL: Record<Activity["kind"], string> = {
   Unlisted: "removed a listing",
   PlanCreated: "published a plan",
   Minted: "was issued a pass",
+  // Gifts and split slices emit only this, so leaving it out dropped both
+  // categories from a feed that claims to show every event.
+  PassTransferred: "received a pass",
 };
 
 const TONE: Record<Activity["kind"], string> = {
@@ -49,6 +52,7 @@ const TONE: Record<Activity["kind"], string> = {
   Unlisted: "var(--color-faint)",
   PlanCreated: "var(--color-text)",
   Minted: "var(--color-faint)",
+  PassTransferred: "var(--color-life-mid)",
 };
 
 export default function ExplorerPage() {

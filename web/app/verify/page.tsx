@@ -40,6 +40,7 @@ import { markUsed } from "@/lib/autosell";
 type Result =
   | { state: "granted"; pass: Pass; plan: Plan | null; left: number }
   | { state: "denied"; reason: string }
+  | { state: "invalid"; reason: string }
   | null;
 
 export default function Verify() {
@@ -83,7 +84,9 @@ export default function Verify() {
     if (!checked) return null;
     const target = who.trim();
     if (!/^0x[a-fA-F0-9]{40}$/.test(target)) {
-      return { state: "denied", reason: "That isn't a valid address." };
+      // Distinct from a denial: nothing was checked, so labelling this "NO
+      // ACTIVE PASS" would report a result that was never computed.
+      return { state: "invalid", reason: "That isn't a valid address." };
     }
 
     const owned = passes.filter((p) => p.owner.toLowerCase() === target.toLowerCase());
@@ -97,8 +100,22 @@ export default function Verify() {
       return { state: "denied", reason: "This address holds passes, but none for that plan." };
     }
 
-    // Best = most time left. If any is active, access is granted.
-    const scored = forPlan
+    // `p.active` is the contract's own answer, not expiry-vs-clock. A split
+    // slice whose window has not opened has a future expiry but grants
+    // nothing, and this page claims to be what a real service runs -- so it
+    // must agree with the contract exactly.
+    const live = forPlan.filter((p) => p.active);
+    if (live.length === 0) {
+      const pending = forPlan.some((p) => Number(p.expiry) > Math.floor((nowMs ?? 0) / 1000));
+      return {
+        state: "denied",
+        reason: pending
+          ? "They hold a pass for that plan, but its access window hasn't started yet."
+          : "Their pass for that plan has expired.",
+      };
+    }
+
+    const scored = live
       .map((p) => {
         const expiry = shiftExpiry(p.expiry);
         return { p, left: remaining(expiry, nowMs ?? Number(expiry) * 1000) };
@@ -106,9 +123,6 @@ export default function Verify() {
       .sort((a, b) => b.left - a.left);
 
     const best = scored[0];
-    if (best.left <= 0) {
-      return { state: "denied", reason: "Their pass for that plan has expired." };
-    }
 
     return {
       state: "granted",

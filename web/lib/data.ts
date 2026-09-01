@@ -94,12 +94,17 @@ export async function fetchPasses(client: PublicClient = publicClient): Promise<
       // contract charges exactly what currentPrice returns, so the UI must
       // quote the contract's own number, not its own approximation of it.
       { address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "currentPrice", args: [id] },
+      // Asked, never inferred. A split slice has a start time as well as an
+      // expiry, and `startOf` was dropped to fit `split` under the 24KB limit,
+      // so expiry alone cannot tell a live pass from one whose window has not
+      // opened yet. Only the contract knows.
+      { address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "isActive", args: [id] },
     ] as const),
   });
 
   return ids
     .map((tokenId, i) => {
-      const o = i * 7;
+      const o = i * 8;
       return {
         tokenId,
         owner: results[o] as `0x${string}`,
@@ -109,6 +114,7 @@ export async function fetchPasses(client: PublicClient = publicClient): Promise<
         paid: results[o + 4] as bigint,
         listed: results[o + 5] as bigint,
         current: results[o + 6] as bigint,
+        active: results[o + 7] as boolean,
       };
     })
     .reverse();
@@ -122,10 +128,11 @@ export async function fetchPasses(client: PublicClient = publicClient): Promise<
  * is at least one such pass on chain already, left listed by a test run.
  */
 export function activeListings(passes: Pass[], nowMs: number | null): Pass[] {
-  // The caller supplies the clock. Reading Date.now() here made every useMemo
-  // that called this impure, which is a hydration hazard on prerendered pages.
-  const now = Math.floor((nowMs ?? 0) / 1000);
-  return passes.filter((p) => p.listed > 0n && Number(p.expiry) > now);
+  // `active` comes from the contract, not from comparing expiry to the clock.
+  // A pending split slice has a future expiry but is not buyable, and buy()
+  // would revert on it.
+  void nowMs;
+  return passes.filter((p) => p.listed > 0n && p.active);
 }
 
 export function passesOf(passes: Pass[], owner?: string): Pass[] {
@@ -146,6 +153,11 @@ const ACTIVITY_EVENT_NAMES = [
   "Bought",
   "PlanCreated",
   "Minted",
+  // Without this the feed silently omitted whole categories of event: gifts
+  // emit only PassTransferred, and so does every slice produced by `split`.
+  // Slices therefore showed "No events recorded yet" on their own lifecycle
+  // strip while the explorer claimed to show every Liquid Pass event.
+  "PassTransferred",
 ] as const;
 
 const ACTIVITY_EVENTS = liquidPassAbi.filter(
@@ -155,7 +167,14 @@ const ACTIVITY_EVENTS = liquidPassAbi.filter(
 );
 
 export type Activity = {
-  kind: "PassPurchased" | "Listed" | "Unlisted" | "Bought" | "PlanCreated" | "Minted";
+  kind:
+    | "PassPurchased"
+    | "Listed"
+    | "Unlisted"
+    | "Bought"
+    | "PlanCreated"
+    | "Minted"
+    | "PassTransferred";
   tokenId?: bigint;
   planId?: bigint;
   who?: `0x${string}`;

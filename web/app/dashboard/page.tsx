@@ -34,6 +34,7 @@ export default function Dashboard() {
   const { writeContractAsync } = useWriteContract();
   const fees = useFees();
   const nowMs = useNow(1000);
+  const { shiftExpiry: shiftForStats, effectiveActive } = useDemo();
 
   const [plans, setPlans] = useState<Plan[]>([]);
   const [passes, setPasses] = useState<Pass[]>([]);
@@ -80,17 +81,26 @@ export default function Dashboard() {
     let soon = 0;
     let listed = 0;
     let expired = 0;
+    let pending = 0;
     for (const p of mine) {
-      const left = Number(p.expiry) - now;
-      if (left <= 0) expired++;
-      else {
+      const left = Number(shiftForStats(p.expiry)) - now;
+      // `p.active` is the contract's own answer. A split slice whose window
+      // has not opened has a future expiry but grants nothing -- counting it
+      // as active told the holder they had several simultaneous accesses.
+      // Under time travel the counters follow the scrubber, so they cannot
+      // disagree with the cards beside them.
+      if (effectiveActive(p.active, p.expiry, nowMs)) {
         active++;
         if (left <= 7 * 86400) soon++;
+      } else if (left > 0) {
+        pending++;
+      } else {
+        expired++;
       }
       if (p.listed > 0n) listed++;
     }
-    return { active, soon, listed, expired };
-  }, [mine, nowMs]);
+    return { active, soon, listed, expired, pending };
+  }, [mine, nowMs, shiftForStats, effectiveActive]);
 
   // What resales of each plan have actually settled at. Empty until there is
   // history, which the oracle reports rather than papers over.
@@ -152,7 +162,11 @@ export default function Dashboard() {
           <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="Active" value={stats.active} tone="var(--color-life-full)" />
             <Stat label="Expiring soon" value={stats.soon} tone="var(--color-life-low)" />
-            <Stat label="Listed" value={stats.listed} tone="var(--color-life-mid)" />
+            <Stat
+              label={stats.pending > 0 ? "Not started" : "Listed"}
+              value={stats.pending > 0 ? stats.pending : stats.listed}
+              tone="var(--color-life-mid)"
+            />
             <Stat label="Expired" value={stats.expired} tone="var(--color-faint)" />
           </div>
 
@@ -297,7 +311,7 @@ function OwnedPass({
   onSplit: (parts: bigint) => void;
 }) {
   const now = useNow();
-  const { shiftExpiry } = useDemo();
+  const { shiftExpiry, effectiveActive } = useDemo();
   const expiry = shiftExpiry(pass.expiry);
 
   const [listing, setListing] = useState(false);
@@ -313,6 +327,14 @@ function OwnedPass({
   const fair = fairPrice(pass.paid, expiry, plan?.duration ?? 0n, now);
   const expired = left <= 0;
   const isListed = pass.listed > 0n;
+  /**
+   * A split slice that has not reached its window yet. Future expiry, but the
+   * contract refuses to list it -- `list` requires is_active -- so offering
+   * "Sell remaining time" here produced a button that reverts, and a days-left
+   * figure covering time the holder cannot use.
+   */
+  const active = effectiveActive(pass.active, pass.expiry, now);
+  const pending = !active && !expired;
 
   function submit() {
     setPriceError(null);
@@ -345,7 +367,12 @@ function OwnedPass({
             #{pass.tokenId.toString()}
           </p>
         </div>
-        {isListed && !expired && (
+        {pending && (
+          <span className="rounded-md bg-life-low/15 px-2 py-1 text-[10px] uppercase tracking-wider text-life-low">
+            not started
+          </span>
+        )}
+        {isListed && !expired && !pending && (
           <span className="rounded-md bg-life-mid/15 px-2 py-1 text-[10px] uppercase tracking-wider text-life-mid">
             listed
           </span>
@@ -367,7 +394,18 @@ function OwnedPass({
       </div>
 
       <div className="mt-auto border-t border-line pt-4">
-        {expired ? (
+        {pending ? (
+          <div className="space-y-1.5 text-center">
+            <p className="text-[12px] text-life-low">
+              Access hasn&rsquo;t started yet
+            </p>
+            <p className="text-[11px] leading-relaxed text-faint">
+              A later slice of a split pass. It becomes usable when the slice
+              before it ends, and until then the contract will not let it be
+              listed — so selling is off rather than failing when you sign.
+            </p>
+          </div>
+        ) : expired ? (
           isListed ? (
             <button
               onClick={onUnlist}
