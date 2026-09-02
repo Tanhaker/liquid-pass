@@ -64,7 +64,7 @@ export default function IssuerPage() {
       const hash = await writeContractAsync({
         address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "createPlan",
         args: [planName, uri, parseEther(planPrice), BigInt(planDays * 86400)],
-        chainId: arbitrumSepolia.id, ...(await fees()),
+        chainId: arbitrumSepolia.id,
       });
       setTx({ hash, what: `Created plan "${planName}"` });
       await client?.waitForTransactionReceipt({ hash });
@@ -78,7 +78,7 @@ export default function IssuerPage() {
     try {
       const hash = await writeContractAsync({
         address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "setPlanOpen",
-        args: [plan.id, !plan.open], chainId: arbitrumSepolia.id, ...(await fees()),
+        args: [plan.id, !plan.open], chainId: arbitrumSepolia.id,
       });
       setTx({ hash, what: `${plan.open ? "Closed" : "Opened"} plan "${plan.name}"` });
       await client?.waitForTransactionReceipt({ hash });
@@ -174,17 +174,17 @@ export default function IssuerPage() {
         <div className="lg:col-span-6 p-6 bg-dark-card border border-dark-border shadow-grunge space-y-6">
           <div className="flex items-center justify-between border-b border-dark-border pb-4">
             <h3 className="font-header font-bold text-xl text-alabaster">Live On-Chain Plans</h3>
-            <span className="font-mono text-xs text-zincGrey">{plans.length} PLANS</span>
+            <span className="font-mono text-xs text-zincGrey">{plans.filter(p => p.id !== 0n && p.name !== "Test Plan A").length} PLANS</span>
           </div>
           {loading ? (
             <div className="p-8 text-center font-mono text-xs text-zincGrey">
               <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3 text-uranium" />Reading plans from Stylus contract...
             </div>
-          ) : plans.length === 0 ? (
+          ) : plans.filter(p => p.id !== 0n && p.name !== "Test Plan A").length === 0 ? (
             <div className="p-8 text-center font-mono text-xs text-zincGrey">No plans created yet. Be the first issuer!</div>
           ) : (
             <div className="space-y-3 font-mono text-xs">
-              {plans.map((plan) => {
+              {plans.filter(p => p.id !== 0n && p.name !== "Test Plan A").map((plan) => {
                 const ipfsCid = plan.uri?.replace("ipfs://", "");
                 const ipfsGatewayUrl = ipfsCid ? `https://gateway.pinata.cloud/ipfs/${ipfsCid}` : null;
                 return (

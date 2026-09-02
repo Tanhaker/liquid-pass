@@ -56,7 +56,10 @@ export default function DashboardPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const myPasses = passesOf(passes, address);
+  const myPasses = passesOf(passes, address).filter((p) => {
+    const pl = planFor(p);
+    return pl?.name !== "Test Plan A" && p.planId !== 0n;
+  });
   const myListings = myPasses.filter((p) => p.listed > 0n && p.active);
   const planFor = (p: Pass) => plans.find((pl) => pl.id === p.planId);
 

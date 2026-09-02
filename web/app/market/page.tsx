@@ -40,7 +40,7 @@ export default function MarketPage() {
   }, [client]);
 
   const planById = useMemo(() => new Map(plans.map((p) => [p.id.toString(), p])), [plans]);
-  const listings = passes.filter((p) => p.listed > 0n && shiftExpiry(p.expiry) > BigInt(Math.floor(now / 1000)));
+  const listings = passes.filter((p) => p.listed > 0n && p.planId !== 0n && shiftExpiry(p.expiry) > BigInt(Math.floor(now / 1000)));
 
   // Convert our real on-chain Pass to their SubscriptionPass UI type
   const toSubscriptionPass = (p: Pass): SubscriptionPass => {
