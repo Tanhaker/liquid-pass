@@ -74,13 +74,8 @@ export function SkeletonGrid({ n = 3 }: { n?: number }) {
 export function useFees() {
   const client = usePublicClient();
   return useCallback(async () => {
-    if (!client) return {};
-    const block = await client.getBlock();
-    const base = block.baseFeePerGas ?? 100_000_000n;
-    return {
-      maxFeePerGas: base * 4n + 1_000_000n,
-      maxPriorityFeePerGas: 1_000_000n,
-    };
+    // Return empty object so MetaMask and Viem natively calculate Arbitrum Sepolia L1+L2 gas fees
+    return {};
   }, [client]);
 }
 
