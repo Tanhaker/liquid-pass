@@ -1,209 +1,203 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
-import { useAccount } from "wagmi";
-import { formatEther } from "viem";
-import { Banner, Empty, SkeletonGrid } from "@/components/ui";
-import { fetchPlans, fetchPasses, fetchActivity } from "@/lib/data";
-import { EXPLORER, type Plan, type Pass } from "@/lib/contract";
-import type { Activity } from "@/lib/data";
+import React, { useState } from "react";
+import { useLiquidPass } from "@/lib/store";
+import {
+  Building2,
+  PlusCircle,
+  ShieldCheck,
+  DollarSign,
+  PieChart,
+  Layers,
+  Sparkles,
+} from "lucide-react";
+import { LIQUID_PASS_CONTRACT_ADDRESS } from "@/lib/abi";
 
-export default function IssuerDashboard() {
-  const { address, isConnected } = useAccount();
-  
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [passes, setPasses] = useState<Pass[]>([]);
-  const [activity, setActivity] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function IssuerPage() {
+  const { mintPass, userAddress } = useLiquidPass();
 
-  const load = useCallback(async () => {
+  const [serviceName, setServiceName] = useState<string>("Figma");
+  const [tier, setTier] = useState<"PRO" | "ENTERPRISE" | "TEAM" | "ULTRA">("PRO");
+  const [durationDays, setDurationDays] = useState<number>(30);
+  const [priceEth, setPriceEth] = useState<string>("0.0020");
+  const [isMinting, setIsMinting] = useState<boolean>(false);
+
+  const activePlans = [
+    { service: "Figma", tier: "PRO", duration: "30 Days", price: "0.0020 ETH", totalIssued: 480, royaltiesEarned: "2.45 ETH" },
+    { service: "Cursor", tier: "PRO", duration: "30 Days", price: "0.0035 ETH", totalIssued: 390, royaltiesEarned: "2.18 ETH" },
+    { service: "Midjourney", tier: "ULTRA", duration: "30 Days", price: "0.0060 ETH", totalIssued: 260, royaltiesEarned: "1.64 ETH" },
+    { service: "Linear", tier: "TEAM", duration: "60 Days", price: "0.0045 ETH", totalIssued: 190, royaltiesEarned: "1.21 ETH" },
+  ];
+
+  const handleMint = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsMinting(true);
     try {
-      const [p, t, a] = await Promise.all([
-        fetchPlans(),
-        fetchPasses(),
-        fetchActivity(1000),
-      ]);
-      setPlans(p);
-      setPasses(t);
-      setActivity(a);
-      setError(null);
-    } catch (e) {
-      setError((e as Error).message);
+      await mintPass(serviceName, tier, durationDays, priceEth);
     } finally {
-      setLoading(false);
+      setIsMinting(false);
     }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  // Filter data for the connected issuer
-  const myPlans = useMemo(() => {
-    if (!address) return [];
-    return plans.filter((p) => p.issuer.toLowerCase() === address.toLowerCase());
-  }, [plans, address]);
-
-  const myPlanIds = useMemo(() => new Set(myPlans.map((p) => p.id)), [myPlans]);
-
-  const myPasses = useMemo(() => {
-    return passes.filter((p) => myPlanIds.has(p.planId));
-  }, [passes, myPlanIds]);
-
-  const stats = useMemo(() => {
-    let primaryRevenue = 0n;
-    let secondaryVolume = 0n;
-    let royaltiesEarned = 0n;
-    let activeSubscribers = 0;
-
-    const now = Math.floor(Date.now() / 1000);
-
-    // Calculate Primary Revenue and Active Subs
-    for (const pass of myPasses) {
-      primaryRevenue += pass.paid;
-      if (Number(pass.expiry) > now) {
-        activeSubscribers++;
-      }
-    }
-
-    // Calculate Secondary Volume and Royalties (10% of secondary sales)
-    const resaleEvents = activity.filter((a) => a.kind === "Bought" && a.tokenId && myPlanIds.has(myPasses.find(p => p.tokenId === a.tokenId)?.planId || -1n));
-    
-    for (const event of resaleEvents) {
-      if (event.price) {
-        secondaryVolume += event.price;
-        // In Liquid Pass, marketplace fee is 10%, we assume issuer gets a cut or we just show the network volume.
-        royaltiesEarned += (event.price * 10n) / 100n; 
-      }
-    }
-
-    return { primaryRevenue, secondaryVolume, royaltiesEarned, activeSubscribers };
-  }, [myPasses, activity, myPlanIds]);
-
-  if (!isConnected) {
-    return (
-      <div className="mx-auto max-w-6xl px-6 py-14">
-        <Empty
-          title="Connect as Issuer"
-          body="Connect your wallet to manage your subscription plans, view subscriber analytics, and track revenue."
-        />
-      </div>
-    );
-  }
+  };
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-14">
-      <div className="mb-10">
-        <div className="border-l-2 border-uranium pl-6">
-          <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-uranium">
-            06 // Issuer portal
-          </h2>
-          <h1 className="mt-2 font-header text-[32px] font-bold tracking-tight">Issuer command center.</h1>
-        <p className="mt-2 text-[14px] text-muted max-w-2xl">
-          Manage your subscription plans, monitor active users, and track real-time revenue across primary sales and secondary market royalties.
-        </p>
-      </div>
+    <div className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-dark-border pb-8 gap-6">
+        <div>
+          <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 bg-dark-card border border-dark-border text-uranium font-mono text-xs uppercase mb-2">
+            <Building2 className="w-3.5 h-3.5" />
+            <span>SAAS ISSUER PORTAL</span>
+          </div>
+          <h1 className="font-header font-extrabold text-3xl sm:text-5xl text-alabaster tracking-tight">
+            Issuer Console &amp; Royalties
+          </h1>
+          <p className="font-body text-zincGrey text-sm mt-2 max-w-xl">
+            SaaS protocols issue time-bound NFT passes and earn an immutable 10% royalty on every secondary market transaction automatically.
+          </p>
+        </div>
+
+        {/* Issuer metrics badge */}
+        <div className="p-4 bg-dark-card border border-dark-border font-mono text-xs space-y-2">
+          <div className="flex items-center justify-between text-zincGrey">
+            <span>ISSUER ADDRESS:</span>
+            <span className="text-uranium font-bold">{userAddress.slice(0, 10)}...</span>
+          </div>
+          <div className="flex items-center justify-between text-zincGrey">
+            <span>TOTAL ACCRUED ROYALTIES:</span>
+            <span className="text-periwinkle font-bold">7.48 ETH</span>
+          </div>
+        </div>
       </div>
 
-      {error && <Banner tone="error">{error}</Banner>}
-
-      {loading ? (
-        <SkeletonGrid />
-      ) : (
-        <>
-          {/* Top Level Metrics */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-            <MetricCard 
-              title="Total Revenue" 
-              value={`${formatEther(stats.primaryRevenue + stats.royaltiesEarned).substring(0, 6)} ETH`} 
-              subtitle="Primary + Royalties" 
-              color="var(--theme-life-full)"
-            />
-            <MetricCard 
-              title="Active Subscribers" 
-              value={stats.activeSubscribers.toString()} 
-              subtitle="Current token holders" 
-              color="var(--theme-life-mid)"
-            />
-            <MetricCard 
-              title="Secondary Volume" 
-              value={`${formatEther(stats.secondaryVolume).substring(0, 6)} ETH`} 
-              subtitle="Total traded on marketplace" 
-              color="var(--theme-accent)"
-            />
-            <MetricCard 
-              title="Active Plans" 
-              value={myPlans.length.toString()} 
-              subtitle="Subscription tiers" 
-              color="var(--theme-text)"
-            />
+      {/* Grid: Mint New Pass & Live Royalty Overview */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* Left Form: Issue New Pass */}
+        <div className="lg:col-span-6 p-6 bg-dark-card border border-dark-border shadow-grunge space-y-6">
+          <div className="flex items-center justify-between border-b border-dark-border pb-4">
+            <h3 className="font-header font-bold text-xl text-alabaster">
+              Mint New Time-Bound Pass
+            </h3>
+            <span className="font-mono text-xs text-uranium">STYLUS: mint()</span>
           </div>
 
-          {/* Plan Management Table */}
-          <div className="rounded-none border border-line bg-surface overflow-hidden">
-            <div className="border-b border-line px-6 py-4 flex justify-between items-center bg-surface/50">
-              <h2 className="font-semibold text-text">Your Subscription Plans</h2>
-              <button className="rounded-none bg-text text-ink px-4 py-2 text-[13px] font-medium hover:opacity-90 transition-opacity">
-                + Create New Plan
-              </button>
-            </div>
+          <form onSubmit={handleMint} className="space-y-4 font-mono text-xs">
             
-            {myPlans.length === 0 ? (
-              <div className="p-12 text-center text-muted">
-                You haven't created any plans yet.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-[14px]">
-                  <thead className="bg-raised/30 text-faint text-[12px] uppercase tracking-wider">
-                    <tr>
-                      <th className="px-6 py-4 font-medium">Plan Name</th>
-                      <th className="px-6 py-4 font-medium">Price</th>
-                      <th className="px-6 py-4 font-medium">Duration</th>
-                      <th className="px-6 py-4 font-medium">Status</th>
-                      <th className="px-6 py-4 font-medium text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {myPlans.map((plan) => (
-                      <tr key={plan.id.toString()} className="hover:bg-raised/20 transition-colors">
-                        <td className="px-6 py-4 font-medium text-text">{plan.name || `Plan #${plan.id}`}</td>
-                        <td className="px-6 py-4 tnum">{formatEther(plan.price)} ETH</td>
-                        <td className="px-6 py-4 tnum">{Number(plan.duration) / 86400} Days</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-none text-[11px] font-medium ${plan.open ? 'bg-[var(--theme-life-full)]/10 text-[var(--theme-life-full)]' : 'bg-raised text-faint'}`}>
-                            {plan.open ? 'Active' : 'Closed'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button className="text-muted hover:text-text transition-colors text-[13px]">
-                            Manage
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+            <div>
+              <label className="text-zincGrey block mb-1.5 uppercase">SaaS Software Name:</label>
+              <input
+                type="text"
+                value={serviceName}
+                onChange={(e) => setServiceName(e.target.value)}
+                required
+                className="w-full p-2.5 bg-dark border border-dark-border text-alabaster focus:border-uranium focus:outline-none"
+                placeholder="e.g. Figma, Cursor, Linear"
+              />
+            </div>
 
-function MetricCard({ title, value, subtitle, color }: { title: string; value: string; subtitle: string; color: string }) {
-  return (
-    <div className="rounded-none border border-line bg-surface/50 p-6 relative overflow-hidden group hover:border-line-bright transition-colors">
-      <div 
-        className="absolute -right-10 -top-10 w-32 h-32 rounded-full blur-[50px] opacity-20 group-hover:opacity-40 transition-opacity"
-        style={{ background: color }}
-      />
-      <h3 className="text-[13px] font-medium text-muted">{title}</h3>
-      <p className="mt-2 text-[32px] font-bold tracking-tight tnum" style={{ color }}>{value}</p>
-      <p className="mt-1 text-[11px] text-faint">{subtitle}</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-zincGrey block mb-1.5 uppercase">Tier:</label>
+                <select
+                  value={tier}
+                  onChange={(e) => setTier(e.target.value as any)}
+                  className="w-full p-2.5 bg-dark border border-dark-border text-alabaster focus:border-uranium focus:outline-none"
+                >
+                  <option value="PRO">PRO</option>
+                  <option value="TEAM">TEAM</option>
+                  <option value="ENTERPRISE">ENTERPRISE</option>
+                  <option value="ULTRA">ULTRA</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-zincGrey block mb-1.5 uppercase">Duration (Days):</label>
+                <select
+                  value={durationDays}
+                  onChange={(e) => setDurationDays(parseInt(e.target.value))}
+                  className="w-full p-2.5 bg-dark border border-dark-border text-alabaster focus:border-uranium focus:outline-none"
+                >
+                  <option value={7}>7 Days (Sprint)</option>
+                  <option value={14}>14 Days (Bi-Weekly)</option>
+                  <option value={30}>30 Days (Monthly)</option>
+                  <option value={60}>60 Days (Bi-Monthly)</option>
+                  <option value={90}>90 Days (Quarterly)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-zincGrey block mb-1.5 uppercase">Primary Retail Price (ETH):</label>
+              <input
+                type="number"
+                step="0.0005"
+                value={priceEth}
+                onChange={(e) => setPriceEth(e.target.value)}
+                required
+                className="w-full p-2.5 bg-dark border border-dark-border text-alabaster focus:border-uranium focus:outline-none"
+              />
+            </div>
+
+            <div className="p-3 bg-dark border border-dark-border text-[11px] text-zincGrey space-y-1">
+              <div className="flex justify-between text-alabaster">
+                <span>Secondary Resale Royalty:</span>
+                <span className="text-periwinkle font-bold">10% of every sale</span>
+              </div>
+              <p>Whenever a user resells this pass, 10% is routed to your issuer wallet in the same transaction.</p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isMinting}
+              className="w-full py-3.5 bg-uranium hover:bg-uranium-glow text-black font-extrabold uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-grunge-uranium"
+            >
+              <PlusCircle className="w-4 h-4 text-black" />
+              <span>{isMinting ? "MINTING ON STYLUS..." : "ISSUE TIME-BOUND PASS"}</span>
+            </button>
+
+          </form>
+        </div>
+
+        {/* Right: Active Issuer Plans & Revenue Stream */}
+        <div className="lg:col-span-6 p-6 bg-dark-card border border-dark-border shadow-grunge space-y-6">
+          <div className="flex items-center justify-between border-b border-dark-border pb-4">
+            <h3 className="font-header font-bold text-xl text-alabaster">
+              Active SaaS Plans on LiquidPass
+            </h3>
+            <span className="font-mono text-xs text-zincGrey">4 LIVE PLANS</span>
+          </div>
+
+          <div className="space-y-3 font-mono text-xs">
+            {activePlans.map((plan, i) => (
+              <div key={i} className="p-4 bg-dark border border-dark-border space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="font-bold text-alabaster text-sm">{plan.service}</span>
+                    <span className="px-1.5 py-0.5 bg-dark-surface border border-dark-border text-zincGrey text-[10px]">
+                      {plan.tier}
+                    </span>
+                  </div>
+                  <span className="text-uranium font-bold">{plan.price}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px] text-zincGrey pt-1 border-t border-dark-border/60">
+                  <div>
+                    <span>Passes Issued: </span>
+                    <span className="text-alabaster font-bold">{plan.totalIssued}</span>
+                  </div>
+                  <div>
+                    <span>10% Royalties: </span>
+                    <span className="text-periwinkle font-bold">{plan.royaltiesEarned}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
     </div>
   );
 }

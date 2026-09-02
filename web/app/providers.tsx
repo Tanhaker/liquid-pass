@@ -7,6 +7,7 @@ import { useState, type ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
 import { config } from "@/lib/wagmi";
 import { ThemeProvider } from "next-themes";
+import { LiquidPassProvider } from "@/lib/store";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -25,7 +26,9 @@ export function Providers({ children }: { children: ReactNode }) {
             })}
             modalSize="compact"
           >
-            {children}
+            <LiquidPassProvider>
+              {children}
+            </LiquidPassProvider>
           </RainbowKitProvider>
         </QueryClientProvider>
       </WagmiProvider>
