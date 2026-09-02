@@ -56,6 +56,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   // would disagree with the prerendered HTML.
   useEffect(() => {
     try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (localStorage.getItem(STORAGE_KEY) === "1") setEnabledState(true);
     } catch {
       // Private windows and blocked site data throw here. Demo mode simply
