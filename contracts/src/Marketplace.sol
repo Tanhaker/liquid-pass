@@ -2,11 +2,11 @@
 pragma solidity ^0.8.20;
 
 interface ILiquidPass {
-    function owner_of(uint256 tokenId) external view returns (address);
-    function is_active(uint256 tokenId) external view returns (bool);
-    function expiry_of(uint256 tokenId) external view returns (uint256);
-    function issuer_of(uint256 tokenId) external view returns (address);
-    function market_transfer(address from, address to, uint256 tokenId) external;
+    function ownerOf(uint256 tokenId) external view returns (address);
+    function isActive(uint256 tokenId) external view returns (bool);
+    function expiryOf(uint256 tokenId) external view returns (uint256);
+    function issuerOf(uint256 tokenId) external view returns (address);
+    function marketTransfer(address from, address to, uint256 tokenId) external;
 }
 
 interface IEscrowYield {
@@ -38,8 +38,8 @@ contract Marketplace {
     }
 
     function list(uint256 tokenId, uint256 price) external {
-        require(liquidPass.owner_of(tokenId) == msg.sender, "Not owner");
-        require(liquidPass.is_active(tokenId), "Expired");
+        require(liquidPass.ownerOf(tokenId) == msg.sender, "Not owner");
+        require(liquidPass.isActive(tokenId), "Expired");
         require(price > 0, "Zero price");
 
         listings[tokenId] = Listing({
@@ -51,7 +51,7 @@ contract Marketplace {
     }
 
     function unlist(uint256 tokenId) external {
-        require(liquidPass.owner_of(tokenId) == msg.sender, "Not owner");
+        require(liquidPass.ownerOf(tokenId) == msg.sender, "Not owner");
         delete listings[tokenId];
         emit Unlisted(tokenId, msg.sender);
     }
@@ -60,7 +60,7 @@ contract Marketplace {
         Listing memory l = listings[tokenId];
         if (l.openingPrice == 0) return 0;
         
-        uint256 expiry = liquidPass.expiry_of(tokenId);
+        uint256 expiry = liquidPass.expiryOf(tokenId);
         if (block.timestamp >= expiry || expiry <= l.listedAt) return 0;
         
         return l.openingPrice * (expiry - block.timestamp) / (expiry - l.listedAt);
@@ -73,13 +73,13 @@ contract Marketplace {
     function buy(uint256 tokenId) external payable {
         uint256 price = currentPrice(tokenId);
         require(price > 0, "Not listed or no time left");
-        require(liquidPass.is_active(tokenId), "Expired");
+        require(liquidPass.isActive(tokenId), "Expired");
         require(msg.value >= price, "Wrong value");
 
-        address seller = liquidPass.owner_of(tokenId);
+        address seller = liquidPass.ownerOf(tokenId);
         require(seller != msg.sender, "Already owner");
 
-        address issuer = liquidPass.issuer_of(tokenId);
+        address issuer = liquidPass.issuerOf(tokenId);
         
         // Clear listing
         delete listings[tokenId];
@@ -89,7 +89,7 @@ contract Marketplace {
         uint256 refund = msg.value - price;
 
         // Transfer token
-        liquidPass.market_transfer(seller, msg.sender, tokenId);
+        liquidPass.marketTransfer(seller, msg.sender, tokenId);
 
         // Payouts: Send proceeds to the Escrow to earn Aave Yield!
         if (address(escrowYield) != address(0)) {

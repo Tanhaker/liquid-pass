@@ -1,10 +1,10 @@
 import { parseAbi } from "viem";
 
 export const LIQUID_PASS_ADDRESS = (process.env.NEXT_PUBLIC_LIQUID_PASS_ADDRESS ||
-  "0x22703fdd3dd77f854ca111e581bbd84cf82c1d36") as `0x${string}`;
+  "0xac20ef73723e7c620df1024eb04cc0b71fca1055") as `0x${string}`;
 
 export const MARKETPLACE_ADDRESS = (process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS ||
-  "0x22703fdd3dd77f854ca111e581bbd84cf82c1d36") as `0x${string}`;
+  "0x63a9edec92baf3e74f19d301808c56104e786241") as `0x${string}`;
 
 export const ESCROW_ADDRESS = (process.env.NEXT_PUBLIC_ESCROW_ADDRESS ||
   "0x") as `0x${string}`;

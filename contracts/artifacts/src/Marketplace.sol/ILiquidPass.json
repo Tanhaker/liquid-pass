@@ -11,7 +11,7 @@
           "type": "uint256"
         }
       ],
-      "name": "expiry_of",
+      "name": "expiryOf",
       "outputs": [
         {
           "internalType": "uint256",
@@ -30,7 +30,7 @@
           "type": "uint256"
         }
       ],
-      "name": "is_active",
+      "name": "isActive",
       "outputs": [
         {
           "internalType": "bool",
@@ -49,7 +49,7 @@
           "type": "uint256"
         }
       ],
-      "name": "issuer_of",
+      "name": "issuerOf",
       "outputs": [
         {
           "internalType": "address",
@@ -78,7 +78,7 @@
           "type": "uint256"
         }
       ],
-      "name": "market_transfer",
+      "name": "marketTransfer",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -91,7 +91,7 @@
           "type": "uint256"
         }
       ],
-      "name": "owner_of",
+      "name": "ownerOf",
       "outputs": [
         {
           "internalType": "address",

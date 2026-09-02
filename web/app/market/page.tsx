@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { formatEther, parseEther } from "viem";
+import { formatEther } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { useNow } from "@/components/ui";
 import { PassCard3D } from "@/components/PassCard3D";
@@ -9,6 +9,8 @@ import { fetchPasses, fetchPlans, marketStats, type MarketStats } from "@/lib/da
 import {
   MARKETPLACE_ADDRESS,
   marketplaceAbi,
+  formatEthShort,
+  withBuffer,
   type Pass,
   type Plan,
 } from "@/lib/contract";
@@ -155,8 +157,11 @@ export default function MarketPage() {
       issuer: p.issuer,
       expiryTimestamp: Number(shiftExpiry(p.expiry)),
       totalDurationSeconds: Number(plan?.duration || 0n),
-      originalPriceEth: formatEther(p.paid > 0n ? p.paid : plan?.price || 0n),
-      listingPriceEth: formatEther(p.current),
+      // formatEthShort, not formatEther: raw wei formatting renders a decaying
+      // price as 0.000972731682277632 ETH on the card. Display only -- the
+      // value sent to the contract still comes from the unrounded bigint.
+      originalPriceEth: formatEthShort(p.paid > 0n ? p.paid : plan?.price || 0n),
+      listingPriceEth: formatEthShort(p.current),
       isListed: p.listed > 0n,
       tier: "PRO",
       features: ["On-chain Access", "Resellable", "Fair Value Decay"],
@@ -202,7 +207,12 @@ export default function MarketPage() {
       return;
     }
     try {
-      const priceWei = parseEther(uiPass.listingPriceEth || uiPass.originalPriceEth);
+      // The price must come from the unrounded on-chain bigint, never from the
+      // formatted card string: the card shows 6 significant figures, and a
+      // rounded-down value underpays a decaying ask and reverts.
+      const onChain = listings.find((p) => p.tokenId.toString() === uiPass.tokenId);
+      if (!onChain) throw new Error("That listing is no longer on chain.");
+      const priceWei = withBuffer(onChain.current);
       const hash = await writeContractAsync({
         address: MARKETPLACE_ADDRESS,
         abi: marketplaceAbi,
