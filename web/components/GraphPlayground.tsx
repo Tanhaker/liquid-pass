@@ -4,26 +4,53 @@ import React, { useState } from "react";
 import { useApolloClient, gql } from "@apollo/client";
 import { Play, Database, Code, Terminal } from "lucide-react";
 
-const DEFAULT_QUERY = `{
-  plans(first: 5) {
+const QUERIES = [
+  {
+    name: "Global Totals",
+    query: `{
+  marketplace(id: "global") {
+    plans
+    passesIssued
+    resales
+    primaryVolume
+    resaleVolume
+  }
+}`
+  },
+  {
+    name: "Recent Resales",
+    query: `{
+  passEvents(
+    first: 5,
+    orderBy: blockNumber,
+    orderDirection: desc,
+    where: { kind: "RESOLD" }
+  ) {
+    price
+    timestamp
+    pass {
+      id
+      plan { id }
+    }
+  }
+}`
+  },
+  {
+    name: "Active Plans",
+    query: `{
+  plans(first: 5, where: { open: true }) {
     id
     issuer
     price
     durationSeconds
   }
-  passes(first: 5) {
-    id
-    plan {
-      id
-    }
-    owner
-    issuer
+}`
   }
-}`;
+];
 
 export function GraphPlayground() {
   const client = useApolloClient();
-  const [queryText, setQueryText] = useState(DEFAULT_QUERY);
+  const [queryText, setQueryText] = useState(QUERIES[0].query);
   const [result, setResult] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -53,7 +80,7 @@ export function GraphPlayground() {
   };
 
   return (
-    <div className="flex flex-col bg-ink border border-dark-border shadow-grunge overflow-hidden h-full min-h-[400px]">
+    <div className="flex flex-col bg-ink border border-dark-border shadow-grunge overflow-hidden h-full min-h-[500px]">
       {/* Playground Header */}
       <div className="flex items-center justify-between bg-dark-card border-b border-dark-border px-4 py-3">
         <div className="flex items-center space-x-3">
@@ -63,7 +90,7 @@ export function GraphPlayground() {
           </h3>
         </div>
         <div className="flex items-center space-x-4">
-          <span className="font-mono text-[10px] text-zincGrey flex items-center gap-1">
+          <span className="font-mono text-[10px] text-zincGrey hidden sm:flex items-center gap-1">
             <Database className="w-3 h-3" />
             Apollo Client Connected
           </span>
@@ -84,9 +111,27 @@ export function GraphPlayground() {
         </div>
       </div>
 
-      {/* Editor & Results Area */}
       <div className="flex flex-col md:flex-row flex-grow h-[450px]">
-        {/* Editor (Left) */}
+        {/* Left Sidebar: Query Presets */}
+        <div className="w-full md:w-48 bg-[#090a0c] border-b md:border-b-0 md:border-r border-dark-border p-3 space-y-2 overflow-y-auto">
+          <span className="font-mono text-[10px] text-zincGrey uppercase tracking-wider block mb-3">
+            QUERY EXPLORER
+          </span>
+          {QUERIES.map((q) => (
+            <button
+              key={q.name}
+              onClick={() => {
+                setQueryText(q.query);
+                setResult(null);
+              }}
+              className="w-full text-left px-3 py-2 text-xs font-mono text-alabaster bg-dark-card border border-dark-border hover:border-uranium/50 hover:text-uranium transition-colors"
+            >
+              {q.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Editor (Middle) */}
         <div className="flex-1 border-b md:border-b-0 md:border-r border-dark-border relative bg-[#0d0f12]">
           <textarea
             value={queryText}
