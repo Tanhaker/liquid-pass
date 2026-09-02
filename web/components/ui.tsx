@@ -95,10 +95,11 @@ export function humanise(e: Error): string {
   if (/not owner/i.test(raw)) return "You don't own that pass.";
   if (/not an issuer/i.test(raw))
     return "This address isn't on the issuer allowlist. The contract admin has to add it.";
-  if (/not plan issuer/i.test(raw)) return "Only the issuer who created this plan can change it.";
-  if (/zero price/i.test(raw)) return "Price must be above zero.";
-  if (/zero duration/i.test(raw)) return "Duration must be above zero.";
-  if (/insufficient funds/i.test(raw)) return "Not enough ETH for the price plus gas.";
+  if (/setPlanOpen/i.test(raw)) return "Only the original issuer wallet that created this plan can open or close it.";
+  if (/createPlan/i.test(raw)) return "Failed to create plan. Ensure your wallet is an allowed issuer and price/duration are valid.";
+  if (/transferPass/i.test(raw)) return "Only the current pass owner can transfer or discard this pass.";
+  if (/list/i.test(raw)) return "Only the owner of an unexpired pass can list it for secondary resale.";
+  if (/buyPass/i.test(raw)) return "Failed to buy pass. Check if the plan is open and you have sufficient ETH.";
   return raw.split("\n")[0];
 }
 
