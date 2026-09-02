@@ -97,14 +97,12 @@ export default function DottedSurface({
     }
     const dotTexture = new THREE.CanvasTexture(canvas);
 
-    // Theme Configuration with Amber #C77700 in both themes
+    // Theme Configuration
     const getThemeConfig = () => {
-      const isLight =
-        document.documentElement.getAttribute("data-theme") === "light";
       return {
-        color: new THREE.Color("#C77700"),
-        blending: isLight ? THREE.NormalBlending : THREE.AdditiveBlending,
-        opacity: isLight ? opacity * 0.75 : opacity,
+        color: new THREE.Color("#98FF1A"), // Uranium green
+        blending: THREE.AdditiveBlending,
+        opacity: opacity,
       };
     };
 
@@ -181,19 +179,14 @@ export default function DottedSurface({
       animate();
     }
 
-    // Visibility & Intersection Observers to eliminate background CPU load
+    // Visibility Observers
     const handleVisibilityChange = () => {
       isVisible = document.visibilityState === "visible";
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    const intersectionObserver = new IntersectionObserver(
-      ([entry]) => {
-        isVisible = entry.isIntersecting;
-      },
-      { threshold: 0.05 },
-    );
-    intersectionObserver.observe(container);
+    // Bypass IntersectionObserver which might fail on absolute/negative-z parents
+    isVisible = true;
 
     // Window resize handler
     const handleResize = () => {
@@ -214,7 +207,6 @@ export default function DottedSurface({
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("resize", handleResize);
       themeObserver.disconnect();
-      intersectionObserver.disconnect();
 
       geometry.dispose();
       dotTexture.dispose();

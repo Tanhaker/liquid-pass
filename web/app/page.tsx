@@ -7,7 +7,8 @@ import { ArrowRight, ArrowUpRight, Cpu, Fingerprint, Sliders } from "lucide-reac
 import { PassCard3D } from "@/components/PassCard3D";
 import { LiveStats } from "@/components/LiveStats";
 import { useNow } from "@/components/ui";
-import DottedSurface from "@/components/ui/dotted-surface";
+import dynamic from "next/dynamic";
+const DottedSurface = dynamic(() => import("@/components/ui/dotted-surface"), { ssr: false });
 import { EXPLORER, LIQUID_PASS_ADDRESS, shortAddress } from "@/lib/contract";
 
 /**
@@ -87,8 +88,8 @@ export default function Home() {
   return (
     <div className="relative overflow-hidden">
       {/* Background Hero 3D Dotted Surface Wave */}
-      <div className="absolute top-0 left-0 right-0 h-[680px] lg:h-[780px] overflow-hidden pointer-events-none -z-20">
-        <DottedSurface size={8} opacity={0.8} />
+      <div className="absolute top-0 left-0 right-0 h-[680px] lg:h-[780px] overflow-hidden pointer-events-none z-0">
+        <DottedSurface size={12} opacity={0.9} />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[var(--theme-ink)]" />
       </div>
 
