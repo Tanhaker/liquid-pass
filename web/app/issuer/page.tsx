@@ -28,6 +28,8 @@ export default function IssuerPage() {
   const [planName, setPlanName] = useState("Claude Pro");
   const [planPrice, setPlanPrice] = useState("0.002");
   const [planDays, setPlanDays] = useState(30);
+  const [metadataUri, setMetadataUri] = useState("");
+  const [pinningIpfs, setPinningIpfs] = useState(false);
 
   const load = useCallback(async () => {
     try { const pl = await fetchPlans(); setPlans(pl); setError(null); }
@@ -42,14 +44,22 @@ export default function IssuerPage() {
     if (!isConnected || wrongNetwork) return;
     setBusy(true); setTx(null); setError(null);
     try {
-      let uri = "";
-      try {
-        const res = await fetch("/api/ipfs", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: planName, description: `${planName} subscription pass`, durationDays: planDays, issuer: address }),
-        });
-        if (res.ok) { const json = await res.json(); uri = `ipfs://${json.cid}`; }
-      } catch { /* IPFS optional */ }
+      let uri = metadataUri.trim();
+      if (!uri) {
+        setPinningIpfs(true);
+        try {
+          const res = await fetch("/api/ipfs", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: planName, description: `${planName} subscription pass`, durationDays: planDays, issuer: address }),
+          });
+          if (res.ok) {
+            const json = await res.json();
+            uri = `ipfs://${json.cid}`;
+            setMetadataUri(uri);
+          }
+        } catch { /* IPFS optional fallback */ }
+        finally { setPinningIpfs(false); }
+      }
 
       const hash = await writeContractAsync({
         address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "createPlan",
@@ -59,7 +69,7 @@ export default function IssuerPage() {
       setTx({ hash, what: `Created plan "${planName}"` });
       await client?.waitForTransactionReceipt({ hash });
       await load();
-    } catch (e) { setError(humanise(e as Error)); } finally { setBusy(false); }
+    } catch (e) { setError(humanise(e as Error)); } finally { setBusy(false); setPinningIpfs(false); }
   };
 
   const handleTogglePlan = async (plan: Plan) => {
@@ -135,6 +145,20 @@ export default function IssuerPage() {
                   className="w-full p-2.5 bg-dark border border-dark-border text-alabaster focus:border-uranium focus:outline-none" />
               </div>
             </div>
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-zincGrey block uppercase">IPFS Metadata URI (Optional):</label>
+                <span className="text-[10px] text-uranium">AUTO-PINS TO PINATA IF BLANK</span>
+              </div>
+              <input
+                type="text"
+                value={metadataUri}
+                onChange={(e) => setMetadataUri(e.target.value)}
+                placeholder="ipfs://Qm... (Leave empty to auto-pin to Pinata)"
+                className="w-full p-2.5 bg-dark border border-dark-border text-alabaster focus:border-uranium focus:outline-none"
+              />
+            </div>
+
             <div className="p-3 bg-dark border border-dark-border text-[11px] text-zincGrey space-y-1">
               <div className="flex justify-between text-alabaster"><span>Secondary Resale Royalty:</span><span className="text-periwinkle font-bold">10% of every sale</span></div>
               <p>Metadata will be automatically pinned to IPFS via Pinata.</p>
@@ -142,7 +166,7 @@ export default function IssuerPage() {
             <button type="submit" disabled={busy || !isConnected || wrongNetwork}
               className="w-full py-3.5 bg-uranium hover:bg-uranium-glow text-black font-extrabold uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-grunge-uranium disabled:opacity-40">
               <PlusCircle className="w-4 h-4 text-black" />
-              <span>{busy ? "CONFIRM IN METAMASK..." : "CREATE PLAN ON-CHAIN"}</span>
+              <span>{pinningIpfs ? "PINNING TO PINATA IPFS..." : busy ? "CONFIRM IN METAMASK..." : "CREATE PLAN ON-CHAIN"}</span>
             </button>
           </form>
         </div>
@@ -160,29 +184,43 @@ export default function IssuerPage() {
             <div className="p-8 text-center font-mono text-xs text-zincGrey">No plans created yet. Be the first issuer!</div>
           ) : (
             <div className="space-y-3 font-mono text-xs">
-              {plans.map((plan) => (
-                <div key={plan.id.toString()} className="p-4 bg-dark border border-dark-border space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-bold text-alabaster text-sm">{plan.name || `Plan #${plan.id}`}</span>
-                      <span className={`px-1.5 py-0.5 border text-[10px] ${plan.open ? "bg-uranium/10 border-uranium text-uranium" : "bg-dark border-dark-border text-zincGrey"}`}>
-                        {plan.open ? "OPEN" : "CLOSED"}
-                      </span>
+              {plans.map((plan) => {
+                const ipfsCid = plan.uri?.replace("ipfs://", "");
+                const ipfsGatewayUrl = ipfsCid ? `https://gateway.pinata.cloud/ipfs/${ipfsCid}` : null;
+                return (
+                  <div key={plan.id.toString()} className="p-4 bg-dark border border-dark-border space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-bold text-alabaster text-sm">{plan.name || `Plan #${plan.id}`}</span>
+                        <span className={`px-1.5 py-0.5 border text-[10px] ${plan.open ? "bg-uranium/10 border-uranium text-uranium" : "bg-dark border-dark-border text-zincGrey"}`}>
+                          {plan.open ? "OPEN" : "CLOSED"}
+                        </span>
+                      </div>
+                      <span className="text-uranium font-bold">{formatEthShort(plan.price)} ETH</span>
                     </div>
-                    <span className="text-uranium font-bold">{formatEthShort(plan.price)} ETH</span>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] text-zincGrey pt-1 border-t border-dark-border/60">
+                      <div><span>Duration: </span><span className="text-alabaster font-bold">{Math.round(Number(plan.duration) / 86400)} days</span></div>
+                      <div><span>Issuer: </span><span className="text-alabaster">{shortAddress(plan.issuer)}</span></div>
+                    </div>
+                    {plan.uri && (
+                      <div className="text-[11px] text-zincGrey flex items-center justify-between bg-black/40 px-2 py-1 border border-dark-border/50">
+                        <span className="truncate max-w-[200px]">URI: {plan.uri}</span>
+                        {ipfsGatewayUrl && (
+                          <a href={ipfsGatewayUrl} target="_blank" rel="noreferrer" className="text-uranium hover:underline ml-2 flex-shrink-0">
+                            View on IPFS ↗
+                          </a>
+                        )}
+                      </div>
+                    )}
+                    {address && plan.issuer.toLowerCase() === address.toLowerCase() && (
+                      <button onClick={() => handleTogglePlan(plan)} disabled={busy || wrongNetwork}
+                        className="mt-1 w-full py-1.5 text-center bg-dark-surface border border-dark-border hover:border-uranium text-zincGrey hover:text-alabaster font-mono text-xs uppercase disabled:opacity-40">
+                        {plan.open ? "Close Plan" : "Re-open Plan"}
+                      </button>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-[11px] text-zincGrey pt-1 border-t border-dark-border/60">
-                    <div><span>Duration: </span><span className="text-alabaster font-bold">{Math.round(Number(plan.duration) / 86400)} days</span></div>
-                    <div><span>Issuer: </span><span className="text-alabaster">{shortAddress(plan.issuer)}</span></div>
-                  </div>
-                  {address && plan.issuer.toLowerCase() === address.toLowerCase() && (
-                    <button onClick={() => handleTogglePlan(plan)} disabled={busy || wrongNetwork}
-                      className="mt-1 w-full py-1.5 text-center bg-dark-surface border border-dark-border hover:border-uranium text-zincGrey hover:text-alabaster font-mono text-xs uppercase disabled:opacity-40">
-                      {plan.open ? "Close Plan" : "Re-open Plan"}
-                    </button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
