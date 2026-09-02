@@ -7,6 +7,7 @@ import { ArrowRight, ArrowUpRight, Cpu, Fingerprint, Sliders } from "lucide-reac
 import { PassCard3D } from "@/components/PassCard3D";
 import { LiveStats } from "@/components/LiveStats";
 import { useNow } from "@/components/ui";
+import DottedSurface from "@/components/ui/dotted-surface";
 import { EXPLORER, LIQUID_PASS_ADDRESS, shortAddress } from "@/lib/contract";
 
 /**
@@ -85,20 +86,10 @@ export default function Home() {
 
   return (
     <div className="relative overflow-hidden">
-      {/* Hero video, masked back so the type stays legible over it. */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 -z-20 h-[680px] overflow-hidden lg:h-[780px]">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="size-full object-cover opacity-25 brightness-90 contrast-110"
-        >
-          <source src="/Hero_vid.mp4" type="video/mp4" />
-        </video>
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/60 via-transparent to-ink" />
-        <div className="absolute inset-0 bg-gradient-to-r from-ink/85 via-transparent to-ink/85" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,var(--theme-ink)_85%)]" />
+      {/* Background Hero 3D Dotted Surface Wave */}
+      <div className="absolute top-0 left-0 right-0 h-[680px] lg:h-[780px] overflow-hidden pointer-events-none -z-20">
+        <DottedSurface size={8} opacity={0.8} />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[var(--theme-ink)]" />
       </div>
 
       {/* ---------------------------------------------------------------- */}
