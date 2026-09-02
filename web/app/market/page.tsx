@@ -168,7 +168,99 @@ export default function MarketPage() {
     };
   };
 
-  const uiListings = listings.map(toSubscriptionPass);
+const CURATED_DEMO_LISTINGS: SubscriptionPass[] = [
+  {
+    tokenId: "101",
+    name: "Cursor Pro (AI Code Editor)",
+    service: "Cursor",
+    owner: "0x71C849A29381710928aBc8910283719028371902" as `0x${string}`,
+    issuer: "0xf5AbE5a5092Af1a7fA31109C98635440fdD83174" as `0x${string}`,
+    expiryTimestamp: Math.floor(Date.now() / 1000) + 18 * 86400,
+    totalDurationSeconds: 30 * 86400,
+    originalPriceEth: "0.0020",
+    listingPriceEth: "0.0011",
+    isListed: true,
+    tier: "PRO",
+    features: ["GPT-4o & Claude 3.5 Sonnet", "Unlimited Fast Requests", "Composer Multi-file"],
+  },
+  {
+    tokenId: "102",
+    name: "Figma Organization Suite",
+    service: "Figma",
+    owner: "0x34B88C19283719028aBc89102837190283719028" as `0x${string}`,
+    issuer: "0xf5AbE5a5092Af1a7fA31109C98635440fdD83174" as `0x${string}`,
+    expiryTimestamp: Math.floor(Date.now() / 1000) + 24 * 86400,
+    totalDurationSeconds: 30 * 86400,
+    originalPriceEth: "0.0045",
+    listingPriceEth: "0.0034",
+    isListed: true,
+    tier: "TEAM",
+    features: ["Dev Mode Enabled", "Unlimited Version History", "Custom Design Systems"],
+  },
+  {
+    tokenId: "103",
+    name: "GitHub Copilot Enterprise",
+    service: "GitHub",
+    owner: "0x98E23109283719028aBc89102837190283719028" as `0x${string}`,
+    issuer: "0xf5AbE5a5092Af1a7fA31109C98635440fdD83174" as `0x${string}`,
+    expiryTimestamp: Math.floor(Date.now() / 1000) + 4 * 86400,
+    totalDurationSeconds: 30 * 86400,
+    originalPriceEth: "0.0030",
+    listingPriceEth: "0.0006",
+    isListed: true,
+    tier: "ENTERPRISE",
+    features: ["Fine-tuned Models", "PR Summaries", "CLI Code Completion"],
+  },
+  {
+    tokenId: "104",
+    name: "Claude 3.5 Sonnet API Tier",
+    service: "Claude",
+    owner: "0x44D901B9283719028aBc89102837190283719028" as `0x${string}`,
+    issuer: "0xf5AbE5a5092Af1a7fA31109C98635440fdD83174" as `0x${string}`,
+    expiryTimestamp: Math.floor(Date.now() / 1000) + 12 * 86400,
+    totalDurationSeconds: 30 * 86400,
+    originalPriceEth: "0.0025",
+    listingPriceEth: "0.0010",
+    isListed: true,
+    tier: "DEVELOPER",
+    features: ["200k Context Window", "Artifacts Rendering", "Computer Use Capabilities"],
+  },
+  {
+    tokenId: "105",
+    name: "Notion AI Workspace",
+    service: "Notion",
+    owner: "0x12A99449283719028aBc89102837190283719028" as `0x${string}`,
+    issuer: "0xf5AbE5a5092Af1a7fA31109C98635440fdD83174" as `0x${string}`,
+    expiryTimestamp: Math.floor(Date.now() / 1000) + 27 * 86400,
+    totalDurationSeconds: 30 * 86400,
+    originalPriceEth: "0.0015",
+    listingPriceEth: "0.0013",
+    isListed: true,
+    tier: "PLUS",
+    features: ["Q&A with Workspace", "Automated Summaries", "Unlimited Blocks"],
+  },
+  {
+    tokenId: "106",
+    name: "Midjourney v6 Unlimited",
+    service: "Midjourney",
+    owner: "0x88C33219283719028aBc89102837190283719028" as `0x${string}`,
+    issuer: "0xf5AbE5a5092Af1a7fA31109C98635440fdD83174" as `0x${string}`,
+    expiryTimestamp: Math.floor(Date.now() / 1000) + 3 * 86400,
+    totalDurationSeconds: 30 * 86400,
+    originalPriceEth: "0.0035",
+    listingPriceEth: "0.0005",
+    isListed: true,
+    tier: "CREATOR",
+    features: ["Relaxed GPU Hours", "Stealth Image Gen", "15 Fast GPU Hours"],
+  },
+];
+
+  const onChainListings = listings.map(toSubscriptionPass);
+  // Merge live on-chain passes with rich curated demo passes
+  const uiListings = [
+    ...onChainListings,
+    ...CURATED_DEMO_LISTINGS.filter(d => !onChainListings.some(o => o.tokenId === d.tokenId))
+  ];
 
   const filteredPasses = uiListings.filter((p) => {
     const remainingSeconds = Math.max(0, p.expiryTimestamp - Math.floor(now / 1000));
@@ -207,6 +299,11 @@ export default function MarketPage() {
       return;
     }
     try {
+      const isCuratedDemo = parseInt(uiPass.tokenId) >= 100;
+      if (isCuratedDemo) {
+        alert(`Demo purchase simulated successfully! Pass #${uiPass.tokenId} (${uiPass.name}) acquired.`);
+        return;
+      }
       // The price must come from the unrounded on-chain bigint, never from the
       // formatted card string: the card shows 6 significant figures, and a
       // rounded-down value underpays a decaying ask and reverts.
