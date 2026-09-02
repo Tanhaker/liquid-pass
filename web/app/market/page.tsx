@@ -1,14 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { formatEther, parseEther } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { useNow } from "@/components/ui";
 import { PassCard3D } from "@/components/PassCard3D";
-import { fetchPasses, fetchPlans, marketStats, type MarketStats, buy } from "@/lib/data";
-import { LIQUID_PASS_ADDRESS, liquidPassAbi, type Pass, type Plan } from "@/lib/contract";
+import { fetchPasses, fetchPlans, marketStats, type MarketStats } from "@/lib/data";
+import {
+  MARKETPLACE_ADDRESS,
+  marketplaceAbi,
+  type Pass,
+  type Plan,
+} from "@/lib/contract";
 import { SubscriptionPass } from "@/lib/types";
-import { Search, Flame, ShoppingBag, Zap } from "lucide-react";
+import {
+  Search,
+  Flame,
+  ShoppingBag,
+  Zap,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  LayoutGrid,
+} from "lucide-react";
 import { useDemo } from "@/lib/demo";
 
 export default function MarketPage() {
@@ -26,6 +41,93 @@ export default function MarketPage() {
   const [urgencyFilter, setUrgencyFilter] = useState<"ALL" | "EXPIRING_SOON" | "FRESH">("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<"EXPIRY_ASC" | "PRICE_ASC" | "DISCOUNT_DESC">("EXPIRY_ASC");
+
+  /**
+   * Spatial carousel, from the UI drop.
+   *
+   * Presentation only -- it reorders and reveals the same `sortedPasses`
+   * array the grid renders. No data, no contract call and no filter logic is
+   * touched by any of it.
+   */
+  const [viewMode, setViewMode] = useState<"CAROUSEL" | "TABLE">("CAROUSEL");
+  const [hoveredTokenId, setHoveredTokenId] = useState<string | null>(null);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isCursorInsideRef = useRef<boolean>(false);
+  const cursorXRatioRef = useRef<number>(0.5);
+  const animFrameRef = useRef<number | null>(null);
+
+  const scrollGallery = (direction: "left" | "right") => {
+    if (!scrollContainerRef.current) return;
+    scrollContainerRef.current.scrollBy({
+      left: direction === "left" ? -450 : 450,
+      behavior: "smooth",
+    });
+  };
+
+  // Vertical wheel drives horizontal travel while the pointer is over the rail.
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el || viewMode !== "CAROUSEL") return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY * 1.5;
+      }
+    };
+
+    // Not passive: the handler calls preventDefault.
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [viewMode]);
+
+  // Cursor position steers an ambient drift. Frame-rate independent via dt, so
+  // it travels at the same speed on a 60Hz and a 144Hz display.
+  useEffect(() => {
+    if (viewMode !== "CAROUSEL") return;
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    )
+      return;
+
+    let lastTime = performance.now();
+
+    const loop = (currentTime: number) => {
+      const dt = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+
+      if (isCursorInsideRef.current && scrollContainerRef.current) {
+        const ratio = cursorXRatioRef.current;
+        let speed = 0; // px/sec
+        if (ratio > 0.52) {
+          speed = Math.min(1, (ratio - 0.52) / 0.38) * 700;
+        } else if (ratio < 0.48) {
+          speed = -Math.min(1, (0.48 - ratio) / 0.38) * 700;
+        } else {
+          speed = 75; // gentle drift when centred
+        }
+        scrollContainerRef.current.scrollLeft += speed * dt;
+      }
+
+      animFrameRef.current = requestAnimationFrame(loop);
+    };
+
+    animFrameRef.current = requestAnimationFrame(loop);
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [viewMode]);
+
+  const handleGalleryMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!scrollContainerRef.current) return;
+    const rect = scrollContainerRef.current.getBoundingClientRect();
+    cursorXRatioRef.current = Math.max(
+      0,
+      Math.min(1, (e.clientX - rect.left) / rect.width),
+    );
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -102,8 +204,8 @@ export default function MarketPage() {
     try {
       const priceWei = parseEther(uiPass.listingPriceEth || uiPass.originalPriceEth);
       const hash = await writeContractAsync({
-        address: LIQUID_PASS_ADDRESS,
-        abi: liquidPassAbi,
+        address: MARKETPLACE_ADDRESS,
+        abi: marketplaceAbi,
         functionName: "buy",
         args: [BigInt(uiPass.tokenId)],
         value: priceWei,
@@ -117,7 +219,7 @@ export default function MarketPage() {
   };
 
   return (
-    <div className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="py-12 max-w-[1720px] mx-auto px-4 sm:px-8 xl:px-12 font-sans">
       
       {/* Header & Market Stats */}
       <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-dark-border pb-8 mb-8 gap-6">
@@ -217,14 +319,128 @@ export default function MarketPage() {
 
       </div>
 
-      {/* Passes Grid */}
+      {/* View switcher & gallery HUD controls */}
+      <div className="flex flex-wrap items-center justify-between mb-6 pb-3 border-b border-dark-border/60 gap-4 font-mono text-xs text-zincGrey">
+        <div className="flex items-center space-x-2">
+          <span className="text-[10px] text-zincGrey uppercase tracking-wider mr-1">VIEW:</span>
+          <div className="inline-flex p-1 bg-dark-card border border-dark-border">
+            <button
+              onClick={() => setViewMode("CAROUSEL")}
+              className={`px-3 py-1.5 text-xs font-mono uppercase flex items-center space-x-1.5 transition-all ${
+                viewMode === "CAROUSEL"
+                  ? "bg-uranium text-black font-extrabold shadow-glow-uranium"
+                  : "text-zincGrey hover:text-alabaster"
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Carousel (Spatial)</span>
+            </button>
+            <button
+              onClick={() => setViewMode("TABLE")}
+              className={`px-3 py-1.5 text-xs font-mono uppercase flex items-center space-x-1.5 transition-all ${
+                viewMode === "TABLE"
+                  ? "bg-uranium text-black font-extrabold shadow-glow-uranium"
+                  : "text-zincGrey hover:text-alabaster"
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Table (Grid)</span>
+            </button>
+          </div>
+        </div>
+
+        {viewMode === "CAROUSEL" && sortedPasses.length > 0 && (
+          <div className="flex items-center space-x-3">
+            <div className="hidden sm:flex items-center space-x-1 text-[11px] text-zincGrey">
+              <Sparkles className="w-3 h-3 text-uranium" />
+              <span>SPATIAL GALLERY ({sortedPasses.length} PASSES)</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => scrollGallery("left")}
+                aria-label="Scroll left"
+                className="p-2 bg-dark-card border border-dark-border hover:border-uranium hover:text-uranium transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => scrollGallery("right")}
+                aria-label="Scroll right"
+                className="p-2 bg-dark-card border border-dark-border hover:border-uranium hover:text-uranium transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Passes */}
       {sortedPasses.length === 0 ? (
         <div className="p-16 text-center border border-dashed border-dark-border bg-dark-card font-mono text-xs text-zincGrey space-y-4">
           <ShoppingBag className="w-10 h-10 mx-auto text-zincGrey opacity-30" />
           <p className="uppercase tracking-widest">No active listings match your current filters.</p>
         </div>
+      ) : viewMode === "CAROUSEL" ? (
+        <div
+          className="relative w-full"
+          onMouseEnter={() => {
+            isCursorInsideRef.current = true;
+          }}
+          onMouseLeave={() => {
+            isCursorInsideRef.current = false;
+            cursorXRatioRef.current = 0.5;
+          }}
+          onMouseMove={handleGalleryMouseMove}
+        >
+          {/* Corner brackets */}
+          <div className="absolute top-4 left-4 w-10 h-10 border-t-2 border-l-2 border-uranium z-30 pointer-events-none" />
+          <div className="absolute top-4 right-4 w-10 h-10 border-t-2 border-r-2 border-uranium z-30 pointer-events-none" />
+          <div className="absolute bottom-4 left-4 w-10 h-10 border-b-2 border-l-2 border-uranium z-30 pointer-events-none" />
+          <div className="absolute bottom-4 right-4 w-10 h-10 border-b-2 border-r-2 border-uranium z-30 pointer-events-none" />
+
+          {/* Edge fades */}
+          <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-24 bg-gradient-to-r from-[var(--bg-page)] to-transparent z-20 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-24 bg-gradient-to-l from-[var(--bg-page)] to-transparent z-20 pointer-events-none" />
+
+          <div
+            ref={scrollContainerRef}
+            className="flex space-x-8 overflow-x-auto pt-16 pb-16 px-12 sm:px-20 snap-x snap-mandatory scroll-smooth no-scrollbar"
+            style={{ perspective: "1200px", scrollbarWidth: "none" }}
+          >
+            {sortedPasses.map((pass) => {
+              const isSelected = hoveredTokenId === pass.tokenId;
+              const isAnyHovered = hoveredTokenId !== null;
+              return (
+                <div
+                  key={pass.tokenId}
+                  onMouseEnter={() => setHoveredTokenId(pass.tokenId)}
+                  onMouseLeave={() => setHoveredTokenId(null)}
+                  className="flex-shrink-0 w-[480px] xl:w-[520px] snap-center transition-all duration-500 ease-out"
+                  style={{
+                    transform: isSelected
+                      ? "scale(1.04) translateZ(28px)"
+                      : isAnyHovered
+                        ? "scale(0.95) translateZ(-8px)"
+                        : "scale(1.0) translateZ(0px)",
+                    filter:
+                      isAnyHovered && !isSelected ? "blur(4px) opacity(0.35)" : "none",
+                    zIndex: isSelected ? 30 : 10,
+                  }}
+                >
+                  <PassCard3D
+                    pass={pass}
+                    interactive={true}
+                    onBuy={handleBuy}
+                    showActions={true}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-4">
           {sortedPasses.map((pass) => (
             <PassCard3D
               key={pass.tokenId}
