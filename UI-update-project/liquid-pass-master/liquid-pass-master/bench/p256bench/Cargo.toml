@@ -1,0 +1,36 @@
+﻿[package]
+name = "p256bench"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+alloy-primitives = { version = "1.5.7", default-features = false }
+alloy-sol-types = { version = "1.5.7", default-features = false }
+stylus-sdk = "0.10.9"
+p256 = { version = "0.14", default-features = false, features = ["ecdsa", "precomputed-tables"] }
+# precomputed-tables needs primeorder's basepoint table, which is behind a
+# LazyLock that requires either std or critical-section. p256 does not pass the
+# feature through, so primeorder is named directly and cargo unifies it.
+# BENCHMARK ONLY -- not part of the wallet's dependency stack.
+primeorder = { version = "0.14", default-features = false, features = ["critical-section"] }
+critical-section = "1"
+
+[[bin]]
+name = "p256bench-abi"
+path = "src/main.rs"
+
+[lib]
+crate-type = ["lib", "cdylib"]
+
+[features]
+default = ["mini-alloc"]
+export-abi = ["stylus-sdk/export-abi"]
+debug = ["stylus-sdk/debug"]
+mini-alloc = ["stylus-sdk/mini-alloc"]
+
+[profile.release]
+opt-level = "s"
+lto = true
+panic = "abort"
+codegen-units = 1
+strip = true

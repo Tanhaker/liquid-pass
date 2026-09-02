@@ -1,433 +1,242 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { formatEther } from "viem";
-import { usePublicClient, useAccount, useWriteContract } from "wagmi";
-import { arbitrumSepolia } from "wagmi/chains";
-import { DecayRing, lifeColor } from "@/components/DecayRing";
-import {
-  EXPLORER,
-  LIQUID_PASS_ADDRESS,
-  MARKETPLACE_ADDRESS,
-  discountPct,
-  fairPrice,
-  formatEthShort,
-  withBuffer,
-  formatRemaining,
-  lifeFraction,
-  priceVsFair,
-  liquidPassAbi,
-  marketplaceAbi,
-  remaining,
-  shortAddress,
-  type Pass,
-  type Plan,
-} from "@/lib/contract";
-import { activeListings, fetchPasses, fetchPlans } from "@/lib/data";
-import { Banner, Empty, SkeletonGrid, humanise, useFees, useNow } from "@/components/ui";
+import { useEffect, useMemo, useState } from "react";
+import { formatEther, parseEther } from "viem";
+import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useNow } from "@/components/ui";
+import { PassCard3D } from "@/components/PassCard3D";
+import { fetchPasses, fetchPlans, marketStats, type MarketStats, buy } from "@/lib/data";
+import { LIQUID_PASS_ADDRESS, liquidPassAbi, type Pass, type Plan } from "@/lib/contract";
+import { SubscriptionPass } from "@/lib/types";
+import { Search, Flame, ShoppingBag, Zap } from "lucide-react";
 import { useDemo } from "@/lib/demo";
-import { PlanMeta } from "@/components/PlanMeta";
 
-type Tab = "plans" | "resale";
-
-/**
- * Short stagger, per the spec's rule that entrance motion must not make the
- * user wait: the last card in a row of three lands 90ms after the first.
- */
-const GRID = {
-  hidden: {},
-  shown: { transition: { staggerChildren: 0.045 } },
-};
-
-const CARD = {
-  hidden: { y: 10 },
-  shown: { y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const } },
-};
-
-export default function Market() {
+export default function MarketPage() {
+  const { isConnected, chain } = useAccount();
   const client = usePublicClient();
-  const { isConnected, chainId } = useAccount();
   const { writeContractAsync } = useWriteContract();
-  const fees = useFees();
-  const nowMs = useNow(1000);
+  const now = useNow(15000) ?? Date.now();
+  const { shiftExpiry } = useDemo(); // respects demo mode time warps
 
-  const [tab, setTab] = useState<Tab>("plans");
   const [plans, setPlans] = useState<Plan[]>([]);
   const [passes, setPasses] = useState<Pass[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [tx, setTx] = useState<{ hash: string; what: string } | null>(null);
-
-  const load = useCallback(async () => {
-    // No setState before the first await: doing so runs synchronously inside
-    // the effect and triggers a cascading render.
-    try {
-      const [p, t] = await Promise.all([fetchPlans(), fetchPasses()]);
-      setPlans(p);
-      setPasses(t);
-      setError(null);
-    } catch (e) {
-      // Surfaced, never swallowed: an empty market and an unreachable RPC must
-      // not look the same.
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [stats, setStats] = useState<MarketStats | null>(null);
+  
+  // UI Filters
+  const [urgencyFilter, setUrgencyFilter] = useState<"ALL" | "EXPIRING_SOON" | "FRESH">("ALL");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sortBy, setSortBy] = useState<"EXPIRY_ASC" | "PRICE_ASC" | "DISCOUNT_DESC">("EXPIRY_ASC");
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    if (!client) return;
+    Promise.all([fetchPlans(client), fetchPasses(client)]).then(([pl, pa]) => {
+      if (cancelled) return;
+      setPlans(pl);
+      setPasses(pa);
+      setStats(marketStats(pl, pa, Date.now()));
+    }).catch(console.error);
+    return () => { cancelled = true; };
+  }, [client]);
 
-  const listings = useMemo(() => activeListings(passes, nowMs), [passes, nowMs]);
-  const planById = useMemo(
-    () => new Map(plans.map((p) => [p.id.toString(), p])),
-    [plans],
-  );
+  const planById = useMemo(() => new Map(plans.map((p) => [p.id.toString(), p])), [plans]);
+  const listings = passes.filter((p) => p.listed > 0n && shiftExpiry(p.expiry) > BigInt(Math.floor(now / 1000)));
 
+  // Convert our real on-chain Pass to their SubscriptionPass UI type
+  const toSubscriptionPass = (p: Pass): SubscriptionPass => {
+    const plan = planById.get(p.planId.toString());
+    return {
+      tokenId: p.tokenId.toString(),
+      name: plan?.name || `Plan #${p.planId}`,
+      service: plan?.name?.split(" ")[0] || "Unknown",
+      owner: p.owner,
+      issuer: p.issuer,
+      expiryTimestamp: Number(shiftExpiry(p.expiry)),
+      totalDurationSeconds: Number(plan?.duration || 0n),
+      originalPriceEth: formatEther(p.paid > 0n ? p.paid : plan?.price || 0n),
+      listingPriceEth: formatEther(p.current),
+      isListed: p.listed > 0n,
+      tier: "PRO",
+      features: ["On-chain Access", "Resellable", "Fair Value Decay"],
+    };
+  };
 
-  async function buyPlan(plan: Plan) {
-    setBusy(`plan-${plan.id}`);
-    setTx(null);
+  const uiListings = listings.map(toSubscriptionPass);
+
+  const filteredPasses = uiListings.filter((p) => {
+    const remainingSeconds = Math.max(0, p.expiryTimestamp - Math.floor(now / 1000));
+    const remainingDays = remainingSeconds / 86400;
+
+    const matchesSearch =
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.tokenId.includes(searchQuery);
+
+    if (!matchesSearch) return false;
+    if (urgencyFilter === "EXPIRING_SOON") return remainingDays < 5 && remainingSeconds > 0;
+    if (urgencyFilter === "FRESH") return remainingDays >= 15;
+    return true;
+  });
+
+  const sortedPasses = [...filteredPasses].sort((a, b) => {
+    const aRem = Math.max(0, a.expiryTimestamp - Math.floor(now / 1000));
+    const bRem = Math.max(0, b.expiryTimestamp - Math.floor(now / 1000));
+    const aPrice = parseFloat(a.listingPriceEth || a.originalPriceEth);
+    const bPrice = parseFloat(b.listingPriceEth || b.originalPriceEth);
+
+    if (sortBy === "EXPIRY_ASC") return aRem - bRem;
+    if (sortBy === "PRICE_ASC") return aPrice - bPrice;
+    if (sortBy === "DISCOUNT_DESC") {
+      const aDisc = (parseFloat(a.originalPriceEth) - aPrice) / parseFloat(a.originalPriceEth);
+      const bDisc = (parseFloat(b.originalPriceEth) - bPrice) / parseFloat(b.originalPriceEth);
+      return bDisc - aDisc;
+    }
+    return 0;
+  });
+
+  const handleBuy = async (uiPass: SubscriptionPass) => {
+    if (!isConnected) {
+      alert("Please connect your wallet first!");
+      return;
+    }
     try {
+      const priceWei = parseEther(uiPass.listingPriceEth || uiPass.originalPriceEth);
       const hash = await writeContractAsync({
         address: LIQUID_PASS_ADDRESS,
         abi: liquidPassAbi,
-        functionName: "buyPass",
-        args: [plan.id],
-        value: plan.price,
-        chainId: arbitrumSepolia.id,
-        ...(await fees()),
-      });
-      setTx({ hash, what: `Bought ${plan.name}` });
-      await client?.waitForTransactionReceipt({ hash });
-      await load();
-    } catch (e) {
-      setError(humanise(e as Error));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function buyResale(pass: Pass) {
-    setBusy(`pass-${pass.tokenId}`);
-    setTx(null);
-    try {
-      const hash = await writeContractAsync({
-        address: MARKETPLACE_ADDRESS,
-        abi: marketplaceAbi,
         functionName: "buy",
-        args: [pass.tokenId],
-        // What the contract charges now, plus a small buffer. See
-        // withBuffer -- the surplus is refunded by the contract.
-        value: withBuffer(pass.current),
-        chainId: arbitrumSepolia.id,
-        ...(await fees()),
+        args: [BigInt(uiPass.tokenId)],
+        value: priceWei,
       });
-      setTx({ hash, what: `Bought pass #${pass.tokenId}` });
-      await client?.waitForTransactionReceipt({ hash });
-      await load();
+      console.log("Transaction submitted:", hash);
+      alert(`Transaction submitted! Hash: ${hash}`);
     } catch (e) {
-      setError(humanise(e as Error));
-    } finally {
-      setBusy(null);
+      console.error("Buy failed", e);
+      alert("Transaction failed. Check console.");
     }
-  }
-
-  const wrongNetwork = isConnected && chainId !== arbitrumSepolia.id;
+  };
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-14">
-      <div className="flex flex-wrap items-end justify-between gap-6">
+    <div className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 font-sans">
+      
+      {/* Header & Market Stats */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-dark-border pb-8 mb-8 gap-6">
         <div>
-          <div className="border-l-2 border-uranium pl-6">
-          <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-uranium">
-            01 // Secondary market
-          </h2>
-          <h1 className="mt-2 font-header text-[32px] font-bold tracking-tight">Buy time, or take it over.</h1>
-          <p className="mt-2 max-w-lg text-[14px] text-muted">
-            Buy a fresh pass from an issuer, or take over the time somebody else
-            didn&rsquo;t use.
+          <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 bg-aviation/10 border border-aviation text-aviation font-mono text-xs font-bold uppercase mb-2">
+            <Flame className="w-3.5 h-3.5" />
+            <span>SECONDARY RESALE LIQUIDITY POOL</span>
+          </div>
+          <h1 className="font-header font-extrabold text-3xl sm:text-5xl text-alabaster tracking-tight">
+            Resale Marketplace
+          </h1>
+          <p className="font-body text-zincGrey text-sm mt-2 max-w-xl leading-relaxed">
+            Grab unexpired subscription time at steep dynamic discounts. Pricing decays automatically block-by-block based on remaining contract seconds.
           </p>
-      </div>
         </div>
-        <div className="flex gap-1 rounded-none border border-line bg-surface p-1">
-          {(["plans", "resale"] as Tab[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`rounded-none px-3.5 py-1.5 text-[13px] transition-colors ${
-                tab === t ? "bg-raised text-text" : "text-muted hover:text-text"
-              }`}
-            >
-              {t === "plans" ? "New" : "Resale"}
-              <span className="tnum ml-2 text-[11px] text-faint">
-                {t === "plans" ? plans.filter((p) => p.open).length : listings.length}
-              </span>
-            </button>
-          ))}
+
+        {/* Live Market Telemetry Card */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 font-mono text-xs p-4 bg-dark-card border border-dark-border shadow-grunge">
+          <div>
+            <span className="text-zincGrey block text-[10px]">ACTIVE LISTINGS</span>
+            <span className="text-uranium font-bold text-base">{listings.length} PASSES</span>
+          </div>
+          <div>
+            <span className="text-zincGrey block text-[10px]">PRIMARY VOLUME</span>
+            <span className="text-aviation font-bold text-base">{stats ? formatEther(stats.primaryVolume).slice(0, 5) : "--"} ETH</span>
+          </div>
+          <div className="col-span-2 sm:col-span-1">
+            <span className="text-zincGrey block text-[10px]">ROYALTY SPLIT</span>
+            <span className="text-alabaster font-bold text-base">90% / 10%</span>
+          </div>
         </div>
       </div>
 
-      {wrongNetwork && (
-        <Banner tone="warn">
-          Your wallet is on the wrong network. Switch to Arbitrum Sepolia to
-          transact.
-        </Banner>
-      )}
-      {error && <Banner tone="error">{error}</Banner>}
-      {tx && (
-        <Banner tone="ok">
-          {tx.what} —{" "}
-          <a
-            className="underline underline-offset-2"
-            href={`${EXPLORER}/tx/${tx.hash}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            view on Arbiscan
-          </a>
-        </Banner>
-      )}
-
-      {loading ? (
-        <SkeletonGrid />
-      ) : tab === "plans" ? (
-        plans.length === 0 ? (
-          <Empty
-            title="No plans yet"
-            body="An issuer needs to publish one before anything can be bought."
+      {/* Filter and Search Controls */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-8">
+        
+        {/* Search Box */}
+        <div className="md:col-span-4 relative">
+          <Search className="w-4 h-4 text-zincGrey absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search service, name, or token ID..."
+            className="w-full pl-9 pr-4 py-3 bg-dark-card border border-dark-border text-alabaster font-mono text-xs focus:border-uranium focus:outline-none"
           />
-        ) : (
-          <motion.div
-            initial="hidden"
-            animate="shown"
-            variants={GRID}
-            className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {plans.map((plan) => (
-              <PlanCard
-                key={plan.id.toString()}
-                plan={plan}
-                busy={busy === `plan-${plan.id}`}
-                canBuy={isConnected && !wrongNetwork}
-                onBuy={() => buyPlan(plan)}
-              />
-            ))}
-          </motion.div>
-        )
-      ) : listings.length === 0 ? (
-        <Empty
-          title="Nothing on resale"
-          body="When a holder lists a pass, the remaining time shows up here."
-        />
-      ) : (
-        <motion.div
-          initial="hidden"
-          animate="shown"
-          variants={GRID}
-          className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          {listings.map((pass) => (
-            <ResaleCard
-              key={pass.tokenId.toString()}
-              pass={pass}
-              plan={planById.get(pass.planId.toString())}
-              busy={busy === `pass-${pass.tokenId}`}
-              canBuy={isConnected && !wrongNetwork}
-              onBuy={() => buyResale(pass)}
-            />
-          ))}
-        </motion.div>
-      )}
-    </div>
-  );
-}
-
-function PlanCard({
-  plan,
-  busy,
-  canBuy,
-  onBuy,
-}: {
-  plan: Plan;
-  busy: boolean;
-  canBuy: boolean;
-  onBuy: () => void;
-}) {
-  const days = Number(plan.duration) / 86400;
-  return (
-    <motion.div
-      variants={CARD}
-      whileHover={{ y: -4, scale: 1.02 }}
-      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-      className="flex flex-col rounded-none border border-line/60 bg-surface/40 backdrop-blur-xl p-6 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.2)] hover:border-line hover:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5)]"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-[15px] font-medium">{plan.name || `Plan #${plan.id}`}</h3>
-          <p className="tnum mt-1 text-[11px] text-faint">
-            by {shortAddress(plan.issuer)}
-          </p>
         </div>
-        {!plan.open && (
-          <span className="rounded-none bg-raised px-2 py-1 text-[10px] uppercase tracking-wider text-faint">
-            closed
-          </span>
-        )}
-      </div>
 
-      <PlanMeta uri={plan.uri} />
-
-      <div className="my-6 grid place-items-center">
-        <DecayRing
-          fraction={1}
-          size={96}
-          label={`${days % 1 === 0 ? days : days.toFixed(1)}d`}
-          sublabel="of access"
-        />
-      </div>
-
-      <div className="mt-auto flex items-center justify-between border-t border-line pt-4">
-        <span className="tnum text-[15px] font-medium">
-          {formatEther(plan.price)} <span className="text-[11px] text-faint">ETH</span>
-        </span>
-        <button
-          onClick={onBuy}
-          disabled={!plan.open || busy || !canBuy}
-          title={!canBuy ? "Connect a wallet on Arbitrum Sepolia" : undefined}
-          className="rounded-none bg-text px-3.5 py-1.5 text-[12px] font-medium text-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {busy ? "Confirm…" : "Buy pass"}
-        </button>
-      </div>
-    </motion.div>
-  );
-}
-
-function ResaleCard({
-  pass,
-  plan,
-  busy,
-  canBuy,
-  onBuy,
-}: {
-  pass: Pass;
-  plan?: Plan;
-  busy: boolean;
-  canBuy: boolean;
-  onBuy: () => void;
-}) {
-  // Ticks locally so the countdown is alive without hammering the RPC.
-  const now = useNow();
-  const { shiftExpiry } = useDemo();
-  // In live mode shiftExpiry is the identity function, so this is a no-op.
-  const expiry = shiftExpiry(pass.expiry);
-  const left = remaining(expiry, now ?? Number(expiry) * 1000);
-  const fraction = lifeFraction(expiry, plan?.duration ?? 0n);
-  const off = discountPct(pass.paid, pass.current);
-  const fair = fairPrice(pass.paid, expiry, plan?.duration ?? 0n, now);
-  const vsFair = priceVsFair(pass.current, fair);
-  const urgent = left > 0 && left <= 7 * 86400;
-
-  return (
-    <motion.div
-      variants={CARD}
-      whileHover={{ y: -4, scale: 1.02 }}
-      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-      className="flex flex-col rounded-none border border-line/60 bg-surface/40 backdrop-blur-xl p-6 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.2)] hover:border-line hover:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5)]"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-[15px] font-medium">
-            {plan?.name || `Pass #${pass.tokenId}`}
-          </h3>
-          <p className="tnum mt-1 text-[11px] text-faint">
-            #{pass.tokenId.toString()} · {shortAddress(pass.owner)}
-          </p>
-        </div>
-        {off !== null &&
-          (off >= 40 ? (
-            <span className="tnum flex items-center gap-1.5 rounded-full border border-life-full/30 bg-life-full/10 px-2.5 py-1 text-[10px] font-bold text-life-full tracking-wide shadow-[0_0_10px_rgba(183,255,60,0.2)]">
-              🔥 STEAL · {off}%
-            </span>
-          ) : (
-            <span className="tnum rounded-full border border-line-bright bg-surface/80 px-2.5 py-1 text-[10px] font-medium text-muted">
-              {off}% below original
-            </span>
-          ))}
-      </div>
-
-      <div className="my-6 grid place-items-center">
-        <DecayRing
-          fraction={fraction}
-          size={96}
-          label={formatRemaining(left).replace(" days", "d").replace(" day", "d")}
-          sublabel="left"
-        />
-      </div>
-
-      {urgent && (
-        <p className="mb-3 text-center text-[11px] text-life-low">
-          expiring soon
-        </p>
-      )}
-
-      <div className="mt-auto border-t border-line pt-4">
-        <div className="flex items-baseline justify-between">
-          <span className="tnum text-[15px] font-medium" style={{ color: lifeColor(fraction) }}>
-            {formatEthShort(pass.current)} <span className="text-[11px] text-faint">ETH</span>
-          </span>
+        {/* Urgency Filter Tabs */}
+        <div className="md:col-span-5 flex flex-wrap gap-2">
           <button
-            onClick={onBuy}
-            disabled={busy || !canBuy}
-            title={!canBuy ? "Connect a wallet on Arbitrum Sepolia" : undefined}
-            className="rounded-none bg-text px-3.5 py-1.5 text-[12px] font-medium text-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={() => setUrgencyFilter("ALL")}
+            className={`px-3 py-2 text-xs font-mono uppercase transition-all ${
+              urgencyFilter === "ALL"
+                ? "bg-uranium text-ink font-extrabold"
+                : "bg-dark-card border border-dark-border text-zincGrey hover:text-alabaster"
+            }`}
           >
-            {busy ? "Confirm…" : "Take over"}
+            All Listings
+          </button>
+          <button
+            onClick={() => setUrgencyFilter("EXPIRING_SOON")}
+            className={`px-3 py-2 text-xs font-mono uppercase flex items-center space-x-1 transition-all ${
+              urgencyFilter === "EXPIRING_SOON"
+                ? "bg-aviation text-ink font-extrabold shadow-[0_0_15px_rgba(255,159,28,0.3)]"
+                : "bg-dark-card border border-dark-border text-aviation hover:bg-dark-surface"
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5" />
+            <span>🔥 Steals (&lt;5D)</span>
+          </button>
+          <button
+            onClick={() => setUrgencyFilter("FRESH")}
+            className={`px-3 py-2 text-xs font-mono uppercase flex items-center space-x-1 transition-all ${
+              urgencyFilter === "FRESH"
+                ? "bg-uranium text-ink font-extrabold"
+                : "bg-dark-card border border-dark-border text-zincGrey hover:text-alabaster"
+            }`}
+          >
+            <Zap className="w-3 h-3" />
+            <span>Fresh (&gt;15D)</span>
           </button>
         </div>
-        {/*
-          The opening ask beside what it costs now. This is the point of the
-          whole decay mechanism made visible: the seller asked X, the pass has
-          been draining since, and the contract charges less as a result.
-          Without this row a card shows one number and the decay is invisible.
-        */}
-        {pass.listed > pass.current && (
-          <div className="mt-3 flex items-center justify-between border-t border-line pt-2.5 text-[11px]">
-            <span className="tnum text-faint">
-              opened at{" "}
-              <span className="line-through">{formatEthShort(pass.listed)}</span>
-            </span>
-            <span className="tnum text-life-full">
-              now {formatEthShort(pass.current)} ETH
-            </span>
-          </div>
-        )}
-        {pass.paid > 0n && (
-          <p className="tnum mt-2 text-[11px] text-faint">
-            originally {formatEther(pass.paid)} ETH
-          </p>
-        )}
-        {fair !== null && fair > 0n && (
-          <p className="tnum mt-1 text-[11px]">
-            <span className="text-faint">time value {formatEthShort(fair)} ETH</span>
-            {vsFair !== null && vsFair !== 0 && (
-              <span
-                className="ml-1.5"
-                style={{
-                  color:
-                    vsFair < 0 ? "var(--color-life-full)" : "var(--color-life-low)",
-                }}
-              >
-                {vsFair < 0 ? `${Math.abs(vsFair)}% under` : `${vsFair}% over`}
-              </span>
-            )}
-          </p>
-        )}
+
+        {/* Sort Dropdown */}
+        <div className="md:col-span-3">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="w-full p-3 bg-dark-card border border-dark-border text-alabaster font-mono text-xs focus:border-uranium focus:outline-none cursor-pointer"
+          >
+            <option value="EXPIRY_ASC">Sort: Expiration (Soonest)</option>
+            <option value="PRICE_ASC">Sort: Price (Lowest ETH)</option>
+            <option value="DISCOUNT_DESC">Sort: Discount (% Highest)</option>
+          </select>
+        </div>
+
       </div>
-    </motion.div>
+
+      {/* Passes Grid */}
+      {sortedPasses.length === 0 ? (
+        <div className="p-16 text-center border border-dashed border-dark-border bg-dark-card font-mono text-xs text-zincGrey space-y-4">
+          <ShoppingBag className="w-10 h-10 mx-auto text-zincGrey opacity-30" />
+          <p className="uppercase tracking-widest">No active listings match your current filters.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {sortedPasses.map((pass) => (
+            <PassCard3D
+              key={pass.tokenId}
+              pass={pass}
+              interactive={true}
+              onBuy={handleBuy}
+              showActions={true}
+            />
+          ))}
+        </div>
+      )}
+
+    </div>
   );
 }

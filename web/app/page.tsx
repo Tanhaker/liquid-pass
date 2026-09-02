@@ -163,13 +163,21 @@ export default function Home() {
               </div>
 
               <PassCard3D
-                name="PromptForge Pro"
-                tokenId="042"
-                tier="SIMULATED"
-                expiry={Math.floor(clock / 1000) + days * 86400}
-                duration={HERO_TOTAL_DAYS * 86400}
-                originalPrice={HERO_OPENING_PRICE}
-                now={now}
+                pass={{
+                  tokenId: "042",
+                  name: "PromptForge Pro",
+                  service: "PromptForge",
+                  owner: "0xDEMO",
+                  issuer: "0xISSUER",
+                  expiryTimestamp: Math.floor(clock / 1000) + days * 86400,
+                  totalDurationSeconds: HERO_TOTAL_DAYS * 86400,
+                  originalPriceEth: (Number(HERO_OPENING_PRICE) / 1e18).toFixed(3),
+                  listingPriceEth: ((Number(HERO_OPENING_PRICE) / 1e18) * (days / HERO_TOTAL_DAYS)).toFixed(4),
+                  isListed: true,
+                  tier: "PRO",
+                  features: [],
+                }}
+                interactive={true}
                 showActions={false}
               />
 

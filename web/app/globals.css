@@ -77,6 +77,19 @@
   --color-accent: var(--theme-accent);
   --color-glow: var(--theme-glow);
 
+  /* New UI System Compatibility Aliases */
+  --color-uranium: var(--theme-accent);
+  --color-uranium-glow: var(--theme-accent);
+  --color-alabaster: var(--theme-text);
+  --color-zinc-grey: var(--theme-muted);
+  --color-aviation: var(--theme-life-low);
+  --color-periwinkle: var(--theme-life-mid);
+  
+  --color-dark: var(--theme-ink);
+  --color-dark-card: var(--theme-surface);
+  --color-dark-surface: var(--theme-raised);
+  --color-dark-border: var(--theme-line);
+
   --font-header: "Cabinet Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-body: "General Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-sans: "General Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;

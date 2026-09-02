@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js build output
+.next/
+out/
+
+# Production
+build/
+dist/
+
+# Rust / Cargo
+target/
+Cargo.lock
+
+# Misc
+.DS_Store
+*.pem
+*.tsbuildinfo
+next-env.d.ts
+.vercel/
+
+# Local env files
+.env*.local
+.env
