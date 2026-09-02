@@ -84,22 +84,17 @@ export function useFees() {
  * The raw error still reaches the console for debugging.
  */
 export function humanise(e: Error): string {
-  const raw = (e as Error & { shortMessage?: string }).shortMessage ?? e.message;
+  const err = e as Error & { shortMessage?: string; details?: string };
+  const raw = err.shortMessage ?? err.message ?? "Transaction failed";
   console.error(e);
-  if (/User rejected|denied/i.test(raw)) return "You rejected the transaction.";
+  if (/User rejected|denied/i.test(raw)) return "You rejected the transaction in MetaMask.";
+  if (/insufficient funds/i.test(raw)) return "Not enough ETH in your wallet to cover gas and price.";
   if (/not listed/i.test(raw)) return "That pass is no longer for sale.";
   if (/expired/i.test(raw)) return "That pass has expired and can no longer be traded.";
   if (/plan closed/i.test(raw)) return "The issuer has closed this plan to new sales.";
   if (/wrong value/i.test(raw)) return "The price changed. Refresh and try again.";
   if (/already owner/i.test(raw)) return "You already own this pass.";
   if (/not owner/i.test(raw)) return "You don't own that pass.";
-  if (/not an issuer/i.test(raw))
-    return "This address isn't on the issuer allowlist. The contract admin has to add it.";
-  if (/setPlanOpen/i.test(raw)) return "Only the original issuer wallet that created this plan can open or close it.";
-  if (/createPlan/i.test(raw)) return "Failed to create plan. Ensure your wallet is an allowed issuer and price/duration are valid.";
-  if (/transferPass/i.test(raw)) return "Only the current pass owner can transfer or discard this pass.";
-  if (/list/i.test(raw)) return "Only the owner of an unexpired pass can list it for secondary resale.";
-  if (/buyPass/i.test(raw)) return "Failed to buy pass. Check if the plan is open and you have sufficient ETH.";
   return raw.split("\n")[0];
 }
 
