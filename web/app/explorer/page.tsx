@@ -26,7 +26,12 @@ export default function ExplorerPage() {
     if (filterType !== "ALL" && e.kind !== filterType) return false;
     if (search) {
       const q = search.toLowerCase();
-      return e.tokenId.toString().includes(q) || e.txHash.toLowerCase().includes(q) || (e.who && e.who.toLowerCase().includes(q));
+      return (
+        (e.tokenId !== undefined && e.tokenId.toString().includes(q)) ||
+        (e.planId !== undefined && e.planId.toString().includes(q)) ||
+        (e.txHash && e.txHash.toLowerCase().includes(q)) ||
+        (e.who && e.who.toLowerCase().includes(q))
+      );
     }
     return true;
   });
@@ -102,8 +107,16 @@ export default function ExplorerPage() {
                         }`}>{evt.kind}</span>
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap">
-                        <a href={`/pass/${evt.tokenId}`} className="text-alabaster hover:text-uranium font-bold">Token #{evt.tokenId.toString()}</a>
-                        {evt.planId !== undefined && <div className="text-zincGrey text-[11px]">Plan #{evt.planId.toString()}</div>}
+                        {evt.tokenId !== undefined ? (
+                          <a href={`/pass/${evt.tokenId}`} className="text-alabaster hover:text-uranium font-bold">
+                            Token #{evt.tokenId.toString()}
+                          </a>
+                        ) : (
+                          <span className="text-zincGrey">—</span>
+                        )}
+                        {evt.planId !== undefined && (
+                          <div className="text-zincGrey text-[11px]">Plan #{evt.planId.toString()}</div>
+                        )}
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap">
                         {evt.price !== undefined && evt.price > 0n ? <span className="text-uranium font-bold">{formatEther(evt.price)} ETH</span> : <span className="text-zincGrey">-</span>}
