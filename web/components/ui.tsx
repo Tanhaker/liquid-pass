@@ -24,7 +24,7 @@ export function Banner({
     ok: "border-life-full/30 bg-life-full/10 text-life-full",
   }[tone];
   return (
-    <div className={`mt-6 rounded-xl border px-4 py-3 text-[13px] ${styles}`} role="status">
+    <div className={`mt-6 rounded-none border px-4 py-3 text-[13px] ${styles}`} role="status">
       {children}
     </div>
   );
@@ -40,7 +40,7 @@ export function Empty({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mt-10 rounded-2xl border border-dashed border-line px-6 py-20 text-center">
+    <div className="mt-10 rounded-none border border-dashed border-line px-6 py-20 text-center">
       <p className="text-[15px] font-medium">{title}</p>
       <p className="mx-auto mt-2 max-w-sm text-[13px] text-muted">{body}</p>
       {action}
@@ -54,7 +54,7 @@ export function SkeletonGrid({ n = 3 }: { n?: number }) {
       {Array.from({ length: n }, (_, i) => (
         <div
           key={i}
-          className="h-64 animate-pulse rounded-2xl border border-line bg-surface"
+          className="h-64 animate-pulse rounded-none border border-line bg-surface"
         />
       ))}
     </div>

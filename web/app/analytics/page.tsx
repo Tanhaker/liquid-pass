@@ -118,18 +118,23 @@ export default function AnalyticsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-14">
-      <h1 className="text-[28px] font-semibold tracking-[-0.02em]">Analytics</h1>
+      <div className="border-l-2 border-uranium pl-6">
+          <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-uranium">
+            04 // Protocol analytics
+          </h2>
+          <h1 className="mt-2 font-header text-[32px] font-bold tracking-tight">Derived only from chain state.</h1>
       <p className="mt-2 max-w-lg text-[14px] text-muted">
         Derived from contract state and decoded events. Nothing here is
         estimated.
       </p>
+      </div>
 
       {error && <Banner tone="error">{error}</Banner>}
 
       {loading ? (
         <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl border border-line bg-surface" />
+            <div key={i} className="h-20 animate-pulse rounded-none border border-line bg-surface" />
           ))}
         </div>
       ) : m.sold === 0 && m.plans === 0 ? (
@@ -150,7 +155,7 @@ export default function AnalyticsPage() {
             <Metric label="Resale volume" value={`${trim(formatEther(m.resaleVolume))} ETH`} />
           </div>
 
-          <section className="mt-10 rounded-2xl border border-line bg-surface p-5">
+          <section className="mt-10 rounded-none border border-line bg-surface p-5">
             <h2 className="text-[11px] uppercase tracking-[0.16em] text-faint">
               Issuer royalties earned
             </h2>
@@ -164,7 +169,7 @@ export default function AnalyticsPage() {
             </p>
           </section>
 
-          <section className="mt-6 rounded-2xl border border-line bg-surface p-5">
+          <section className="mt-6 rounded-none border border-line bg-surface p-5">
             <h2 className="text-[11px] uppercase tracking-[0.16em] text-faint">
               Passes sold per plan
             </h2>
@@ -191,7 +196,7 @@ export default function AnalyticsPage() {
             )}
           </section>
 
-          <section className="mt-6 rounded-2xl border border-line bg-surface p-5">
+          <section className="mt-6 rounded-none border border-line bg-surface p-5">
             <h2 className="text-[11px] uppercase tracking-[0.16em] text-faint">Top issuers</h2>
             <ul className="mt-4 divide-y divide-line">
               {m.issuers.map(([addr, e]) => (
@@ -213,7 +218,7 @@ export default function AnalyticsPage() {
 
 function Metric({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
-    <div className="rounded-xl border border-line bg-surface px-4 py-3">
+    <div className="rounded-none border border-line bg-surface px-4 py-3">
       <p className="tnum text-[22px] font-semibold" style={tone ? { color: tone } : undefined}>
         {value}
       </p>

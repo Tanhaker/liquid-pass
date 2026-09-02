@@ -27,6 +27,7 @@ import { PassBundler } from "@/components/PassBundler";
 import { YieldDashboard } from "@/components/YieldDashboard";
 import { PricingOracle } from "@/components/PricingOracle";
 import { GiftSplit } from "@/components/GiftSplit";
+import { YieldConcept } from "@/components/YieldConcept";
 import { planSignals, type PlanSignal } from "@/lib/signals";
 
 export default function Dashboard() {
@@ -127,11 +128,17 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-14">
-      <h1 className="text-[28px] font-semibold tracking-[-0.02em]">My passes</h1>
-      <p className="mt-2 max-w-lg text-[14px] text-muted">
-        Time you own. List any of it and someone else can take over what&rsquo;s
-        left.
-      </p>
+      <div className="border-l-2 border-uranium pl-6">
+        <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-uranium">
+          02 // My passes &amp; vault
+        </h2>
+        <h1 className="mt-2 font-header text-[32px] font-bold tracking-tight">
+          Time you own.
+        </h1>
+        <p className="mt-2 max-w-lg text-[14px] text-muted">
+          List any of it and someone else can take over what&rsquo;s left.
+        </p>
+      </div>
 
       {wrongNetwork && (
         <Banner tone="warn">Switch your wallet to Arbitrum Sepolia.</Banner>
@@ -178,7 +185,7 @@ export default function Dashboard() {
               action={
                 <Link
                   href="/market"
-                  className="mt-5 inline-block rounded-lg bg-text px-4 py-2 text-[13px] font-medium text-ink"
+                  className="mt-5 inline-block rounded-none bg-text px-4 py-2 text-[13px] font-medium text-ink"
                 >
                   Go to market
                 </Link>
@@ -264,9 +271,10 @@ export default function Dashboard() {
 
       {/* Outside the connected branch on purpose: this explains a mechanism,
           and a judge who never connects a wallet should still see it. */}
-      <div className="mt-12">
+      <div className="mt-12 grid gap-6 lg:grid-cols-2">
         <YieldDashboard />
-        </div>
+        <YieldConcept />
+      </div>
         <div className="mt-12">
           <PassBundler passes={passes} plans={planById} />
       </div>
@@ -276,7 +284,7 @@ export default function Dashboard() {
 
 function Stat({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
-    <div className="rounded-xl border border-line bg-surface px-4 py-3">
+    <div className="rounded-none border border-line bg-surface px-4 py-3">
       <p className="tnum text-[22px] font-semibold" style={{ color: tone }}>
         {value}
       </p>
@@ -355,7 +363,7 @@ function OwnedPass({
   }
 
   return (
-    <div className="hairline flex flex-col rounded-2xl border border-line bg-surface p-5">
+    <div className="hairline flex flex-col rounded-none border border-line bg-surface p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-[15px] font-medium">
@@ -366,17 +374,17 @@ function OwnedPass({
           </p>
         </div>
         {pending && (
-          <span className="rounded-md bg-life-low/15 px-2 py-1 text-[10px] uppercase tracking-wider text-life-low">
+          <span className="rounded-none bg-life-low/15 px-2 py-1 text-[10px] uppercase tracking-wider text-life-low">
             not started
           </span>
         )}
         {isListed && !expired && !pending && (
-          <span className="rounded-md bg-life-mid/15 px-2 py-1 text-[10px] uppercase tracking-wider text-life-mid">
+          <span className="rounded-none bg-life-mid/15 px-2 py-1 text-[10px] uppercase tracking-wider text-life-mid">
             listed
           </span>
         )}
         {expired && (
-          <span className="rounded-md bg-raised px-2 py-1 text-[10px] uppercase tracking-wider text-faint">
+          <span className="rounded-none bg-raised px-2 py-1 text-[10px] uppercase tracking-wider text-faint">
             expired
           </span>
         )}
@@ -408,7 +416,7 @@ function OwnedPass({
             <button
               onClick={onUnlist}
               disabled={busy || disabled}
-              className="w-full rounded-lg border border-line px-3 py-2 text-[12px] text-muted transition-colors hover:text-text disabled:opacity-40"
+              className="w-full rounded-none border border-line px-3 py-2 text-[12px] text-muted transition-colors hover:text-text disabled:opacity-40"
             >
               {busy ? "Confirm…" : "Clear stale listing"}
             </button>
@@ -437,7 +445,7 @@ function OwnedPass({
             <button
               onClick={onUnlist}
               disabled={busy || disabled}
-              className="w-full rounded-lg border border-line px-3 py-2 text-[12px] text-muted transition-colors hover:text-text disabled:opacity-40"
+              className="w-full rounded-none border border-line px-3 py-2 text-[12px] text-muted transition-colors hover:text-text disabled:opacity-40"
             >
               {busy ? "Confirm…" : "Remove listing"}
             </button>
@@ -455,7 +463,7 @@ function OwnedPass({
               placeholder={fair !== null && fair > 0n ? formatEthShort(fair) : "0.0001"}
               inputMode="decimal"
               autoFocus
-              className="tnum w-full rounded-lg border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
+              className="tnum w-full rounded-none border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
             />
             <PricingOracle
               pass={pass}
@@ -471,7 +479,7 @@ function OwnedPass({
               <button
                 onClick={submit}
                 disabled={busy || disabled}
-                className="flex-1 rounded-lg bg-text px-3 py-2 text-[12px] font-medium text-ink disabled:opacity-40"
+                className="flex-1 rounded-none bg-text px-3 py-2 text-[12px] font-medium text-ink disabled:opacity-40"
               >
                 {busy ? "Confirm…" : "List it"}
               </button>
@@ -480,7 +488,7 @@ function OwnedPass({
                   setListing(false);
                   setPriceError(null);
                 }}
-                className="rounded-lg border border-line px-3 py-2 text-[12px] text-muted"
+                className="rounded-none border border-line px-3 py-2 text-[12px] text-muted"
               >
                 Cancel
               </button>
@@ -490,7 +498,7 @@ function OwnedPass({
           <button
             onClick={() => setListing(true)}
             disabled={disabled}
-            className="w-full rounded-lg bg-text px-3 py-2 text-[12px] font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-40"
+            className="w-full rounded-none bg-text px-3 py-2 text-[12px] font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             Sell remaining time
           </button>

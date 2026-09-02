@@ -15,7 +15,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/market"
-        className="mt-8 rounded-xl bg-text px-5 py-2.5 text-[14px] font-medium text-ink transition-opacity hover:opacity-90"
+        className="mt-8 rounded-none bg-text px-5 py-2.5 text-[14px] font-medium text-ink transition-opacity hover:opacity-90"
       >
         Back to the market
       </Link>

@@ -26,10 +26,10 @@ export function DemoBar() {
       <div className="mx-auto max-w-6xl px-6 pt-4">
         <button
           onClick={() => setEnabled(true)}
-          className="flex items-center gap-2 rounded-lg border border-line px-3 py-1.5 text-[11px] text-faint transition-colors hover:text-muted"
+          className="flex items-center gap-2 border border-dark-border bg-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-zinc-grey transition-colors hover:border-uranium hover:text-uranium"
         >
-          <span className="size-1.5 rounded-full bg-life-crit" />
-          LIVE — Arbitrum Sepolia · switch to demo mode
+          <span className="size-1.5 rounded-full bg-uranium" />
+          LIVE // ARBITRUM SEPOLIA — SWITCH TO DEMO MODE
         </button>
       </div>
     );
@@ -37,36 +37,36 @@ export function DemoBar() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 pt-4">
-      <div className="rounded-xl border border-life-low/40 bg-life-low/10 px-4 py-3">
+      <div className="border border-aviation/50 bg-aviation/10 px-4 py-3 shadow-glow-amber">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <span className="flex items-center gap-2 text-[12px] font-semibold text-life-low">
+          <span className="flex items-center gap-2 font-mono text-[12px] font-bold uppercase tracking-wider text-aviation">
             <span className="size-1.5 rounded-full bg-life-low" />
             DEMO MODE
           </span>
-          <span className="text-[12px] text-life-low/90">
+          <span className="font-mono text-[11px] uppercase tracking-wide text-aviation/90">
             Simulated — no blockchain transaction. Nothing here is real chain
             state.
           </span>
           <button
             onClick={() => setEnabled(false)}
-            className="ml-auto rounded-lg border border-life-low/40 px-2.5 py-1 text-[11px] text-life-low hover:bg-life-low/10"
+            className="ml-auto border border-aviation/50 px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-aviation hover:bg-aviation/10"
           >
             Back to live
           </button>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-life-low/20 pt-3">
-          <span className="text-[10px] uppercase tracking-[0.16em] text-life-low/80">
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-aviation/25 pt-3">
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-aviation/80">
             Simulate pass age
           </span>
           {STOPS.map((s) => (
             <button
               key={s.label}
               onClick={() => setTimeTravel(timeTravel === s.days ? null : s.days)}
-              className={`rounded-lg px-2.5 py-1 text-[11px] transition-colors ${
+              className={`px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider transition-colors ${
                 timeTravel === s.days
-                  ? "bg-life-low text-ink"
-                  : "border border-life-low/40 text-life-low hover:bg-life-low/10"
+                  ? "bg-aviation font-bold text-black"
+                  : "border border-aviation/50 text-aviation hover:bg-aviation/10"
               }`}
             >
               {s.label}
@@ -75,7 +75,7 @@ export function DemoBar() {
           {timeTravel !== null && (
             <button
               onClick={() => setTimeTravel(null)}
-              className="text-[11px] text-life-low/80 underline underline-offset-2"
+              className="font-mono text-[11px] uppercase text-aviation/80 underline underline-offset-2"
             >
               reset
             </button>
@@ -83,7 +83,7 @@ export function DemoBar() {
         </div>
 
         {timeTravel !== null && (
-          <p className="mt-2 text-[11px] text-life-low/80">
+          <p className="mt-2 font-mono text-[11px] text-aviation/80">
             Showing every pass as it would look {timeTravel} day
             {timeTravel === 1 ? "" : "s"} further into its life. The real expiry
             timestamps on chain are unchanged.

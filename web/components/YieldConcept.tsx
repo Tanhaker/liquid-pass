@@ -33,9 +33,9 @@ export function YieldConcept() {
   const half = yieldUsd / 2;
 
   return (
-    <section className="rounded-2xl border border-line bg-surface p-6">
+    <section className="rounded-none border border-line bg-surface p-6">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-md bg-life-mid/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-life-mid">
+        <span className="rounded-none bg-life-mid/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-life-mid">
           Concept
         </span>
         <h2 className="text-[15px] font-medium">Escrow that doesn&rsquo;t sit idle</h2>
@@ -75,7 +75,7 @@ export function YieldConcept() {
           </ol>
         </div>
 
-        <div className="rounded-xl border border-line bg-ink p-5">
+        <div className="rounded-none border border-line bg-ink p-5">
           <p className="text-[11px] uppercase tracking-[0.16em] text-faint">
             Worked example
           </p>
@@ -138,7 +138,7 @@ export function YieldConcept() {
         </div>
       </div>
 
-      <p className="mt-5 rounded-lg border border-line bg-ink/60 px-4 py-3 text-[12px] leading-relaxed text-muted">
+      <p className="mt-5 rounded-none border border-line bg-ink/60 px-4 py-3 text-[12px] leading-relaxed text-muted">
         <span className="font-medium text-text">Not implemented.</span> Liquid
         Pass settles resales atomically — the buyer pays and receives the pass in
         the same transaction, so today there is no escrow window for money to

@@ -51,10 +51,10 @@ export function PassBundler({ passes, plans }: { passes: Pass[]; plans: Map<stri
   if (bundlesAvailable.length === 0) return null;
 
   return (
-    <section className="mt-12 rounded-2xl border border-line bg-surface p-6">
+    <section className="mt-12 rounded-none border border-line bg-surface p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="rounded-md bg-life-mid/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-life-mid">
+          <span className="rounded-none bg-life-mid/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-life-mid">
             Feature
           </span>
           <h2 className="text-[15px] font-medium">Bundle Passes</h2>
@@ -81,13 +81,13 @@ export function PassBundler({ passes, plans }: { passes: Pass[]; plans: Map<stri
           const selectedInGroup = groupPasses.filter(p => selected.has(p.tokenId));
           
           return (
-            <div key={plan.id.toString()} className="rounded-xl border border-line bg-ink p-5">
+            <div key={plan.id.toString()} className="rounded-none border border-line bg-ink p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-[14px] font-medium text-text">{plan.name} Passes</h3>
                 <button
                   onClick={() => handleBundle(plan.id)}
                   disabled={selectedInGroup.length < 2 || busy}
-                  className="rounded-lg bg-white px-4 py-1.5 text-[12px] font-medium text-black transition-colors hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded-none bg-white px-4 py-1.5 text-[12px] font-medium text-black transition-colors hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {busy ? "Bundling..." : `Bundle ${selectedInGroup.length} Passes`}
                 </button>
@@ -97,7 +97,7 @@ export function PassBundler({ passes, plans }: { passes: Pass[]; plans: Map<stri
                 {groupPasses.map(p => (
                   <label 
                     key={p.tokenId.toString()} 
-                    className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors ${
+                    className={`flex cursor-pointer items-center justify-between rounded-none border p-3 transition-colors ${
                       selected.has(p.tokenId) ? "border-life-mid bg-life-mid/5" : "border-line bg-surface hover:bg-line/50"
                     }`}
                   >

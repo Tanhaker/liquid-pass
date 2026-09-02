@@ -55,7 +55,7 @@ export function GiftSplit({
               setErr(null);
             }}
             disabled={disabled}
-            className="flex-1 rounded-lg border border-line px-3 py-1.5 text-[11px] text-muted transition-colors hover:text-text disabled:opacity-40"
+            className="flex-1 rounded-none border border-line px-3 py-1.5 text-[11px] text-muted transition-colors hover:text-text disabled:opacity-40"
           >
             Gift
           </button>
@@ -66,7 +66,7 @@ export function GiftSplit({
             }}
             disabled={disabled}
             title={isListed ? "Unlist it first — a split burns the original" : undefined}
-            className="flex-1 rounded-lg border border-line px-3 py-1.5 text-[11px] text-muted transition-colors hover:text-text disabled:opacity-40"
+            className="flex-1 rounded-none border border-line px-3 py-1.5 text-[11px] text-muted transition-colors hover:text-text disabled:opacity-40"
           >
             Split
           </button>
@@ -85,7 +85,7 @@ export function GiftSplit({
             placeholder="0x…"
             spellCheck={false}
             autoFocus
-            className="tnum w-full rounded-lg border border-line bg-ink px-3 py-2 text-[12px] outline-none focus:border-line-bright"
+            className="tnum w-full rounded-none border border-line bg-ink px-3 py-2 text-[12px] outline-none focus:border-line-bright"
           />
           <p className="text-[10px] text-faint">
             They receive {formatRemaining(left)} of access. Any listing is
@@ -105,13 +105,13 @@ export function GiftSplit({
                 onGift(a as `0x${string}`);
               }}
               disabled={busy || disabled}
-              className="flex-1 rounded-lg bg-text px-3 py-1.5 text-[11px] font-medium text-ink disabled:opacity-40"
+              className="flex-1 rounded-none bg-text px-3 py-1.5 text-[11px] font-medium text-ink disabled:opacity-40"
             >
               {busy ? "Confirm…" : "Send"}
             </button>
             <button
               onClick={() => setMode("none")}
-              className="rounded-lg border border-line px-3 py-1.5 text-[11px] text-muted"
+              className="rounded-none border border-line px-3 py-1.5 text-[11px] text-muted"
             >
               Cancel
             </button>
@@ -130,7 +130,7 @@ export function GiftSplit({
             onChange={(e) => setParts(e.target.value)}
             inputMode="numeric"
             autoFocus
-            className="tnum w-full rounded-lg border border-line bg-ink px-3 py-2 text-[12px] outline-none focus:border-line-bright"
+            className="tnum w-full rounded-none border border-line bg-ink px-3 py-2 text-[12px] outline-none focus:border-line-bright"
           />
           <p className="text-[10px] leading-relaxed text-faint">
             {formatRemaining(left)} becomes {Number.isFinite(n) ? n : "—"}{" "}
@@ -161,13 +161,13 @@ export function GiftSplit({
                 onSplit(BigInt(n));
               }}
               disabled={busy || disabled || isListed}
-              className="flex-1 rounded-lg bg-text px-3 py-1.5 text-[11px] font-medium text-ink disabled:opacity-40"
+              className="flex-1 rounded-none bg-text px-3 py-1.5 text-[11px] font-medium text-ink disabled:opacity-40"
             >
               {busy ? "Confirm…" : `Split into ${Number.isFinite(n) ? n : "?"}`}
             </button>
             <button
               onClick={() => setMode("none")}
-              className="rounded-lg border border-line px-3 py-1.5 text-[11px] text-muted"
+              className="rounded-none border border-line px-3 py-1.5 text-[11px] text-muted"
             >
               Cancel
             </button>

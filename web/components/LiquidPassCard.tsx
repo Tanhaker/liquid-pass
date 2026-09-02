@@ -57,7 +57,7 @@ export function LiquidPassCard({
     <div className="mx-auto" style={{ width: "min(100%, 340px)", perspective: "800px" }}>
       <div
         ref={ref}
-        className="liquid-float relative aspect-[1.58/1] w-full rounded-3xl p-[1px] transition-transform duration-200 ease-out will-change-transform z-10"
+        className="liquid-float relative aspect-[1.58/1] w-full rounded-none p-[1px] transition-transform duration-200 ease-out will-change-transform z-10"
         style={{
           transformStyle: "preserve-3d",
           transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
@@ -66,7 +66,7 @@ export function LiquidPassCard({
         }}
       >
         <div 
-          className="relative h-full w-full overflow-hidden rounded-[23px] bg-surface/90 backdrop-blur-3xl"
+          className="relative h-full w-full overflow-hidden rounded-none bg-surface/90 backdrop-blur-3xl"
           style={{ transformStyle: "preserve-3d" }}
         >
           {/* Dynamic Glare */}

@@ -1,6 +1,65 @@
+/* One @import per family, deliberately.
+   The design file asks Fontshare for both in a single request:
+     ?f[]=cabinet-grotesk@800,700,500&f[]=general-sans@400,500,600
+   That URL does not return General Sans. Fontshare resolves the second `f[]`
+   to Satoshi -- verified by fetching it and reading the @font-face blocks --
+   so the body copy silently renders in a face nobody chose. Requested one at
+   a time, both come back correct. */
+@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,700,500&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   Design system -- ported from the team's Tailwind v3 config.
+
+   Their tailwind.config.ts targets Tailwind v3. This project is on v4, where
+   the config lives in CSS. Translating the palette into @theme rather than
+   downgrading keeps @tailwindcss/postcss, the existing tokens and the whole
+   dependency tree intact -- and every class name they wrote (bg-dark-card,
+   text-uranium, font-header, shadow-glow-uranium) resolves exactly as it did
+   for them.
+
+   zincGrey is the one rename: v4 derives class names from CSS custom property
+   names, which are kebab-case, so it is `zinc-grey` here.
+--------------------------------------------------------------------------- */
+
 @theme {
+  /* Toxic Uranium Green */
+  --color-uranium: #98FF1A;
+  --color-uranium-glow: #B2FF4D;
+  --color-uranium-dim: #6EB812;
+
+  /* Tactical Aviation Amber */
+  --color-aviation: #FF9F1C;
+  --color-aviation-glow: #FFB34D;
+  --color-aviation-dim: #D47E0A;
+
+  /* Raw Alabaster */
+  --color-alabaster: #F2F4F7;
+  --color-alabaster-dim: #D0D5DD;
+  --color-alabaster-muted: #98A2B3;
+
+  /* Zinc Grey -- subtitles / explanations */
+  --color-zinc-grey: #8E95A1;
+  --color-zinc-grey-light: #A4ACB9;
+  --color-zinc-grey-dark: #667085;
+
+  /* Sleek deep black, zero muddy tint */
+  --color-dark: #08090C;
+  --color-dark-base: #0B0D11;
+  --color-dark-card: #11141A;
+  --color-dark-surface: #161A22;
+  --color-dark-surface-hover: #1D222D;
+  --color-dark-border: #232936;
+  --color-dark-border-muted: #181D26;
+
+  --color-periwinkle: #7B92FF;
+  --color-periwinkle-dim: #556DD9;
+
+  /* Semantic tokens the existing pages already use, remapped onto the palette
+     above. This is what makes market / dashboard / issuer / explorer /
+     analytics / verify adopt the new look without their JSX being edited. */
   --color-ink: var(--theme-ink);
   --color-surface: var(--theme-surface);
   --color-raised: var(--theme-raised);
@@ -11,7 +70,6 @@
   --color-muted: var(--theme-muted);
   --color-faint: var(--theme-faint);
 
-  /* Premium Liquid Pass Palette - Increased Colors */
   --color-life-full: var(--theme-life-full);
   --color-life-mid: var(--theme-life-mid);
   --color-life-low: var(--theme-life-low);
@@ -19,65 +77,176 @@
   --color-accent: var(--theme-accent);
   --color-glow: var(--theme-glow);
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-header: "Cabinet Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "General Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: "General Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* No `var(--font-space-mono)` leading this stack. The design file gets that
+     variable from a next/font loader; here Space Mono comes from the @import
+     above, so the variable is undefined -- and one undefined var invalidates
+     the whole font-family declaration, which silently dropped every mono
+     label on the site back to the body sans. */
+  --font-mono: "Space Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --shadow-glow-uranium: 0 0 25px -5px rgba(152, 255, 26, 0.45);
+  --shadow-glow-amber: 0 0 25px -5px rgba(255, 159, 28, 0.45);
+  --shadow-grunge: 4px 4px 0px 0px #040507;
+  --shadow-grunge-uranium: 4px 4px 0px 0px #98FF1A;
+  --shadow-grunge-amber: 4px 4px 0px 0px #FF9F1C;
 }
 
+/* Dark is the design's native state and the default. */
 :root {
-  /* LIGHT MODE */
-  --theme-ink: #F9FAFB;
-  --theme-surface: #FFFFFF;
-  --theme-raised: #F3F4F6;
-  --theme-line: #E5E7EB;
-  --theme-line-bright: #D1D5DB;
+  --theme-ink: #08090C;
+  --theme-surface: #11141A;
+  --theme-raised: #161A22;
+  --theme-line: #232936;
+  --theme-line-bright: #323A4C;
 
-  --theme-text: #111827;
-  --theme-muted: #4B5563;
-  --theme-faint: #9CA3AF;
+  --theme-text: #F2F4F7;
+  --theme-muted: #8E95A1;
+  --theme-faint: #667085;
 
-  --theme-life-full: #10B981; /* Emerald 500 */
-  --theme-life-mid: #3B82F6; /* Blue 500 */
-  --theme-life-low: #F59E0B; /* Amber 500 */
-  --theme-life-crit: #EF4444; /* Red 500 */
-  
-  --theme-accent: #6366F1; /* Indigo 500 */
-  --theme-glow: rgba(99, 102, 241, 0.4);
+  --theme-life-full: #98FF1A;  /* uranium -- plenty of time left */
+  --theme-life-mid: #7B92FF;   /* periwinkle */
+  --theme-life-low: #FF9F1C;   /* aviation -- running down */
+  --theme-life-crit: #FF3B30;
+
+  --theme-accent: #98FF1A;
+  --theme-glow: rgba(152, 255, 26, 0.3);
 }
 
-.dark {
-  /* DARK MODE */
-  --theme-ink: #050605;
-  --theme-surface: #0D100F;
-  --theme-raised: #1A1F1D;
-  --theme-line: #262E2A;
-  --theme-line-bright: #39453F;
+/* Light mode keeps the same hues at printable contrast. Uranium at full
+   saturation on white is unreadable, so it steps down to its dim variant. */
+.light {
+  --theme-ink: #F2F4F7;
+  --theme-surface: #FFFFFF;
+  --theme-raised: #E9ECF1;
+  --theme-line: #D0D5DD;
+  --theme-line-bright: #98A2B3;
 
-  --theme-text: #F4F7F4;
-  --theme-muted: #A6ADA7;
-  --theme-faint: #636864;
+  --theme-text: #08090C;
+  --theme-muted: #4B5563;
+  --theme-faint: #667085;
 
-  --theme-life-full: #00FF88; /* Neon Aqua/Green */
-  --theme-life-mid: #00D4FF; /* Neon Cyan */
-  --theme-life-low: #FFB547; /* Neon Orange */
-  --theme-life-crit: #FF3366; /* Neon Pink/Red */
-  
-  --theme-accent: #B7FF3C; /* Signature Green */
-  --theme-glow: rgba(183, 255, 60, 0.3);
+  --theme-life-full: #4E8F00;
+  --theme-life-mid: #4257C4;
+  --theme-life-low: #B96C00;
+  --theme-life-crit: #C42B21;
+
+  --theme-accent: #4E8F00;
+  --theme-glow: rgba(78, 143, 0, 0.25);
 }
 
 html {
   background: var(--theme-ink);
-  color-scheme: light dark;
+  color-scheme: dark;
+}
+
+.light {
+  color-scheme: light;
 }
 
 body {
   margin: 0;
-  background: var(--theme-ink);
+  min-height: 100vh;
+  background-color: var(--theme-ink);
   color: var(--theme-text);
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--theme-accent) 5%, transparent) 0%, transparent 60%),
+    radial-gradient(circle at 100% 100%, rgba(255, 159, 28, 0.03) 0%, transparent 40%);
+  background-attachment: fixed;
 }
+
+::selection {
+  background: var(--theme-accent);
+  color: #08090C;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-header);
+  letter-spacing: -0.02em;
+}
+
+/* Subtle physical grain overlay */
+.grain-overlay {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.025'/%3E%3C/svg%3E");
+}
+
+.technical-grid {
+  background-size: 32px 32px;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--theme-text) 3%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--theme-text) 3%, transparent) 1px, transparent 1px);
+}
+
+.technical-dots {
+  background-size: 24px 24px;
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--theme-accent) 10%, transparent) 1px, transparent 1px);
+}
+
+.bg-decay-gradient {
+  background-image: linear-gradient(135deg, #98FF1A 0%, #FF9F1C 60%, #11141A 100%);
+}
+
+.bg-decay-bar {
+  background-image: linear-gradient(90deg, #98FF1A 0%, #FF9F1C 50%, #232936 100%);
+}
+
+/* Stamped physical ticket notch */
+.ticket-edge {
+  position: relative;
+}
+.ticket-edge::before,
+.ticket-edge::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--theme-ink);
+  transform: translateY(-50%);
+  z-index: 10;
+}
+.ticket-edge::before { left: -9px; }
+.ticket-edge::after { right: -9px; }
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(1000%); }
+}
+
+.scanline-effect {
+  position: relative;
+  overflow: hidden;
+}
+.scanline-effect::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+    linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  z-index: 2;
+  background-size: 100% 3px, 6px 100%;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+/* Terminal scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--theme-ink); }
+::-webkit-scrollbar-thumb {
+  background: var(--theme-line);
+  border: 1px solid var(--theme-line-bright);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--theme-accent); }
+
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
 
 .tnum {
   font-variant-numeric: tabular-nums;
@@ -89,14 +258,8 @@ body {
 }
 
 @keyframes rise {
-  from {
-    transform: translateY(14px) scale(0.98);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
+  from { transform: translateY(14px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
 .rise {
@@ -105,18 +268,10 @@ body {
 }
 
 @keyframes liquid-float {
-  0%, 100% {
-    transform: translateY(0) rotateX(2deg) rotateY(-2deg);
-  }
-  25% {
-    transform: translateY(-5px) rotateX(-2deg) rotateY(1deg);
-  }
-  50% {
-    transform: translateY(-10px) rotateX(1deg) rotateY(3deg);
-  }
-  75% {
-    transform: translateY(-5px) rotateX(-1deg) rotateY(-1deg);
-  }
+  0%, 100% { transform: translateY(0) rotateX(2deg) rotateY(-2deg); }
+  25% { transform: translateY(-5px) rotateX(-2deg) rotateY(1deg); }
+  50% { transform: translateY(-10px) rotateX(1deg) rotateY(3deg); }
+  75% { transform: translateY(-5px) rotateX(-1deg) rotateY(-1deg); }
 }
 
 .liquid-float {
@@ -124,21 +279,16 @@ body {
   transform-style: preserve-3d;
 }
 
-/* Enhancing the 3D Perspective */
-.perspective-container {
-  perspective: 2000px;
-}
+.perspective-container { perspective: 2000px; }
+.card-3d-wrapper { transform-style: preserve-3d; }
+.card-3d-content { transform: translateZ(40px); }
+.card-3d-bg { transform: translateZ(-20px) scale(1.05); }
 
-.card-3d-wrapper {
-  transform-style: preserve-3d;
-}
-
-.card-3d-content {
-  transform: translateZ(40px);
-}
-
-.card-3d-bg {
-  transform: translateZ(-20px) scale(1.05);
+/* CSS View Transitions for the theme wipe */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }
 
 @media (prefers-reduced-motion: reduce) {

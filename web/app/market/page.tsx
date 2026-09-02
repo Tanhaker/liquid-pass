@@ -142,18 +142,23 @@ export default function Market() {
     <div className="mx-auto max-w-6xl px-6 py-14">
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-[-0.02em]">Market</h1>
+          <div className="border-l-2 border-uranium pl-6">
+          <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-uranium">
+            01 // Secondary market
+          </h2>
+          <h1 className="mt-2 font-header text-[32px] font-bold tracking-tight">Buy time, or take it over.</h1>
           <p className="mt-2 max-w-lg text-[14px] text-muted">
             Buy a fresh pass from an issuer, or take over the time somebody else
             didn&rsquo;t use.
           </p>
+      </div>
         </div>
-        <div className="flex gap-1 rounded-xl border border-line bg-surface p-1">
+        <div className="flex gap-1 rounded-none border border-line bg-surface p-1">
           {(["plans", "resale"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`rounded-lg px-3.5 py-1.5 text-[13px] transition-colors ${
+              className={`rounded-none px-3.5 py-1.5 text-[13px] transition-colors ${
                 tab === t ? "bg-raised text-text" : "text-muted hover:text-text"
               }`}
             >
@@ -258,7 +263,7 @@ function PlanCard({
       variants={CARD}
       whileHover={{ y: -4, scale: 1.02 }}
       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-      className="flex flex-col rounded-3xl border border-line/60 bg-surface/40 backdrop-blur-xl p-6 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.2)] hover:border-line hover:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5)]"
+      className="flex flex-col rounded-none border border-line/60 bg-surface/40 backdrop-blur-xl p-6 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.2)] hover:border-line hover:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5)]"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -268,7 +273,7 @@ function PlanCard({
           </p>
         </div>
         {!plan.open && (
-          <span className="rounded-md bg-raised px-2 py-1 text-[10px] uppercase tracking-wider text-faint">
+          <span className="rounded-none bg-raised px-2 py-1 text-[10px] uppercase tracking-wider text-faint">
             closed
           </span>
         )}
@@ -293,7 +298,7 @@ function PlanCard({
           onClick={onBuy}
           disabled={!plan.open || busy || !canBuy}
           title={!canBuy ? "Connect a wallet on Arbitrum Sepolia" : undefined}
-          className="rounded-lg bg-text px-3.5 py-1.5 text-[12px] font-medium text-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-none bg-text px-3.5 py-1.5 text-[12px] font-medium text-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy ? "Confirm…" : "Buy pass"}
         </button>
@@ -332,7 +337,7 @@ function ResaleCard({
       variants={CARD}
       whileHover={{ y: -4, scale: 1.02 }}
       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-      className="flex flex-col rounded-3xl border border-line/60 bg-surface/40 backdrop-blur-xl p-6 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.2)] hover:border-line hover:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5)]"
+      className="flex flex-col rounded-none border border-line/60 bg-surface/40 backdrop-blur-xl p-6 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.2)] hover:border-line hover:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5)]"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -379,7 +384,7 @@ function ResaleCard({
             onClick={onBuy}
             disabled={busy || !canBuy}
             title={!canBuy ? "Connect a wallet on Arbitrum Sepolia" : undefined}
-            className="rounded-lg bg-text px-3.5 py-1.5 text-[12px] font-medium text-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-none bg-text px-3.5 py-1.5 text-[12px] font-medium text-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {busy ? "Confirm…" : "Take over"}
           </button>

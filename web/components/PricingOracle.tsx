@@ -31,7 +31,7 @@ export function PricingOracle({
   if (!s) return null;
 
   return (
-    <div className="mt-3 rounded-xl border border-line bg-ink p-3">
+    <div className="mt-3 rounded-none border border-line bg-ink p-3">
       <div className="flex items-center gap-1.5">
         <svg width="11" height="11" viewBox="0 0 14 14" fill="none" aria-hidden>
           <path
@@ -59,7 +59,7 @@ export function PricingOracle({
       <button
         type="button"
         onClick={() => onUse(formatEthShort(s.price))}
-        className="tnum mt-2.5 rounded-lg border border-line px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-line-bright hover:text-text"
+        className="tnum mt-2.5 rounded-none border border-line px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-line-bright hover:text-text"
       >
         use {formatEthShort(s.price)} ETH
       </button>

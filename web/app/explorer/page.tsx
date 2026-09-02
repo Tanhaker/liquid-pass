@@ -12,6 +12,7 @@ import {
 } from "@/lib/contract";
 import { fetchActivity, type Activity } from "@/lib/data";
 import { fetchActivityFromSubgraph, subgraphConfigured, type Source } from "@/lib/graph";
+import { SubgraphPanel } from "@/components/SubgraphPanel";
 
 /**
  * On-chain event explorer.
@@ -115,13 +116,18 @@ export default function ExplorerPage() {
   return (
     <div className="mx-auto max-w-5xl px-6 py-14">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[28px] font-semibold tracking-[-0.02em]">Explorer</h1>
+        <div className="border-l-2 border-uranium pl-6">
+          <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-uranium">
+            03 // Live contract explorer
+          </h2>
+          <h1 className="mt-2 font-header text-[32px] font-bold tracking-tight">
+            Every event, straight from chain.
+          </h1>
           <p className="mt-2 max-w-lg text-[14px] text-muted">
-            Every Liquid Pass event, read straight from Arbitrum Sepolia.
+            Read from Arbitrum Sepolia. Nothing here is synthesised.
           </p>
         </div>
-        <span className="flex items-center gap-2 rounded-lg border border-line px-3 py-1.5 text-[11px] text-muted">
+        <span className="flex items-center gap-2 border border-dark-border bg-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-zinc-grey">
           <span className="relative flex size-1.5">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-life-full opacity-60" />
             <span className="relative inline-flex size-1.5 rounded-full bg-life-full" />
@@ -135,12 +141,12 @@ export default function ExplorerPage() {
 
       {error && <Banner tone="error">{error}</Banner>}
 
-      <div className="mt-8 flex flex-wrap gap-1 rounded-xl border border-line bg-surface p-1">
+      <div className="mt-8 flex flex-wrap gap-1 rounded-none border border-line bg-surface p-1">
         {PRESETS.map((p) => (
           <button
             key={p.id}
             onClick={() => setPreset(p.id)}
-            className={`rounded-lg px-3 py-1.5 text-[12px] transition-colors ${
+            className={`rounded-none px-3 py-1.5 text-[12px] transition-colors ${
               preset === p.id ? "bg-raised text-text" : "text-muted hover:text-text"
             }`}
           >
@@ -152,7 +158,7 @@ export default function ExplorerPage() {
       {loading ? (
         <div className="mt-8 space-y-2">
           {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-14 animate-pulse rounded-xl border border-line bg-surface" />
+            <div key={i} className="h-14 animate-pulse rounded-none border border-line bg-surface" />
           ))}
         </div>
       ) : shown.length === 0 ? (
@@ -161,12 +167,17 @@ export default function ExplorerPage() {
           body="On-chain activity will appear here as soon as something happens."
         />
       ) : (
-        <ul className="mt-8 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+        <ul className="mt-8 divide-y divide-line overflow-hidden rounded-none border border-line bg-surface">
           {shown.map((a) => (
             <EventRow key={`${a.txHash}-${a.kind}-${a.tokenId ?? a.planId ?? ""}`} a={a} />
           ))}
         </ul>
       )}
+    
+      {/* Reachable UI for lib/graphql.ts, which had none. */}
+      <div className="mt-14">
+        <SubgraphPanel />
+      </div>
     </div>
   );
 }

@@ -89,7 +89,7 @@ export function FloatingAI() {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-label={open ? "Close Liquid AI" : "Ask Liquid AI"}
-        className="fixed bottom-5 right-5 z-50 grid size-12 place-items-center rounded-full border border-line bg-surface/90 shadow-[0_10px_40px_-12px_rgba(0,0,0,.9)] backdrop-blur-xl transition-transform hover:scale-105 active:scale-95"
+        className="fixed bottom-5 right-5 z-50 grid size-12 place-items-center border border-uranium bg-uranium text-black shadow-glow-uranium transition-transform hover:scale-105 active:scale-95"
       >
         {open ? (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -99,7 +99,7 @@ export function FloatingAI() {
           <svg width="18" height="18" viewBox="0 0 14 14" fill="none" aria-hidden>
             <path
               d="M7 1.5 8.3 5.2 12 6.5 8.3 7.8 7 11.5 5.7 7.8 2 6.5l3.7-1.3z"
-              stroke="var(--color-life-full)"
+              stroke="currentColor"
               strokeWidth="1.2"
               strokeLinejoin="round"
             />
@@ -109,14 +109,14 @@ export function FloatingAI() {
 
       {open && (
         <div
-          className="fixed bottom-20 right-5 z-50 flex max-h-[min(70vh,560px)] w-[min(calc(100vw-2.5rem),380px)] flex-col overflow-hidden rounded-2xl border border-line bg-surface/95 shadow-[0_24px_70px_-20px_rgba(0,0,0,.95)] backdrop-blur-2xl"
+          className="fixed bottom-20 right-5 z-50 flex max-h-[min(70vh,560px)] w-[min(calc(100vw-2.5rem),380px)] flex-col overflow-hidden rounded-none border border-line bg-surface/95 shadow-[0_24px_70px_-20px_rgba(0,0,0,.95)] backdrop-blur-2xl"
           role="dialog"
           aria-label="Liquid AI"
         >
           <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-            <span className="size-1.5 rounded-full bg-life-full" />
-            <span className="text-[13px] font-medium">Liquid AI</span>
-            <span className="ml-auto text-[10px] uppercase tracking-[0.14em] text-faint">
+            <span className="size-1.5 rounded-full bg-uranium" />
+            <span className="font-mono text-[12px] font-bold uppercase tracking-wider text-uranium">LIQUID AI</span>
+            <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-grey">
               live chain data
             </span>
           </div>
@@ -131,7 +131,7 @@ export function FloatingAI() {
                   <button
                     key={q}
                     onClick={() => ask(q)}
-                    className="block w-full rounded-lg border border-line bg-ink px-3 py-2 text-left text-[12px] text-muted transition-colors hover:border-line-bright hover:text-text"
+                    className="block w-full rounded-none border border-line bg-ink px-3 py-2 text-left text-[12px] text-muted transition-colors hover:border-line-bright hover:text-text"
                   >
                     {q}
                   </button>
@@ -143,17 +143,17 @@ export function FloatingAI() {
               t.role === "user" ? (
                 <p
                   key={i}
-                  className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-raised px-3 py-2 text-[13px]"
+                  className="ml-auto w-fit max-w-[85%] rounded-none rounded-br-md bg-raised px-3 py-2 text-[13px]"
                 >
                   {t.text}
                 </p>
               ) : (
                 <div key={i} className="max-w-[92%]">
-                  <p className="whitespace-pre-wrap rounded-2xl rounded-bl-md border border-line bg-ink px-3 py-2 text-[13px] leading-relaxed">
+                  <p className="whitespace-pre-wrap rounded-none rounded-bl-md border border-line bg-ink px-3 py-2 text-[13px] leading-relaxed">
                     {t.text}
                   </p>
                   {t.mode === "knowledge-base" && (
-                    <span className="mt-1 inline-block rounded bg-life-low/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-life-low">
+                    <span className="mt-1 inline-block border border-aviation/40 bg-aviation/15 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-aviation">
                       from documentation
                     </span>
                   )}
@@ -187,7 +187,7 @@ export function FloatingAI() {
             <button
               type="submit"
               disabled={busy || !input.trim()}
-              className="rounded-lg bg-text px-3 py-1.5 text-[12px] font-medium text-ink disabled:opacity-40"
+              className="bg-uranium px-3 py-1.5 font-mono text-[12px] font-bold uppercase tracking-wider text-black transition-colors hover:bg-uranium-glow disabled:opacity-40"
             >
               Ask
             </button>

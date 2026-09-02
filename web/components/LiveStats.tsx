@@ -45,7 +45,7 @@ export function LiveStats() {
   ];
 
   return (
-    <div className="rounded-2xl border border-line bg-surface/60 backdrop-blur-xl">
+    <div className="rounded-none border border-line bg-surface/60 backdrop-blur-xl">
       <div className="flex items-center gap-2 border-b border-line px-5 py-2.5">
         <span className="relative flex size-1.5">
           {!failed && (

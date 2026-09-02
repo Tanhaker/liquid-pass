@@ -142,16 +142,21 @@ export default function Verify() {
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-14">
-      <h1 className="text-[28px] font-semibold tracking-[-0.02em]">Verify access</h1>
+      <div className="border-l-2 border-uranium pl-6">
+          <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-uranium">
+            05 // Access verifier
+          </h2>
+          <h1 className="mt-2 font-header text-[32px] font-bold tracking-tight">Does this address hold a pass?</h1>
       <p className="mt-2 max-w-xl text-[14px] text-muted">
         What a service runs before letting somebody in. Ask whether an address
         holds an active pass — no transaction, no signature, just a read of the
         contract.
       </p>
+      </div>
 
       {error && <Banner tone="error">{error}</Banner>}
 
-      <div className="mt-8 rounded-2xl border border-line bg-surface p-5">
+      <div className="mt-8 rounded-none border border-line bg-surface p-5">
         <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
           <label className="block">
             <span className="text-[11px] uppercase tracking-[0.12em] text-faint">
@@ -166,7 +171,7 @@ export default function Verify() {
               onKeyDown={(e) => e.key === "Enter" && setChecked(true)}
               placeholder="0x…"
               spellCheck={false}
-              className="tnum mt-2 w-full rounded-lg border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
+              className="tnum mt-2 w-full rounded-none border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
             />
           </label>
 
@@ -178,7 +183,7 @@ export default function Verify() {
                 setPlanId(e.target.value);
                 setChecked(false);
               }}
-              className="mt-2 w-full rounded-lg border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright sm:w-48"
+              className="mt-2 w-full rounded-none border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright sm:w-48"
             >
               <option value="any">Any plan</option>
               {plans.map((p) => (
@@ -193,7 +198,7 @@ export default function Verify() {
         <button
           onClick={() => setChecked(true)}
           disabled={loading || !who.trim()}
-          className="mt-4 rounded-xl bg-text px-4 py-2 text-[13px] font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-40"
+          className="mt-4 rounded-none bg-text px-4 py-2 text-[13px] font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-40"
         >
           {loading ? "Reading chain…" : "Check access"}
         </button>
@@ -201,7 +206,7 @@ export default function Verify() {
 
       {result && (
         <div
-          className="mt-6 rounded-2xl border p-6"
+          className="mt-6 rounded-none border p-6"
           style={{
             borderColor:
               result.state === "granted"
@@ -264,7 +269,7 @@ export default function Verify() {
               {selectedPlan && (
                 <Link
                   href="/market"
-                  className="mt-4 inline-block rounded-lg bg-text px-4 py-2 text-[13px] font-medium text-ink"
+                  className="mt-4 inline-block rounded-none bg-text px-4 py-2 text-[13px] font-medium text-ink"
                 >
                   Buy {selectedPlan.name}
                 </Link>
@@ -274,7 +279,7 @@ export default function Verify() {
         </div>
       )}
 
-      <section className="mt-10 rounded-2xl border border-line bg-surface/50 p-5">
+      <section className="mt-10 rounded-none border border-line bg-surface/50 p-5">
         <h2 className="text-[11px] uppercase tracking-[0.16em] text-faint">
           What this actually checks
         </h2>
@@ -284,7 +289,7 @@ export default function Verify() {
           does not. Verify the same address before and after a sale and the
           answer flips, while the expiry stays exactly where it was.
         </p>
-        <pre className="tnum mt-4 overflow-x-auto rounded-lg border border-line bg-ink p-4 text-[11px] leading-relaxed text-muted">
+        <pre className="tnum mt-4 overflow-x-auto rounded-none border border-line bg-ink p-4 text-[11px] leading-relaxed text-muted">
 {`ownerOf(tokenId)  == customer   // do they hold it
 isActive(tokenId)  == true       // is there time left
                     ↓

@@ -119,7 +119,7 @@ export default function PassDetail({
   if (loading) {
     return (
       <div className="mx-auto max-w-5xl px-6 py-14">
-        <div className="h-72 animate-pulse rounded-2xl border border-line bg-surface" />
+        <div className="h-72 animate-pulse rounded-none border border-line bg-surface" />
       </div>
     );
   }
@@ -133,7 +133,7 @@ export default function PassDetail({
           action={
             <Link
               href="/market"
-              className="mt-5 inline-block rounded-lg bg-text px-4 py-2 text-[13px] font-medium text-ink"
+              className="mt-5 inline-block rounded-none bg-text px-4 py-2 text-[13px] font-medium text-ink"
             >
               Back to market
             </Link>
@@ -219,7 +219,7 @@ export default function PassDetail({
           </dl>
 
           {off !== null && (
-            <p className="mt-4 rounded-lg bg-life-full/10 px-3 py-2 text-[12px] text-life-full">
+            <p className="mt-4 rounded-none bg-life-full/10 px-3 py-2 text-[12px] text-life-full">
               Buying this gets you {formatRemaining(left)} of access —{" "}
               <strong>{off}% below</strong> the {formatEther(pass.paid)} ETH it
               originally sold for. You inherit the existing expiry, not a fresh
@@ -240,7 +240,7 @@ export default function PassDetail({
                   )
                 }
                 disabled={busy || !isConnected || wrongNetwork}
-                className="rounded-xl bg-text px-4 py-2 text-[13px] font-medium text-ink disabled:opacity-40"
+                className="rounded-none bg-text px-4 py-2 text-[13px] font-medium text-ink disabled:opacity-40"
               >
                 {busy ? "Confirm…" : `Take over ${formatRemaining(left)}`}
               </button>
@@ -250,7 +250,7 @@ export default function PassDetail({
               <button
                 onClick={() => setListing(true)}
                 disabled={wrongNetwork}
-                className="rounded-xl bg-text px-4 py-2 text-[13px] font-medium text-ink disabled:opacity-40"
+                className="rounded-none bg-text px-4 py-2 text-[13px] font-medium text-ink disabled:opacity-40"
               >
                 Sell remaining time
               </button>
@@ -267,7 +267,7 @@ export default function PassDetail({
                   )
                 }
                 disabled={busy || wrongNetwork}
-                className="rounded-xl border border-line px-4 py-2 text-[13px] text-muted disabled:opacity-40"
+                className="rounded-none border border-line px-4 py-2 text-[13px] text-muted disabled:opacity-40"
               >
                 {busy ? "Confirm…" : "Remove listing"}
               </button>
@@ -276,7 +276,7 @@ export default function PassDetail({
             {pass.listed > 0n && (
               <button
                 onClick={() => setShowQr(true)}
-                className="rounded-xl border border-line px-4 py-2 text-[13px] text-muted hover:text-text"
+                className="rounded-none border border-line px-4 py-2 text-[13px] text-muted hover:text-text"
               >
                 Generate QR
               </button>
@@ -284,7 +284,7 @@ export default function PassDetail({
           </div>
 
           {listing && (
-            <div className="mt-5 max-w-sm rounded-xl border border-line bg-surface p-4">
+            <div className="mt-5 max-w-sm rounded-none border border-line bg-surface p-4">
               <label htmlFor="p" className="text-[11px] uppercase tracking-[0.12em] text-faint">
                 Asking price in ETH
               </label>
@@ -295,7 +295,7 @@ export default function PassDetail({
                 placeholder={pass.paid > 0n ? formatEther(pass.paid / 2n) : "0.0001"}
                 inputMode="decimal"
                 autoFocus
-                className="tnum mt-2 w-full rounded-lg border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
+                className="tnum mt-2 w-full rounded-none border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
               />
               <p className="mt-2 text-[11px] text-faint">
                 On sale: 90% to you, 10% to {shortAddress(pass.issuer)} (the
@@ -325,13 +325,13 @@ export default function PassDetail({
                     );
                   }}
                   disabled={busy || wrongNetwork}
-                  className="flex-1 rounded-lg bg-text px-3 py-2 text-[12px] font-medium text-ink disabled:opacity-40"
+                  className="flex-1 rounded-none bg-text px-3 py-2 text-[12px] font-medium text-ink disabled:opacity-40"
                 >
                   List it
                 </button>
                 <button
                   onClick={() => setListing(false)}
-                  className="rounded-lg border border-line px-3 py-2 text-[12px] text-muted"
+                  className="rounded-none border border-line px-3 py-2 text-[12px] text-muted"
                 >
                   Cancel
                 </button>

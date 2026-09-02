@@ -71,7 +71,7 @@ export function QrPanel({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl border border-line bg-surface p-6"
+        className="w-full max-w-sm rounded-none border border-line bg-surface p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <p className="text-[11px] uppercase tracking-[0.16em] text-faint">Scan to buy</p>
@@ -80,7 +80,7 @@ export function QrPanel({
           {remainingLabel} left · {price} ETH
         </p>
 
-        <div className="mt-5 grid place-items-center rounded-xl border border-line bg-ink p-4">
+        <div className="mt-5 grid place-items-center rounded-none border border-line bg-ink p-4">
           {error ? (
             <p className="py-10 text-center text-[12px] text-life-crit">
               Couldn&rsquo;t render the code: {error}
@@ -98,13 +98,13 @@ export function QrPanel({
         <div className="mt-5 flex gap-2">
           <button
             onClick={copy}
-            className="flex-1 rounded-lg bg-text px-3 py-2 text-[12px] font-medium text-ink"
+            className="flex-1 rounded-none bg-text px-3 py-2 text-[12px] font-medium text-ink"
           >
             {copied === "ok" ? "Copied" : copied === "fail" ? "Copy unavailable" : "Copy link"}
           </button>
           <button
             onClick={onClose}
-            className="rounded-lg border border-line px-3 py-2 text-[12px] text-muted"
+            className="rounded-none border border-line px-3 py-2 text-[12px] text-muted"
           >
             Close
           </button>

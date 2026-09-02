@@ -81,12 +81,17 @@ export default function Assistant() {
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-3xl flex-col px-6 py-14">
       <div>
-        <h1 className="text-[28px] font-semibold tracking-[-0.02em]">Liquid AI</h1>
+        <div className="border-l-2 border-uranium pl-6">
+          <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-uranium">
+            07 // Assistant
+          </h2>
+          <h1 className="mt-2 font-header text-[32px] font-bold tracking-tight">Liquid AI.</h1>
         <p className="mt-2 text-[14px] text-muted">
           Ask about your passes, what&rsquo;s on the market, or how any of this
           works. Answers come from the product documentation and live chain
           state — never invented.
         </p>
+      </div>
       </div>
 
       {configured === false && (
@@ -105,7 +110,7 @@ export default function Assistant() {
               <button
                 key={s}
                 onClick={() => ask(s)}
-                className="rounded-xl border border-line bg-surface px-3 py-2 text-[13px] text-muted transition-colors hover:border-line-bright hover:text-text"
+                className="rounded-none border border-line bg-surface px-3 py-2 text-[13px] text-muted transition-colors hover:border-line-bright hover:text-text"
               >
                 {s}
               </button>
@@ -116,18 +121,18 @@ export default function Assistant() {
         {turns.map((t, i) =>
           t.role === "user" ? (
             <div key={i} className="flex justify-end">
-              <p className="max-w-[80%] rounded-2xl rounded-br-md bg-raised px-4 py-2.5 text-[14px]">
+              <p className="max-w-[80%] rounded-none rounded-br-md bg-raised px-4 py-2.5 text-[14px]">
                 {t.text}
               </p>
             </div>
           ) : (
             <div key={i} className="max-w-[90%]">
-              <p className="whitespace-pre-wrap rounded-2xl rounded-bl-md border border-line bg-surface px-4 py-3 text-[14px] leading-relaxed">
+              <p className="whitespace-pre-wrap rounded-none rounded-bl-md border border-line bg-surface px-4 py-3 text-[14px] leading-relaxed">
                 {t.text}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2 pl-1">
                 {t.mode === "knowledge-base" && (
-                  <span className="rounded-md bg-life-low/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-life-low">
+                  <span className="rounded-none bg-life-low/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-life-low">
                     from documentation
                   </span>
                 )}
@@ -155,7 +160,7 @@ export default function Assistant() {
           e.preventDefault();
           void ask(input);
         }}
-        className="sticky bottom-6 mt-8 flex gap-2 rounded-2xl border border-line bg-surface/90 p-2 backdrop-blur-xl"
+        className="sticky bottom-6 mt-8 flex gap-2 rounded-none border border-line bg-surface/90 p-2 backdrop-blur-xl"
       >
         <input
           value={input}
@@ -166,7 +171,7 @@ export default function Assistant() {
         <button
           type="submit"
           disabled={busy || !input.trim()}
-          className="rounded-xl bg-text px-4 py-2 text-[13px] font-medium text-ink disabled:opacity-40"
+          className="rounded-none bg-text px-4 py-2 text-[13px] font-medium text-ink disabled:opacity-40"
         >
           Ask
         </button>

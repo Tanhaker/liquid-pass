@@ -95,10 +95,15 @@ export default function IssuerDashboard() {
   return (
     <div className="mx-auto max-w-6xl px-6 py-14">
       <div className="mb-10">
-        <h1 className="text-[28px] font-semibold tracking-tight text-text">Issuer Command Center</h1>
+        <div className="border-l-2 border-uranium pl-6">
+          <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-uranium">
+            06 // Issuer portal
+          </h2>
+          <h1 className="mt-2 font-header text-[32px] font-bold tracking-tight">Issuer command center.</h1>
         <p className="mt-2 text-[14px] text-muted max-w-2xl">
           Manage your subscription plans, monitor active users, and track real-time revenue across primary sales and secondary market royalties.
         </p>
+      </div>
       </div>
 
       {error && <Banner tone="error">{error}</Banner>}
@@ -136,10 +141,10 @@ export default function IssuerDashboard() {
           </div>
 
           {/* Plan Management Table */}
-          <div className="rounded-2xl border border-line bg-surface overflow-hidden">
+          <div className="rounded-none border border-line bg-surface overflow-hidden">
             <div className="border-b border-line px-6 py-4 flex justify-between items-center bg-surface/50">
               <h2 className="font-semibold text-text">Your Subscription Plans</h2>
-              <button className="rounded-lg bg-text text-ink px-4 py-2 text-[13px] font-medium hover:opacity-90 transition-opacity">
+              <button className="rounded-none bg-text text-ink px-4 py-2 text-[13px] font-medium hover:opacity-90 transition-opacity">
                 + Create New Plan
               </button>
             </div>
@@ -167,7 +172,7 @@ export default function IssuerDashboard() {
                         <td className="px-6 py-4 tnum">{formatEther(plan.price)} ETH</td>
                         <td className="px-6 py-4 tnum">{Number(plan.duration) / 86400} Days</td>
                         <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium ${plan.open ? 'bg-[var(--theme-life-full)]/10 text-[var(--theme-life-full)]' : 'bg-raised text-faint'}`}>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-none text-[11px] font-medium ${plan.open ? 'bg-[var(--theme-life-full)]/10 text-[var(--theme-life-full)]' : 'bg-raised text-faint'}`}>
                             {plan.open ? 'Active' : 'Closed'}
                           </span>
                         </td>
@@ -191,7 +196,7 @@ export default function IssuerDashboard() {
 
 function MetricCard({ title, value, subtitle, color }: { title: string; value: string; subtitle: string; color: string }) {
   return (
-    <div className="rounded-2xl border border-line bg-surface/50 p-6 relative overflow-hidden group hover:border-line-bright transition-colors">
+    <div className="rounded-none border border-line bg-surface/50 p-6 relative overflow-hidden group hover:border-line-bright transition-colors">
       <div 
         className="absolute -right-10 -top-10 w-32 h-32 rounded-full blur-[50px] opacity-20 group-hover:opacity-40 transition-opacity"
         style={{ background: color }}

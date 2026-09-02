@@ -43,6 +43,7 @@ export async function createSessionKey(walletClient: WalletClient) {
         },
       ],
       // validUntil: Date.now() / 1000 + 7 * 24 * 60 * 60, // Valid for 7 days
+    },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     entryPoint: ENTRYPOINT_ADDRESS_V07 as any,
   });

@@ -152,13 +152,13 @@ export function AutoSell({
   const ready = evaluated.filter((e) => e.fired);
 
   return (
-    <section className="mt-10 rounded-2xl border border-line bg-surface p-5">
+    <section className="mt-10 rounded-none border border-line bg-surface p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="size-1.5 rounded-full bg-life-mid" />
           <h2 className="text-[13px] font-medium">Auto-sell rules</h2>
         </div>
-        <span className="rounded-md bg-life-mid/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-life-mid">
+        <span className="rounded-none bg-life-mid/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-life-mid">
           Powered by ZeroDev
         </span>
       </div>
@@ -173,20 +173,20 @@ export function AutoSell({
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && parse()}
           placeholder="if I don't use my Notion pass for 7 days, sell it for 0.0002"
-          className="min-w-0 flex-1 rounded-lg border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
+          className="min-w-0 flex-1 rounded-none border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
         />
         <div className="flex gap-2">
           <button
             onClick={parse}
             disabled={busy || !text.trim() || passes.length === 0}
-            className="rounded-lg bg-text px-3.5 py-2 text-[12px] font-medium text-ink disabled:opacity-40 hover:bg-text/90 transition-colors"
+            className="rounded-none bg-text px-3.5 py-2 text-[12px] font-medium text-ink disabled:opacity-40 hover:bg-text/90 transition-colors"
           >
             {busy ? "Reading..." : "Add rule"}
           </button>
           
           <button 
             onClick={() => alert("Connecting to ZeroDev to create Kernel Account and ECDSA Validator... Check console.")} 
-            className="rounded-lg border border-life-mid/40 bg-life-mid/10 px-3.5 py-2 text-[12px] font-medium text-life-mid hover:bg-life-mid/20 transition-colors"
+            className="rounded-none border border-life-mid/40 bg-life-mid/10 px-3.5 py-2 text-[12px] font-medium text-life-mid hover:bg-life-mid/20 transition-colors"
           >
             Issue Session Key
           </button>
@@ -201,7 +201,7 @@ export function AutoSell({
       {error && <p className="mt-2 text-[12px] text-life-crit">{error}</p>}
 
       {pending && (
-        <div className="mt-4 rounded-xl border border-life-mid/40 bg-life-mid/10 p-4">
+        <div className="mt-4 rounded-none border border-life-mid/40 bg-life-mid/10 p-4">
           <p className="text-[12px] text-life-mid">
             {pending.restated || "Rule understood."}
           </p>
@@ -212,13 +212,13 @@ export function AutoSell({
           <div className="mt-3 flex gap-2">
             <button
               onClick={confirm}
-              className="rounded-lg bg-text px-3 py-1.5 text-[12px] font-medium text-ink"
+              className="rounded-none bg-text px-3 py-1.5 text-[12px] font-medium text-ink"
             >
               Save rule
             </button>
             <button
               onClick={() => setPending(null)}
-              className="rounded-lg border border-line px-3 py-1.5 text-[12px] text-muted"
+              className="rounded-none border border-line px-3 py-1.5 text-[12px] text-muted"
             >
               Discard
             </button>
@@ -244,7 +244,7 @@ export function AutoSell({
             return (
               <div
                 key={rule.id}
-                className="rounded-xl border border-life-low/40 bg-life-low/10 p-4"
+                className="rounded-none border border-life-low/40 bg-life-low/10 p-4"
               >
                 <p className="text-[11px] uppercase tracking-[0.16em] text-life-low">
                   Ready to list
@@ -257,7 +257,7 @@ export function AutoSell({
                       if (price > 0n) onList(pass.tokenId, price);
                     }}
                     disabled={price <= 0n || busyToken === rule.tokenId}
-                    className="rounded-lg bg-text px-3 py-1.5 text-[12px] font-medium text-ink disabled:opacity-40"
+                    className="rounded-none bg-text px-3 py-1.5 text-[12px] font-medium text-ink disabled:opacity-40"
                   >
                     {busyToken === rule.tokenId
                       ? "Confirm in wallet…"

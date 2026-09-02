@@ -48,10 +48,10 @@ export function YieldDashboard() {
   };
 
   return (
-    <section className="rounded-2xl border border-line bg-surface p-6">
+    <section className="rounded-none border border-line bg-surface p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="rounded-md bg-life-mid/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-life-mid">
+          <span className="rounded-none bg-life-mid/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-life-mid">
             Live
           </span>
           <h2 className="text-[15px] font-medium">Aave V3 Escrow Yield</h2>
@@ -74,7 +74,7 @@ export function YieldDashboard() {
         Your capital earns interest continuously while it sits here.
       </p>
 
-      <div className="mt-6 rounded-xl border border-line bg-ink p-5 flex items-center justify-between">
+      <div className="mt-6 rounded-none border border-line bg-ink p-5 flex items-center justify-between">
         <div>
           <p className="text-[11px] uppercase tracking-[0.16em] text-faint">
             Total Locked Balance & Yield
@@ -90,7 +90,7 @@ export function YieldDashboard() {
         <button
           onClick={handleClaim}
           disabled={!hasBalance || busy}
-          className="rounded-lg bg-white px-5 py-2.5 text-[13px] font-medium text-black transition-colors hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-none bg-white px-5 py-2.5 text-[13px] font-medium text-black transition-colors hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {busy ? "Claiming..." : "Claim Funds"}
         </button>
