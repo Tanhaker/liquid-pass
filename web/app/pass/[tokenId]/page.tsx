@@ -60,6 +60,7 @@ export default function PassDetail({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tx, setTx] = useState<{ hash: string; what: string } | null>(null);
   const [listing, setListing] = useState(false);
   const [transferring, setTransferring] = useState(false);
   const [recipient, setRecipient] = useState("");
