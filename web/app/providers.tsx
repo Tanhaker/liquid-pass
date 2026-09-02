@@ -8,6 +8,8 @@ import { WagmiProvider } from "wagmi";
 import { config } from "@/lib/wagmi";
 import { ThemeProvider } from "next-themes";
 import { LiquidPassProvider } from "@/lib/store";
+import { ApolloProvider } from "@apollo/client";
+import { apolloClient } from "@/lib/apollo";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -26,9 +28,11 @@ export function Providers({ children }: { children: ReactNode }) {
             })}
             modalSize="compact"
           >
-            <LiquidPassProvider>
-              {children}
-            </LiquidPassProvider>
+            <ApolloProvider client={apolloClient}>
+              <LiquidPassProvider>
+                {children}
+              </LiquidPassProvider>
+            </ApolloProvider>
           </RainbowKitProvider>
         </QueryClientProvider>
       </WagmiProvider>
