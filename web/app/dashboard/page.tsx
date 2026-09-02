@@ -70,7 +70,7 @@ export default function DashboardPage() {
       const hash = await writeContractAsync({
         address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "buyPass",
         args: [plan.id], value: plan.price, chainId: arbitrumSepolia.id,
-        gas: 3_000_000n,
+        gas: 800_000n,
       });
       setTx({ hash, what: `Bought pass from plan "${plan.name}"` });
       await client?.waitForTransactionReceipt({ hash });
@@ -85,7 +85,7 @@ export default function DashboardPage() {
       const hash = await writeContractAsync({
         address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "mint",
         args: [address, BigInt(mintDuration)], chainId: arbitrumSepolia.id,
-        gas: 3_000_000n,
+        gas: 800_000n,
       });
       setTx({ hash, what: "Minted a new pass" });
       await client?.waitForTransactionReceipt({ hash });
