@@ -60,8 +60,9 @@ export default function PassDetail({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [tx, setTx] = useState<{ hash: string; what: string } | null>(null);
   const [listing, setListing] = useState(false);
+  const [transferring, setTransferring] = useState(false);
+  const [recipient, setRecipient] = useState("");
   const [price, setPrice] = useState("");
   const [showQr, setShowQr] = useState(false);
 
@@ -256,6 +257,16 @@ export default function PassDetail({
               </button>
             )}
 
+            {isOwner && pass.active && !listing && !transferring && (
+              <button
+                onClick={() => setTransferring(true)}
+                disabled={wrongNetwork}
+                className="rounded-none border border-line px-4 py-2 text-[13px] text-muted hover:text-text disabled:opacity-40"
+              >
+                Transfer / Discard
+              </button>
+            )}
+
             {isOwner && pass.listed > 0n && (
               <button
                 onClick={() =>
@@ -331,6 +342,49 @@ export default function PassDetail({
                 </button>
                 <button
                   onClick={() => setListing(false)}
+                  className="rounded-none border border-line px-3 py-2 text-[12px] text-muted"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {transferring && (
+            <div className="mt-5 max-w-sm rounded-none border border-line bg-surface p-4">
+              <label htmlFor="recip" className="text-[11px] uppercase tracking-[0.12em] text-faint">
+                Recipient Wallet Address (or 0x00...dead to burn)
+              </label>
+              <input
+                id="recip"
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
+                placeholder="0x... or 0x000000000000000000000000000000000000dead"
+                autoFocus
+                className="tnum mt-2 w-full rounded-none border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
+              />
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => {
+                    const target = (recipient.trim() || "0x000000000000000000000000000000000000dead") as `0x${string}`;
+                    setTransferring(false);
+                    void run(`Transferred pass #${pass.tokenId}`, async () =>
+                      writeContractAsync({
+                        address: LIQUID_PASS_ADDRESS,
+                        abi: liquidPassAbi,
+                        functionName: "transferPass",
+                        args: [target, pass.tokenId],
+                        chainId: arbitrumSepolia.id,
+                      }),
+                    );
+                  }}
+                  disabled={busy || wrongNetwork}
+                  className="flex-1 rounded-none bg-text px-3 py-2 text-[12px] font-medium text-ink disabled:opacity-40"
+                >
+                  Confirm Transfer
+                </button>
+                <button
+                  onClick={() => setTransferring(false)}
                   className="rounded-none border border-line px-3 py-2 text-[12px] text-muted"
                 >
                   Cancel
