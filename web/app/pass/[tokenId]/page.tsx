@@ -237,7 +237,7 @@ export default function PassDetail({
                     writeContractAsync({
                       address: MARKETPLACE_ADDRESS, abi: marketplaceAbi, functionName: "buy", args: [pass.tokenId], value: withBuffer(pass.current),
                       chainId: arbitrumSepolia.id,
-                      ...(await fees()),
+                      gas: 3_000_000n,
                     }),
                   )
                 }
@@ -274,7 +274,7 @@ export default function PassDetail({
                   run(`Unlisted pass #${pass.tokenId}`, async () =>
                     writeContractAsync({
                       address: MARKETPLACE_ADDRESS, abi: marketplaceAbi, functionName: "unlist", args: [pass.tokenId], chainId: arbitrumSepolia.id,
-                      ...(await fees()),
+                      gas: 3_000_000n,
                     }),
                   )
                 }
@@ -332,7 +332,7 @@ export default function PassDetail({
                       writeContractAsync({
                         address: MARKETPLACE_ADDRESS, abi: marketplaceAbi, functionName: "list", args: [pass.tokenId, wei],
                         chainId: arbitrumSepolia.id,
-                        ...(await fees()),
+                        gas: 3_000_000n,
                       }),
                     );
                   }}
@@ -376,6 +376,7 @@ export default function PassDetail({
                         functionName: "transferPass",
                         args: [target, pass.tokenId],
                         chainId: arbitrumSepolia.id,
+                        gas: 3_000_000n,
                       }),
                     );
                   }}

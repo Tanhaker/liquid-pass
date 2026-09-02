@@ -65,6 +65,7 @@ export default function IssuerPage() {
         address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "createPlan",
         args: [planName, uri, parseEther(planPrice), BigInt(planDays * 86400)],
         chainId: arbitrumSepolia.id,
+        gas: 3_000_000n,
       });
       setTx({ hash, what: `Created plan "${planName}"` });
       await client?.waitForTransactionReceipt({ hash });
@@ -79,6 +80,7 @@ export default function IssuerPage() {
       const hash = await writeContractAsync({
         address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "setPlanOpen",
         args: [plan.id, !plan.open], chainId: arbitrumSepolia.id,
+        gas: 3_000_000n,
       });
       setTx({ hash, what: `${plan.open ? "Closed" : "Opened"} plan "${plan.name}"` });
       await client?.waitForTransactionReceipt({ hash });
