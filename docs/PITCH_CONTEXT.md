@@ -38,10 +38,6 @@ Unlike competitors who just use the blockchain as a slow database to store hashe
 - **How it works:** A dedicated `/issuer` dashboard where companies (like Figma) can view their total primary revenue, track secondary market trading volume, and see how many active subscribers they have. 
 - **The Magic:** It bridges the gap between Web3 asset ownership and Web2 B2B enterprise analytics.
 
-### 6. Cinematic 3D Glassmorphism UI
-- **How it works:** The Next.js frontend is a bespoke, premium "Apple-meets-Stripe" fintech experience. Hardware-accelerated 3D cards tilt with the mouse, featuring dynamic glare and drop shadows. 
-- **The Magic:** Time remaining is visualized by an SVG "Decay Ring" that physically ticks down, making the abstract concept of "decaying time" instantly understandable to a normal consumer.
-
 ---
 
 ## 🎯 The "Web 2.5" Vision (Future Roadmap)
