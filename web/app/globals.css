@@ -86,9 +86,46 @@
   --color-periwinkle: var(--theme-life-mid);
   
   --color-dark: var(--theme-ink);
+  --color-dark-base: var(--bg-page);
   --color-dark-card: var(--theme-surface);
   --color-dark-surface: var(--theme-raised);
+  --color-dark-surface-hover: var(--border-default);
   --color-dark-border: var(--theme-line);
+  --color-dark-border-muted: var(--border-default);
+
+  /* camelCase spellings, on purpose.
+     The design file is Tailwind v3, where the config key `zincGrey` produces
+     `text-zincGrey`. v4 derives utilities from the CSS variable name verbatim,
+     so `--color-zinc-grey` only ever produced `text-zinc-grey` -- and the 107
+     `text-zincGrey` class names copied across from the drop resolved to
+     NOTHING. They inherited primary text instead, which silently flattened
+     every caption, label and secondary line on the site to full contrast.
+     It only looked correct in light mode, because a `!important` override
+     further down happens to catch `.text-zincGrey` there.
+     Both spellings are defined so either resolves. */
+  --color-zincGrey: var(--text-secondary);
+  --color-zincGrey-light: var(--text-tertiary);
+  --color-zincGrey-dark: var(--text-secondary);
+
+  /* Semantic namespaces from the drop's tailwind.config, so anything copied
+     from it verbatim (Navbar uses bg-bg-page and border-border-default)
+     resolves rather than silently dropping out. */
+  --color-bg-page: var(--bg-page);
+  --color-bg-card: var(--bg-card);
+  --color-bg-panel: var(--bg-panel-nested);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-text: var(--accent-text);
+  --color-accent-glow: var(--accent-glow);
+  --color-chip-bg: var(--chip-bg);
+  --color-chip-text: var(--chip-text);
+  --color-status-warning: var(--status-warning);
+  --color-status-danger: var(--status-danger);
+  --color-status-info: var(--status-info);
 
   --font-header: "Cabinet Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-body: "General Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -107,96 +144,194 @@
   --shadow-grunge-amber: 4px 4px 0px 0px #FF9F1C;
 }
 
-/* Dark is the design's native state and the default. */
-:root {
-  --theme-ink: #08090C;
-  --theme-surface: #11141A;
-  --theme-raised: #161A22;
-  --theme-line: #232936;
-  --theme-line-bright: #323A4C;
+/* ---------------------------------------------------------------------------
+   Theme tokens, from the new UI drop.
 
-  --theme-text: #F2F4F7;
-  --theme-muted: #8E95A1;
-  --theme-faint: #667085;
+   The drop switched theming from a `.dark` / `.light` class to an
+   `html[data-theme]` attribute, and brought a real light mode -- warm paper
+   (#EDEDE8) rather than the cool grey that was here before. Both are adopted
+   as-is, and next-themes is set to attribute="data-theme" to match. Nothing in
+   the app keyed off the old classes: the only `dark:` hit in the codebase is a
+   property name inside QrPanel's QR colour object, not a Tailwind variant.
 
-  --theme-life-full: #98FF1A;  /* uranium -- plenty of time left */
-  --theme-life-mid: #7B92FF;   /* periwinkle */
-  --theme-life-low: #FF9F1C;   /* aviation -- running down */
-  --theme-life-crit: #FF3B30;
+   The --theme-* names are kept and pointed at the drop's tokens. That is what
+   lets every existing page pick up the new palette without a single line of
+   their JSX changing.
+--------------------------------------------------------------------------- */
 
-  --theme-accent: #98FF1A;
-  --theme-glow: rgba(152, 255, 26, 0.3);
-}
+:root,
+html[data-theme="dark"] {
+  --bg-page: #08090C;
+  --bg-card: #11141A;
+  --bg-panel-nested: #161A22;
+  --border-default: #232936;
+  --border-strong: #323A4C;
+  --text-primary: #F2F4F7;
+  --text-secondary: #8E95A1;
+  --text-tertiary: #667085;
+  --accent-primary: #98FF1A;
+  --accent-text: #98FF1A;
+  --accent-glow: #B4FF39;
+  --status-warning: #FF9F1C;
+  --status-danger: #F87171;
+  --status-info: #7B92FF;
+  --chip-bg: #141412;
+  --chip-text: #B4FF39;
 
-/* Light mode keeps the same hues at printable contrast. Uranium at full
-   saturation on white is unreadable, so it steps down to its dim variant. */
-.light {
-  --theme-ink: #F2F4F7;
-  --theme-surface: #FFFFFF;
-  --theme-raised: #E9ECF1;
-  --theme-line: #D0D5DD;
-  --theme-line-bright: #98A2B3;
+  --video-opacity: 0.25;
+  --video-mix: normal;
 
-  --theme-text: #08090C;
-  --theme-muted: #4B5563;
-  --theme-faint: #667085;
-
-  --theme-life-full: #4E8F00;
-  --theme-life-mid: #4257C4;
-  --theme-life-low: #B96C00;
-  --theme-life-crit: #C42B21;
-
-  --theme-accent: #4E8F00;
-  --theme-glow: rgba(78, 143, 0, 0.25);
-}
-
-html {
-  background: var(--theme-ink);
   color-scheme: dark;
 }
 
-.light {
+html[data-theme="light"] {
+  --bg-page: #EDEDE8;
+  --bg-card: #F7F7F3;
+  --bg-panel-nested: #DFDFD8;
+  --border-default: #C7C7BE;
+  --border-strong: #B0B0A5;
+  --text-primary: #141412;
+  --text-secondary: #5A5A52;
+  --text-tertiary: #8A8A80;
+  --accent-primary: #6BBF00;
+  --accent-text: #3E7A00;
+  --accent-glow: #B4FF39;
+  --status-warning: #9A5C00; /* WCAG AA (>4.5:1 on #EDEDE8) */
+  --status-danger: #C4342A;
+  --status-info: #2D6FC4;
+  --chip-bg: #141412;        /* stays dark in both modes */
+  --chip-text: #B4FF39;      /* stays light in both modes */
+
+  --video-opacity: 0.06;
+  --video-mix: multiply;
+
   color-scheme: light;
+}
+
+/* The app's own semantic names, mapped onto the drop's tokens. Both themes
+   flow through this one mapping. */
+:root,
+html[data-theme="dark"],
+html[data-theme="light"] {
+  --theme-ink: var(--bg-page);
+  --theme-surface: var(--bg-card);
+  --theme-raised: var(--bg-panel-nested);
+  --theme-line: var(--border-default);
+  --theme-line-bright: var(--border-strong);
+
+  --theme-text: var(--text-primary);
+  --theme-muted: var(--text-secondary);
+  --theme-faint: var(--text-tertiary);
+
+  --theme-life-full: var(--accent-text);
+  --theme-life-mid: var(--status-info);
+  --theme-life-low: var(--status-warning);
+  --theme-life-crit: var(--status-danger);
+
+  --theme-accent: var(--accent-primary);
+  --theme-glow: color-mix(in srgb, var(--accent-primary) 30%, transparent);
+}
+
+html {
+  background: var(--bg-page);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: var(--theme-ink);
-  color: var(--theme-text);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   background-image:
-    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--theme-accent) 5%, transparent) 0%, transparent 60%),
-    radial-gradient(circle at 100% 100%, rgba(255, 159, 28, 0.03) 0%, transparent 40%);
+    radial-gradient(ellipse at 50% 0%, rgba(152, 255, 26, 0.03) 0%, transparent 60%),
+    linear-gradient(to bottom, var(--bg-page) 0%, var(--bg-card) 100%);
   background-attachment: fixed;
 }
 
 ::selection {
-  background: var(--theme-accent);
+  background: var(--accent-primary);
   color: #08090C;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-header);
   letter-spacing: -0.02em;
+  color: var(--text-primary);
 }
 
-/* Subtle physical grain overlay */
-.grain-overlay {
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.025'/%3E%3C/svg%3E");
+/* ---------------------------------------------------------------------------
+   Light-mode contrast overrides, from the drop.
+
+   Utility classes named for dark values (bg-dark-card, text-alabaster) are all
+   over the ported markup. In light mode those names are lies, so the drop pins
+   them to paper values rather than renaming several hundred call sites.
+--------------------------------------------------------------------------- */
+
+html[data-theme="light"] .text-alabaster { color: #141412 !important; }
+html[data-theme="light"] .text-zinc-grey { color: #5A5A52 !important; }
+html[data-theme="light"] .text-uranium { color: #3E7A00 !important; }
+html[data-theme="light"] .bg-dark-card {
+  background-color: #F7F7F3 !important;
+  border-color: #C7C7BE !important;
 }
+html[data-theme="light"] .bg-dark-surface {
+  background-color: #DFDFD8 !important;
+  border-color: #C7C7BE !important;
+}
+html[data-theme="light"] .bg-dark { background-color: #EDEDE8 !important; }
+html[data-theme="light"] .border-dark-border { border-color: #C7C7BE !important; }
+html[data-theme="light"] .bg-uranium {
+  background-color: #6BBF00 !important;
+  color: #141412 !important;
+}
+
+/* Chips, badges and token tags stay dark in BOTH themes -- the drop treats
+   them as physical stamped labels, not surfaces. */
+.bg-chip-bg { background-color: #141412 !important; }
+.text-chip-text { color: #B4FF39 !important; }
+
+.footer-brand-watermark {
+  color: var(--text-primary);
+  opacity: 0.16;
+}
+html[data-theme="light"] .footer-brand-watermark {
+  color: var(--status-warning) !important;
+  opacity: 0.32 !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Grain, as an isolated fixed pseudo-element rather than a body background.
+   On the body it tiled with the page gradient and scrolled with it; here its
+   opacity is its own and it never multiplies against content.
+--------------------------------------------------------------------------- */
+
+.grain-overlay {
+  position: relative;
+}
+
+.grain-overlay::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+  opacity: 0.08;
+}
+
+html[data-theme="light"] .grain-overlay::before { opacity: 0.03; }
 
 .technical-grid {
   background-size: 32px 32px;
   background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--theme-text) 3%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--theme-text) 3%, transparent) 1px, transparent 1px);
+    linear-gradient(to right, rgba(128, 128, 128, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(128, 128, 128, 0.07) 1px, transparent 1px);
 }
 
 .technical-dots {
   background-size: 24px 24px;
-  background-image: radial-gradient(circle, color-mix(in srgb, var(--theme-accent) 10%, transparent) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(128, 128, 128, 0.15) 1px, transparent 1px);
 }
 
 .bg-decay-gradient {
@@ -219,7 +354,7 @@ h1, h2, h3, h4, h5, h6 {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background-color: var(--theme-ink);
+  background-color: var(--bg-page);
   transform: translateY(-50%);
   z-index: 10;
 }
@@ -297,12 +432,24 @@ h1, h2, h3, h4, h5, h6 {
 .card-3d-content { transform: translateZ(40px); }
 .card-3d-bg { transform: translateZ(-20px) scale(1.05); }
 
-/* CSS View Transitions for the theme wipe */
+/* View Transitions for the theme wipe, per the drop: a slower group duration
+   and an explicit stacking order, so the incoming page wipes over the outgoing
+   one instead of cross-fading through it. */
+::view-transition-group(root) { animation-duration: 0.85s; }
+
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
+  animation: none !important;
+  mix-blend-mode: normal !important;
+  display: block;
 }
+
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 999999; }
+
+/* The chatbot terminal and its prompt rail scroll without visible bars. */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, Cpu, Fingerprint, Sliders } from "lucide-react";
 import { PassCard3D } from "@/components/PassCard3D";
 import { LiveStats } from "@/components/LiveStats";
+import { DualSettlementAnimation } from "@/components/DualSettlementAnimation";
 import { useNow } from "@/components/ui";
 import dynamic from "next/dynamic";
 const DottedSurface = dynamic(() => import("@/components/ui/dotted-surface"), { ssr: false });
@@ -271,6 +272,11 @@ export default function Home() {
         </motion.div>
         <LiveStats />
       </section>
+
+      {/* Dual-settlement animation, mounted where the drop places it: directly
+          after the live stats. It visualises the 90/10 split the contract
+          performs on every resale. */}
+      <DualSettlementAnimation />
 
       {/* ---------------------------------------------------------------- */}
       {/* CTA                                                              */}

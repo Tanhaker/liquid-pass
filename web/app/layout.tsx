@@ -4,7 +4,7 @@ import { Providers } from "./providers";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { DemoBar } from "@/components/DemoBar";
-import { FloatingAI } from "@/components/FloatingAI";
+import { ChatbotWidget } from "@/components/ChatbotWidget";
 import { DemoProvider } from "@/lib/demo";
 
 export const metadata: Metadata = {
@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <DemoBar />
             <main className="grow">{children}</main>
             <Footer />
-            <FloatingAI />
+            <ChatbotWidget />
           </DemoProvider>
         </Providers>
       </body>
