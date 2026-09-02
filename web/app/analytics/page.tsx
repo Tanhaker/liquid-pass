@@ -13,6 +13,7 @@ import {
   Zap,
 } from "lucide-react";
 import { SUBGRAPH_URL } from "@/lib/graph";
+import { GraphPlayground } from "@/components/GraphPlayground";
 
 const MARKETPLACE_TOTALS = gql`
   query Totals {
@@ -118,38 +119,12 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* Breakdown: Resale Volume per SaaS Service */}
+      {/* GraphQL Playground and Architecture */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* Left: Platform Distribution */}
-        <div className="lg:col-span-8 p-6 bg-dark-card border border-dark-border shadow-grunge space-y-6">
-          <div className="flex items-center justify-between border-b border-dark-border pb-4">
-            <h3 className="font-header font-bold text-xl text-alabaster">
-              Secondary Resale Volume by SaaS Protocol (Demo)
-            </h3>
-            <span className="font-mono text-xs text-zincGrey">MOCK DATA</span>
-          </div>
-
-          <div className="space-y-4 font-mono text-xs">
-            {platforms.map((p) => (
-              <div key={p.name} className="space-y-1.5">
-                <div className="flex justify-between items-center text-zincGrey">
-                  <span className="text-alabaster font-bold">{p.name}</span>
-                  <div className="space-x-3">
-                    <span className="text-uranium font-bold">{p.volume}</span>
-                    <span>({p.passes} passes  {p.avgDiscount} avg discount)</span>
-                  </div>
-                </div>
-                {/* Visual Bar */}
-                <div className="w-full h-2.5 bg-dark border border-dark-border overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-uranium to-aviation"
-                    style={{ width: `${p.share * 3}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+        {/* Left: Live GraphQL Playground */}
+        <div className="lg:col-span-8">
+          <GraphPlayground />
         </div>
 
         {/* Right: 90/10 Split Architecture */}
