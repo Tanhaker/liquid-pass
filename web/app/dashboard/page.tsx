@@ -56,12 +56,12 @@ export default function DashboardPage() {
 
   useEffect(() => { void load(); }, [load]);
 
+  const planFor = (p: Pass) => plans.find((pl) => pl.id === p.planId);
   const myPasses = passesOf(passes, address).filter((p) => {
     const pl = planFor(p);
     return pl?.name !== "Test Plan A" && p.planId !== 0n;
   });
   const myListings = myPasses.filter((p) => p.listed > 0n && p.active);
-  const planFor = (p: Pass) => plans.find((pl) => pl.id === p.planId);
 
   const handleBuyFromPlan = async (plan: Plan) => {
     if (!isConnected || wrongNetwork) return;
@@ -69,7 +69,7 @@ export default function DashboardPage() {
     try {
       const hash = await writeContractAsync({
         address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "buyPass",
-        args: [plan.id], value: plan.price, chainId: arbitrumSepolia.id, ...(await fees()),
+        args: [plan.id], value: plan.price, chainId: arbitrumSepolia.id,
       });
       setTx({ hash, what: `Bought pass from plan "${plan.name}"` });
       await client?.waitForTransactionReceipt({ hash });
@@ -83,7 +83,7 @@ export default function DashboardPage() {
     try {
       const hash = await writeContractAsync({
         address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "mint",
-        args: [address, BigInt(mintDuration)], chainId: arbitrumSepolia.id, ...(await fees()),
+        args: [address, BigInt(mintDuration)], chainId: arbitrumSepolia.id,
       });
       setTx({ hash, what: "Minted a new pass" });
       await client?.waitForTransactionReceipt({ hash });
