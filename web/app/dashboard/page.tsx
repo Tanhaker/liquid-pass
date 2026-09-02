@@ -57,10 +57,7 @@ export default function DashboardPage() {
   useEffect(() => { void load(); }, [load]);
 
   const planFor = (p: Pass) => plans.find((pl) => pl.id === p.planId);
-  const myPasses = passesOf(passes, address).filter((p) => {
-    const pl = planFor(p);
-    return pl?.name !== "Test Plan A" && p.planId !== 0n;
-  });
+  const myPasses = passesOf(passes, address);
   const myListings = myPasses.filter((p) => p.listed > 0n && p.active);
 
   const handleBuyFromPlan = async (plan: Plan) => {
