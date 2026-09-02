@@ -54,10 +54,23 @@ export default function Home() {
     <div ref={containerRef} className="bg-ink min-h-screen text-text selection:bg-life-full/30 font-sans">
       {/* Cinematic Hero */}
       <section className="relative min-h-[90vh] flex flex-col justify-center pt-24 pb-12 overflow-hidden border-b border-line">
-        {/* The Constellation component acts as the tech matrix particle background */}
-        <Constellation className="opacity-60" />
-        
-        {/* Dynamic Glows */}
+        {/* Background Hero Video Layer with Clean Vignette Masks */}
+        <div className="absolute top-0 left-0 right-0 bottom-0 overflow-hidden pointer-events-none -z-20">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover opacity-30 filter contrast-110 brightness-90"
+          >
+            <source src="/Hero_vid.mp4" type="video/mp4" />
+          </video>
+          
+          {/* Soft edge vignetting and gradient fades */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#08090C]/60 via-transparent to-[#08090C]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#08090C]/85 via-transparent to-[#08090C]/85" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,#08090C_85%)]" />
+        </div>
         <div className="absolute top-1/4 -left-1/4 w-[800px] h-[800px] bg-[var(--theme-accent)]/10 rounded-full blur-[150px] pointer-events-none" />
         <div className="absolute bottom-1/4 right-0 w-[600px] h-[600px] bg-[var(--theme-life-full)]/10 rounded-full blur-[150px] pointer-events-none" />
         
