@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowUpRight, Cpu } from "lucide-react";
-import { LIQUID_PASS_CONTRACT_ADDRESS } from "@/lib/abi";
+import { EXPLORER, LIQUID_PASS_ADDRESS } from "@/lib/contract";
 
 export function Footer() {
   return (
@@ -81,12 +81,12 @@ export function Footer() {
             <div className="p-4 bg-dark-card border border-dark-border space-y-2 text-[11px]">
               <div className="text-zincGrey">STYLUS TARGET:</div>
               <a
-                href={`https://sepolia.arbiscan.io/address/${LIQUID_PASS_CONTRACT_ADDRESS}`}
+                href={`${EXPLORER}/address/${LIQUID_PASS_ADDRESS}`}
                 target="_blank"
                 rel="noreferrer"
                 className="text-uranium hover:underline flex items-center justify-between font-mono"
               >
-                <span>{LIQUID_PASS_CONTRACT_ADDRESS.slice(0, 14)}...</span>
+                <span>{LIQUID_PASS_ADDRESS.slice(0, 14)}...</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </a>
               <div className="text-zincGrey pt-1">NETWORK: Arbitrum Sepolia (421614)</div>
