@@ -4,7 +4,7 @@ import React, { useRef, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { SubscriptionPass } from "@/lib/types";
 import { Clock, ShieldCheck, ArrowRight, Zap, Flame } from "lucide-react";
-import Link from "next/link";
+import { Button3D, LinkButton3D } from "@/components/Button3D";
 
 interface PassCard3DProps {
   pass: SubscriptionPass;
@@ -213,20 +213,19 @@ export function PassCard3D({
         {/* Action Controls */}
         {showActions && (
           <div className="mt-5 flex items-center space-x-2 relative z-10">
-            <Link
+            <LinkButton3D
               href={`/pass/${pass.tokenId}`}
-              className="flex-1 text-center py-3 px-3 border border-dark-border bg-dark hover:bg-dark-surface text-alabaster font-mono text-sm uppercase tracking-wider transition-colors"
+              variant="ghost"
+              size="md"
+              className="flex-1"
             >
               Inspect Detail
-            </Link>
+            </LinkButton3D>
             {pass.isListed && onBuy && (
-              <button
-                onClick={() => onBuy(pass)}
-                className="flex-1 flex items-center justify-center space-x-1.5 py-3 px-3 bg-uranium hover:bg-uranium-glow text-black font-mono text-sm font-extrabold uppercase tracking-wider transition-all hover:shadow-glow-uranium"
-              >
+              <Button3D onClick={() => onBuy(pass)} size="md" className="flex-1">
                 <span>Acquire Pass</span>
                 <ArrowRight className="w-4 h-4" />
-              </button>
+              </Button3D>
             )}
           </div>
         )}

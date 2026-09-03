@@ -5,6 +5,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, Cpu, Fingerprint, Sliders } from "lucide-react";
 import { PassCard3D } from "@/components/PassCard3D";
+import { LinkButton3D } from "@/components/Button3D";
 import { LiveStats } from "@/components/LiveStats";
 import { DualSettlementAnimation } from "@/components/DualSettlementAnimation";
 import { useNow } from "@/components/ui";
@@ -90,8 +91,9 @@ export default function Home() {
     <div className="relative overflow-hidden">
       {/* Background Hero 3D Dotted Surface Wave */}
       <div className="absolute top-0 left-0 right-0 h-[680px] lg:h-[780px] overflow-hidden pointer-events-none z-0">
-        <DottedSurface size={12} opacity={0.9} />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[var(--theme-ink)]" />
+        <div className="hero-surface-fade absolute inset-0">
+          <DottedSurface size={12} opacity={0.9} />
+        </div>
       </div>
 
       {/* ---------------------------------------------------------------- */}
@@ -114,19 +116,13 @@ export default function Home() {
             </p>
 
             <div className="flex flex-col items-stretch gap-3 pt-2 sm:flex-row sm:items-center sm:gap-4">
-              <Link
-                href="/market"
-                className="flex items-center justify-center gap-2 bg-uranium px-8 py-4 font-mono text-sm font-extrabold uppercase tracking-wider text-black shadow-grunge-uranium transition-all hover:bg-uranium-glow hover:shadow-glow-uranium"
-              >
+              <LinkButton3D href="/market" size="lg">
                 <span>BROWSE THE MARKET</span>
                 <ArrowRight className="size-4" />
-              </Link>
-              <Link
-                href="/dashboard"
-                className="flex items-center justify-center border border-dark-border bg-surface px-8 py-4 font-mono text-sm uppercase tracking-wider text-text transition-all hover:border-uranium hover:bg-raised"
-              >
+              </LinkButton3D>
+              <LinkButton3D href="/dashboard" variant="ghost" size="lg">
                 MY PASSES &amp; VAULT
-              </Link>
+              </LinkButton3D>
             </div>
 
             <div className="flex items-center gap-2 pt-2 font-mono text-xs text-zinc-grey">
