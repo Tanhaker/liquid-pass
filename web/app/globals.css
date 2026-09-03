@@ -1,16 +1,166 @@
-@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,700,500&f[]=general-sans@400,500,600&display=swap');
+/* One @import per family, deliberately.
+   The design file asks Fontshare for both in a single request:
+     ?f[]=cabinet-grotesk@800,700,500&f[]=general-sans@400,500,600
+   That URL does not return General Sans. Fontshare resolves the second `f[]`
+   to Satoshi -- verified by fetching it and reading the @font-face blocks --
+   so the body copy silently renders in a face nobody chose. Requested one at
+   a time, both come back correct. */
+@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,700,500&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ---------------------------------------------------------------------------
+   Design system -- ported from the team's Tailwind v3 config.
 
-/* ============================================================ */
-/* THEME TOKENS */
-/* ============================================================ */
+   Their tailwind.config.ts targets Tailwind v3. This project is on v4, where
+   the config lives in CSS. Translating the palette into @theme rather than
+   downgrading keeps @tailwindcss/postcss, the existing tokens and the whole
+   dependency tree intact -- and every class name they wrote (bg-dark-card,
+   text-uranium, font-header, shadow-glow-uranium) resolves exactly as it did
+   for them.
+
+   zincGrey is the one rename: v4 derives class names from CSS custom property
+   names, which are kebab-case, so it is `zinc-grey` here.
+--------------------------------------------------------------------------- */
+
+@theme {
+  /* Toxic Uranium Green */
+  --color-uranium: #98FF1A;
+  --color-uranium-glow: #B2FF4D;
+  --color-uranium-dim: #6EB812;
+
+  /* Tactical Aviation Amber */
+  --color-aviation: #FF9F1C;
+  --color-aviation-glow: #FFB34D;
+  --color-aviation-dim: #D47E0A;
+
+  /* Raw Alabaster */
+  --color-alabaster: #F2F4F7;
+  --color-alabaster-dim: #D0D5DD;
+  --color-alabaster-muted: #98A2B3;
+
+  /* Zinc Grey -- subtitles / explanations */
+  --color-zinc-grey: #8E95A1;
+  --color-zinc-grey-light: #A4ACB9;
+  --color-zinc-grey-dark: #667085;
+
+  /* Sleek deep black, zero muddy tint */
+  --color-dark: #08090C;
+  --color-dark-base: #0B0D11;
+  --color-dark-card: #11141A;
+  --color-dark-surface: #161A22;
+  --color-dark-surface-hover: #1D222D;
+  --color-dark-border: #232936;
+  --color-dark-border-muted: #181D26;
+
+  --color-periwinkle: #7B92FF;
+  --color-periwinkle-dim: #556DD9;
+
+  /* Semantic tokens the existing pages already use, remapped onto the palette
+     above. This is what makes market / dashboard / issuer / explorer /
+     analytics / verify adopt the new look without their JSX being edited. */
+  --color-ink: var(--theme-ink);
+  --color-surface: var(--theme-surface);
+  --color-raised: var(--theme-raised);
+  --color-line: var(--theme-line);
+  --color-line-bright: var(--theme-line-bright);
+
+  --color-text: var(--theme-text);
+  --color-muted: var(--theme-muted);
+  --color-faint: var(--theme-faint);
+
+  --color-life-full: var(--theme-life-full);
+  --color-life-mid: var(--theme-life-mid);
+  --color-life-low: var(--theme-life-low);
+  --color-life-crit: var(--theme-life-crit);
+  --color-accent: var(--theme-accent);
+  --color-glow: var(--theme-glow);
+
+  /* New UI System Compatibility Aliases */
+  --color-uranium: var(--theme-accent);
+  --color-uranium-glow: var(--theme-accent);
+  --color-alabaster: var(--theme-text);
+  --color-zinc-grey: var(--theme-muted);
+  --color-aviation: var(--theme-life-low);
+  --color-periwinkle: var(--theme-life-mid);
+  
+  --color-dark: var(--theme-ink);
+  --color-dark-base: var(--bg-page);
+  --color-dark-card: var(--theme-surface);
+  --color-dark-surface: var(--theme-raised);
+  --color-dark-surface-hover: var(--border-default);
+  --color-dark-border: var(--theme-line);
+  --color-dark-border-muted: var(--border-default);
+
+  /* camelCase spellings, on purpose.
+     The design file is Tailwind v3, where the config key `zincGrey` produces
+     `text-zincGrey`. v4 derives utilities from the CSS variable name verbatim,
+     so `--color-zinc-grey` only ever produced `text-zinc-grey` -- and the 107
+     `text-zincGrey` class names copied across from the drop resolved to
+     NOTHING. They inherited primary text instead, which silently flattened
+     every caption, label and secondary line on the site to full contrast.
+     It only looked correct in light mode, because a `!important` override
+     further down happens to catch `.text-zincGrey` there.
+     Both spellings are defined so either resolves. */
+  --color-zincGrey: var(--text-secondary);
+  --color-zincGrey-light: var(--text-tertiary);
+  --color-zincGrey-dark: var(--text-secondary);
+
+  /* Semantic namespaces from the drop's tailwind.config, so anything copied
+     from it verbatim (Navbar uses bg-bg-page and border-border-default)
+     resolves rather than silently dropping out. */
+  --color-bg-page: var(--bg-page);
+  --color-bg-card: var(--bg-card);
+  --color-bg-panel: var(--bg-panel-nested);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-text: var(--accent-text);
+  --color-accent-glow: var(--accent-glow);
+  --color-chip-bg: var(--chip-bg);
+  --color-chip-text: var(--chip-text);
+  --color-status-warning: var(--status-warning);
+  --color-status-danger: var(--status-danger);
+  --color-status-info: var(--status-info);
+
+  --font-header: "Cabinet Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "General Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: "General Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* No `var(--font-space-mono)` leading this stack. The design file gets that
+     variable from a next/font loader; here Space Mono comes from the @import
+     above, so the variable is undefined -- and one undefined var invalidates
+     the whole font-family declaration, which silently dropped every mono
+     label on the site back to the body sans. */
+  --font-mono: "Space Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --shadow-glow-uranium: 0 0 25px -5px rgba(152, 255, 26, 0.45);
+  --shadow-glow-amber: 0 0 25px -5px rgba(255, 159, 28, 0.45);
+  --shadow-grunge: 4px 4px 0px 0px #040507;
+  --shadow-grunge-uranium: 4px 4px 0px 0px #98FF1A;
+  --shadow-grunge-amber: 4px 4px 0px 0px #FF9F1C;
+}
+
+/* ---------------------------------------------------------------------------
+   Theme tokens, from the new UI drop.
+
+   The drop switched theming from a `.dark` / `.light` class to an
+   `html[data-theme]` attribute, and brought a real light mode -- warm paper
+   (#EDEDE8) rather than the cool grey that was here before. Both are adopted
+   as-is, and next-themes is set to attribute="data-theme" to match. Nothing in
+   the app keyed off the old classes: the only `dark:` hit in the codebase is a
+   property name inside QrPanel's QR colour object, not a Tailwind variant.
+
+   The --theme-* names are kept and pointed at the drop's tokens. That is what
+   lets every existing page pick up the new palette without a single line of
+   their JSX changing.
+--------------------------------------------------------------------------- */
 
 :root,
-html[data-theme="dark"],
-.dark {
+html[data-theme="dark"] {
   --bg-page: #08090C;
   --bg-card: #11141A;
   --bg-panel-nested: #161A22;
@@ -28,20 +178,13 @@ html[data-theme="dark"],
   --chip-bg: #141412;
   --chip-text: #B4FF39;
 
-  --color-uranium: #98FF1A;
-  --color-aviation: #FF9F1C;
-  --color-alabaster: #F2F4F7;
-  --color-zinc: #8E95A1;
-  --color-dark: #08090C;
-  --color-card: #11141A;
-  --color-border: #232936;
-
   --video-opacity: 0.25;
   --video-mix: normal;
+
+  color-scheme: dark;
 }
 
-html[data-theme="light"],
-[data-theme="light"] {
+html[data-theme="light"] {
   --bg-page: #EDEDE8;
   --bg-card: #F7F7F3;
   --bg-panel-nested: #DFDFD8;
@@ -53,144 +196,115 @@ html[data-theme="light"],
   --accent-primary: #6BBF00;
   --accent-text: #3E7A00;
   --accent-glow: #B4FF39;
-  --status-warning: #9A5C00; /* WCAG AA compliant (>4.5:1 on #EDEDE8) */
+  --status-warning: #9A5C00; /* WCAG AA (>4.5:1 on #EDEDE8) */
   --status-danger: #C4342A;
   --status-info: #2D6FC4;
-  --chip-bg: #141412;        /* Stays dark in both modes */
-  --chip-text: #B4FF39;      /* Stays light in both modes */
-
-  --color-uranium: #3E7A00;
-  --color-aviation: #9A5C00;
-  --color-alabaster: #141412;
-  --color-zinc: #5A5A52;
-  --color-dark: #EDEDE8;
-  --color-card: #F7F7F3;
-  --color-border: #C7C7BE;
+  --chip-bg: #141412;        /* stays dark in both modes */
+  --chip-text: #B4FF39;      /* stays light in both modes */
 
   --video-opacity: 0.06;
   --video-mix: multiply;
+
+  color-scheme: light;
 }
 
-@layer base {
-  body {
-    background-color: var(--bg-page);
-    color: var(--text-primary);
-    font-family: 'General Sans', sans-serif;
-    min-height: 100vh;
-    background-image: 
-      radial-gradient(ellipse at 50% 0%, rgba(152, 255, 26, 0.03) 0%, transparent 60%),
-      linear-gradient(to bottom, var(--bg-page) 0%, var(--bg-card) 100%);
-    background-attachment: fixed;
-  }
+/* The app's own semantic names, mapped onto the drop's tokens. Both themes
+   flow through this one mapping. */
+:root,
+html[data-theme="dark"],
+html[data-theme="light"] {
+  --theme-ink: var(--bg-page);
+  --theme-surface: var(--bg-card);
+  --theme-raised: var(--bg-panel-nested);
+  --theme-line: var(--border-default);
+  --theme-line-bright: var(--border-strong);
 
-  h1, h2, h3, h4, h5, h6 {
-    color: var(--text-primary);
-    font-family: 'Cabinet Grotesk', sans-serif;
-    letter-spacing: -0.025em;
-  }
+  --theme-text: var(--text-primary);
+  --theme-muted: var(--text-secondary);
+  --theme-faint: var(--text-tertiary);
+
+  --theme-life-full: var(--accent-text);
+  --theme-life-mid: var(--status-info);
+  --theme-life-low: var(--status-warning);
+  --theme-life-crit: var(--status-danger);
+
+  --theme-accent: var(--accent-primary);
+  --theme-glow: color-mix(in srgb, var(--accent-primary) 30%, transparent);
 }
 
-/* ============================================================ */
-/* VIEW TRANSITIONS API (FULL-PAGE SEAMLESS WIPE) */
-/* ============================================================ */
-
-::view-transition-group(root) {
-  animation-duration: 0.85s;
+html {
+  background: var(--bg-page);
 }
 
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none !important;
-  mix-blend-mode: normal !important;
-  display: block;
-}
-
-::view-transition-old(root) {
-  z-index: 1;
-}
-
-::view-transition-new(root) {
-  z-index: 999999;
-}
-
-.footer-brand-watermark {
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--bg-page);
   color: var(--text-primary);
-  opacity: 0.16;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(152, 255, 26, 0.03) 0%, transparent 60%),
+    linear-gradient(to bottom, var(--bg-page) 0%, var(--bg-card) 100%);
+  background-attachment: fixed;
 }
 
-html[data-theme="light"] .footer-brand-watermark {
-  color: var(--status-warning) !important;
-  opacity: 0.32 !important;
+::selection {
+  background: var(--accent-primary);
+  color: #08090C;
 }
 
-/* ============================================================ */
-/* DIRECT HIGH-CONTRAST THEME OVERRIDES */
-/* ============================================================ */
-
-/* Light mode specific high contrast text & cards */
-html[data-theme="light"] body {
-  background-color: #EDEDE8;
-  color: #141412;
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-header);
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
 }
 
-html[data-theme="light"] h1,
-html[data-theme="light"] h2,
-html[data-theme="light"] h3,
-html[data-theme="light"] h4,
-html[data-theme="light"] h5,
-html[data-theme="light"] h6,
-html[data-theme="light"] .text-alabaster {
-  color: #141412 !important;
-}
+/* ---------------------------------------------------------------------------
+   Light-mode contrast overrides, from the drop.
 
-html[data-theme="light"] p,
-html[data-theme="light"] .text-zincGrey {
-  color: #5A5A52 !important;
-}
+   Utility classes named for dark values (bg-dark-card, text-alabaster) are all
+   over the ported markup. In light mode those names are lies, so the drop pins
+   them to paper values rather than renaming several hundred call sites.
+--------------------------------------------------------------------------- */
 
-html[data-theme="light"] .text-uranium {
-  color: #3E7A00 !important;
-}
-
+html[data-theme="light"] .text-alabaster { color: #141412 !important; }
+html[data-theme="light"] .text-zinc-grey { color: #5A5A52 !important; }
+html[data-theme="light"] .text-uranium { color: #3E7A00 !important; }
 html[data-theme="light"] .bg-dark-card {
   background-color: #F7F7F3 !important;
   border-color: #C7C7BE !important;
 }
-
 html[data-theme="light"] .bg-dark-surface {
   background-color: #DFDFD8 !important;
   border-color: #C7C7BE !important;
 }
-
-html[data-theme="light"] .bg-dark {
-  background-color: #EDEDE8 !important;
-}
-
-html[data-theme="light"] .border-dark-border {
-  border-color: #C7C7BE !important;
-}
-
+html[data-theme="light"] .bg-dark { background-color: #EDEDE8 !important; }
+html[data-theme="light"] .border-dark-border { border-color: #C7C7BE !important; }
 html[data-theme="light"] .bg-uranium {
   background-color: #6BBF00 !important;
   color: #141412 !important;
 }
 
-/* Chips, badges, token tags, PRO tags and passkey pills STAY DARK in both themes */
-.bg-chip-bg,
-html[data-theme="light"] .bg-chip-bg,
-html[data-theme="dark"] .bg-chip-bg {
-  background-color: #141412 !important;
+/* Chips, badges and token tags stay dark in BOTH themes -- the drop treats
+   them as physical stamped labels, not surfaces. */
+.bg-chip-bg { background-color: #141412 !important; }
+.text-chip-text { color: #B4FF39 !important; }
+
+.footer-brand-watermark {
+  color: var(--text-primary);
+  opacity: 0.16;
+}
+html[data-theme="light"] .footer-brand-watermark {
+  color: var(--status-warning) !important;
+  opacity: 0.32 !important;
 }
 
-.text-chip-text,
-html[data-theme="light"] .text-chip-text,
-html[data-theme="dark"] .text-chip-text {
-  color: #B4FF39 !important;
-}
-
-/* ============================================================ */
-/* GRAIN OVERLAY VIA PSEUDO-ELEMENT (ISOLATED OPACITY) */
-/* ============================================================ */
+/* ---------------------------------------------------------------------------
+   Grain, as an isolated fixed pseudo-element rather than a body background.
+   On the body it tiled with the page gradient and scrolled with it; here its
+   opacity is its own and it never multiplies against content.
+--------------------------------------------------------------------------- */
 
 .grain-overlay {
   position: relative;
@@ -206,13 +320,11 @@ html[data-theme="dark"] .text-chip-text {
   opacity: 0.08;
 }
 
-html[data-theme="light"] .grain-overlay::before {
-  opacity: 0.03;
-}
+html[data-theme="light"] .grain-overlay::before { opacity: 0.03; }
 
 .technical-grid {
   background-size: 32px 32px;
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(128, 128, 128, 0.07) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(128, 128, 128, 0.07) 1px, transparent 1px);
 }
@@ -222,7 +334,15 @@ html[data-theme="light"] .grain-overlay::before {
   background-image: radial-gradient(circle, rgba(128, 128, 128, 0.15) 1px, transparent 1px);
 }
 
-/* Stamped / distressed physical ticket notch */
+.bg-decay-gradient {
+  background-image: linear-gradient(135deg, #98FF1A 0%, #FF9F1C 60%, #11141A 100%);
+}
+
+.bg-decay-bar {
+  background-image: linear-gradient(90deg, #98FF1A 0%, #FF9F1C 50%, #232936 100%);
+}
+
+/* Stamped physical ticket notch */
 .ticket-edge {
   position: relative;
 }
@@ -238,14 +358,9 @@ html[data-theme="light"] .grain-overlay::before {
   transform: translateY(-50%);
   z-index: 10;
 }
-.ticket-edge::before {
-  left: -9px;
-}
-.ticket-edge::after {
-  right: -9px;
-}
+.ticket-edge::before { left: -9px; }
+.ticket-edge::after { right: -9px; }
 
-/* Scanline animation for active tech HUD */
 @keyframes scanline {
   0% { transform: translateY(-100%); }
   100% { transform: translateY(1000%); }
@@ -259,26 +374,87 @@ html[data-theme="light"] .grain-overlay::before {
   content: " ";
   display: block;
   position: absolute;
-  top: 0; left: 0; bottom: 0; right: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  inset: 0;
+  background:
+    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+    linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
   z-index: 2;
   background-size: 100% 3px, 6px 100%;
   pointer-events: none;
   opacity: 0.4;
 }
 
-/* Custom terminal scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-page);
-}
+/* Terminal scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--theme-ink); }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-default);
-  border: 1px solid var(--border-strong);
+  background: var(--theme-line);
+  border: 1px solid var(--theme-line-bright);
 }
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-primary);
+::-webkit-scrollbar-thumb:hover { background: var(--theme-accent); }
+
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+.hairline {
+  box-shadow: inset 0 1px 0 0 color-mix(in oklab, white 6%, transparent);
+}
+
+@keyframes rise {
+  from { transform: translateY(14px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.rise {
+  animation: rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes liquid-float {
+  0%, 100% { transform: translateY(0) rotateX(2deg) rotateY(-2deg); }
+  25% { transform: translateY(-5px) rotateX(-2deg) rotateY(1deg); }
+  50% { transform: translateY(-10px) rotateX(1deg) rotateY(3deg); }
+  75% { transform: translateY(-5px) rotateX(-1deg) rotateY(-1deg); }
+}
+
+.liquid-float {
+  animation: liquid-float 8s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+.perspective-container { perspective: 2000px; }
+.card-3d-wrapper { transform-style: preserve-3d; }
+.card-3d-content { transform: translateZ(40px); }
+.card-3d-bg { transform: translateZ(-20px) scale(1.05); }
+
+/* View Transitions for the theme wipe, per the drop: a slower group duration
+   and an explicit stacking order, so the incoming page wipes over the outgoing
+   one instead of cross-fading through it. */
+::view-transition-group(root) { animation-duration: 0.85s; }
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none !important;
+  mix-blend-mode: normal !important;
+  display: block;
+}
+
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 999999; }
+
+/* The chatbot terminal and its prompt rail scroll without visible bars. */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
