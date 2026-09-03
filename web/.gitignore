@@ -6,3 +6,7 @@ next-env.d.ts
 .vercel
 
 dev.log
+.env
+.env.local
+.env.*.local
+*.local
