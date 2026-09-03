@@ -75,7 +75,7 @@ html[data-theme="light"],
   body {
     background-color: var(--bg-page);
     color: var(--text-primary);
-    font-family: 'General Sans', sans-serif;
+    @apply font-body antialiased selection:bg-uranium selection:text-black;
     min-height: 100vh;
     background-image: 
       radial-gradient(ellipse at 50% 0%, rgba(152, 255, 26, 0.03) 0%, transparent 60%),
@@ -85,8 +85,7 @@ html[data-theme="light"],
 
   h1, h2, h3, h4, h5, h6 {
     color: var(--text-primary);
-    font-family: 'Cabinet Grotesk', sans-serif;
-    letter-spacing: -0.025em;
+    @apply font-header tracking-tight;
   }
 }
 

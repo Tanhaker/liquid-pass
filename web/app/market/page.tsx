@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { formatEther } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { useNow } from "@/components/ui";
@@ -25,49 +25,168 @@ import {
   ChevronRight,
   Layers,
   LayoutGrid,
+  Loader2,
+  ArrowRight,
 } from "lucide-react";
+import Link from "next/link";
 import { useDemo } from "@/lib/demo";
 
 export default function MarketPage() {
-  const { isConnected, chain } = useAccount();
+  const { isConnected, address } = useAccount();
   const client = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   const now = useNow(15000) ?? Date.now();
-  const { shiftExpiry } = useDemo(); // respects demo mode time warps
+  const { shiftExpiry } = useDemo();
 
   const [plans, setPlans] = useState<Plan[]>([]);
   const [passes, setPasses] = useState<Pass[]>([]);
   const [stats, setStats] = useState<MarketStats | null>(null);
-  
+  const [loading, setLoading] = useState<boolean>(true);
+  const [buyingTokenId, setBuyingTokenId] = useState<string | null>(null);
+  const [txSuccess, setTxSuccess] = useState<string | null>(null);
+  const [txError, setTxError] = useState<string | null>(null);
+
   // UI Filters
-  const [urgencyFilter, setUrgencyFilter] = useState<"ALL" | "EXPIRING_SOON" | "FRESH">("ALL");
+  const [urgencyFilter, setUrgencyFilter] = useState<"ALL" | "EXPIRING_SOON" | "FRESH" | "UNDER_0_01_ETH">("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<"EXPIRY_ASC" | "PRICE_ASC" | "DISCOUNT_DESC">("EXPIRY_ASC");
 
-  /**
-   * Spatial carousel, from the UI drop.
-   *
-   * Presentation only -- it reorders and reveals the same `sortedPasses`
-   * array the grid renders. No data, no contract call and no filter logic is
-   * touched by any of it.
-   */
+  // View state: "CAROUSEL" or "TABLE" (grid layout)
   const [viewMode, setViewMode] = useState<"CAROUSEL" | "TABLE">("CAROUSEL");
-  const [hoveredTokenId, setHoveredTokenId] = useState<string | null>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const isCursorInsideRef = useRef<boolean>(false);
-  const cursorXRatioRef = useRef<number>(0.5);
+  const isHoveredRef = useRef<boolean>(false);
+  const isDraggingRef = useRef<boolean>(false);
+  const startXRef = useRef<number>(0);
+  const scrollLeftRef = useRef<number>(0);
   const animFrameRef = useRef<number | null>(null);
 
-  const scrollGallery = (direction: "left" | "right") => {
-    if (!scrollContainerRef.current) return;
-    scrollContainerRef.current.scrollBy({
-      left: direction === "left" ? -450 : 450,
-      behavior: "smooth",
+  const loadData = useCallback(async () => {
+    if (!client) return;
+    try {
+      setLoading(true);
+      const [pl, pa] = await Promise.all([fetchPlans(client), fetchPasses(client)]);
+      setPlans(pl);
+      setPasses(pa);
+      setStats(marketStats(pl, pa, Date.now()));
+    } catch (e) {
+      console.error("Failed to load market data:", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [client]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  const planById = useMemo(() => new Map(plans.map((p) => [p.id.toString(), p])), [plans]);
+  
+  // Real on-chain listed passes only (no fake demo passes)
+  const listings = useMemo(() => {
+    return passes.filter((p) => p.listed > 0n && shiftExpiry(p.expiry) > BigInt(Math.floor(now / 1000)));
+  }, [passes, shiftExpiry, now]);
+
+  // Convert real on-chain Pass to SubscriptionPass UI type
+  const toSubscriptionPass = useCallback((p: Pass): SubscriptionPass => {
+    const plan = planById.get(p.planId.toString());
+    return {
+      tokenId: p.tokenId.toString(),
+      name: plan?.name || `Pass #${p.tokenId}`,
+      service: plan?.name?.split(" ")[0] || "SaaS",
+      owner: p.owner,
+      issuer: p.issuer,
+      expiryTimestamp: Number(shiftExpiry(p.expiry)),
+      totalDurationSeconds: Number(plan?.duration || 2592000n),
+      originalPriceEth: formatEthShort(p.paid > 0n ? p.paid : plan?.price || 0n),
+      listingPriceEth: formatEthShort(p.current),
+      isListed: p.listed > 0n,
+      tier: "PRO",
+      features: ["On-chain Access", "Resellable", "Fair Value Decay"],
+    };
+  }, [planById, shiftExpiry]);
+
+  const uiListings = useMemo(() => listings.map(toSubscriptionPass), [listings, toSubscriptionPass]);
+
+  const filteredPasses = useMemo(() => {
+    return uiListings.filter((p) => {
+      const remainingSeconds = Math.max(0, p.expiryTimestamp - Math.floor(now / 1000));
+      const remainingDays = remainingSeconds / 86400;
+      const price = parseFloat(p.listingPriceEth || p.originalPriceEth || "0");
+
+      const matchesSearch =
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.tokenId.includes(searchQuery);
+
+      if (!matchesSearch) return false;
+      if (urgencyFilter === "EXPIRING_SOON") return remainingDays < 5 && remainingSeconds > 0;
+      if (urgencyFilter === "FRESH") return remainingDays >= 15;
+      if (urgencyFilter === "UNDER_0_01_ETH") return price < 0.01;
+      return true;
     });
+  }, [uiListings, now, searchQuery, urgencyFilter]);
+
+  const sortedPasses = useMemo(() => {
+    return [...filteredPasses].sort((a, b) => {
+      const aRem = Math.max(0, a.expiryTimestamp - Math.floor(now / 1000));
+      const bRem = Math.max(0, b.expiryTimestamp - Math.floor(now / 1000));
+      const aPrice = parseFloat(a.listingPriceEth || a.originalPriceEth || "0");
+      const bPrice = parseFloat(b.listingPriceEth || b.originalPriceEth || "0");
+
+      if (sortBy === "EXPIRY_ASC") return aRem - bRem;
+      if (sortBy === "PRICE_ASC") return aPrice - bPrice;
+      if (sortBy === "DISCOUNT_DESC") {
+        const aDisc = (parseFloat(a.originalPriceEth) - aPrice) / (parseFloat(a.originalPriceEth) || 1);
+        const bDisc = (parseFloat(b.originalPriceEth) - bPrice) / (parseFloat(b.originalPriceEth) || 1);
+        return bDisc - aDisc;
+      }
+      return 0;
+    });
+  }, [filteredPasses, now, sortBy]);
+
+  // Smooth carousel buttons
+  const scrollGallery = (direction: "left" | "right") => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 480;
+      scrollContainerRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
   };
 
-  // Vertical wheel drives horizontal travel while the pointer is over the rail.
+  // Continuous auto-drifting / moving animation for the carousel
+  useEffect(() => {
+    if (viewMode !== "CAROUSEL") return;
+    
+    let lastTime = performance.now();
+    const speed = 40; // px per second continuous smooth travel
+
+    const loop = (currentTime: number) => {
+      const dt = (currentTime - lastTime) / 1000;
+      lastTime = currentTime;
+
+      const el = scrollContainerRef.current;
+      if (el && !isHoveredRef.current && !isDraggingRef.current) {
+        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 10) {
+          // Wrap around gently when reaching the end
+          el.scrollLeft = 0;
+        } else {
+          el.scrollLeft += speed * dt;
+        }
+      }
+
+      animFrameRef.current = requestAnimationFrame(loop);
+    };
+
+    animFrameRef.current = requestAnimationFrame(loop);
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [viewMode, sortedPasses.length]);
+
+  // Mouse wheel horizontal scroll support
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el || viewMode !== "CAROUSEL") return;
@@ -79,487 +198,263 @@ export default function MarketPage() {
       }
     };
 
-    // Not passive: the handler calls preventDefault.
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, [viewMode]);
 
-  // Cursor position steers an ambient drift. Frame-rate independent via dt, so
-  // it travels at the same speed on a 60Hz and a 144Hz display.
-  useEffect(() => {
-    if (viewMode !== "CAROUSEL") return;
-    if (
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
-      return;
-
-    let lastTime = performance.now();
-
-    const loop = (currentTime: number) => {
-      const dt = (currentTime - lastTime) / 1000;
-      lastTime = currentTime;
-
-      if (isCursorInsideRef.current && scrollContainerRef.current) {
-        const ratio = cursorXRatioRef.current;
-        let speed = 0; // px/sec
-        if (ratio > 0.52) {
-          speed = Math.min(1, (ratio - 0.52) / 0.38) * 700;
-        } else if (ratio < 0.48) {
-          speed = -Math.min(1, (0.48 - ratio) / 0.38) * 700;
-        } else {
-          speed = 75; // gentle drift when centred
-        }
-        scrollContainerRef.current.scrollLeft += speed * dt;
-      }
-
-      animFrameRef.current = requestAnimationFrame(loop);
-    };
-
-    animFrameRef.current = requestAnimationFrame(loop);
-    return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    };
-  }, [viewMode]);
-
-  const handleGalleryMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  // Mouse Drag Scroll Handlers
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!scrollContainerRef.current) return;
-    const rect = scrollContainerRef.current.getBoundingClientRect();
-    cursorXRatioRef.current = Math.max(
-      0,
-      Math.min(1, (e.clientX - rect.left) / rect.width),
-    );
+    isDraggingRef.current = true;
+    startXRef.current = e.pageX - scrollContainerRef.current.offsetLeft;
+    scrollLeftRef.current = scrollContainerRef.current.scrollLeft;
   };
 
-  useEffect(() => {
-    let cancelled = false;
-    if (!client) return;
-    Promise.all([fetchPlans(client), fetchPasses(client)]).then(([pl, pa]) => {
-      if (cancelled) return;
-      setPlans(pl);
-      setPasses(pa);
-      setStats(marketStats(pl, pa, Date.now()));
-    }).catch(console.error);
-    return () => { cancelled = true; };
-  }, [client]);
-
-  const planById = useMemo(() => new Map(plans.map((p) => [p.id.toString(), p])), [plans]);
-  const listings = passes.filter((p) => p.listed > 0n && shiftExpiry(p.expiry) > BigInt(Math.floor(now / 1000)));
-
-  // Convert our real on-chain Pass to their SubscriptionPass UI type
-  const toSubscriptionPass = (p: Pass): SubscriptionPass => {
-    const plan = planById.get(p.planId.toString());
-    return {
-      tokenId: p.tokenId.toString(),
-      name: plan?.name || `Plan #${p.planId}`,
-      service: plan?.name?.split(" ")[0] || "Unknown",
-      owner: p.owner,
-      issuer: p.issuer,
-      expiryTimestamp: Number(shiftExpiry(p.expiry)),
-      totalDurationSeconds: Number(plan?.duration || 0n),
-      // formatEthShort, not formatEther: raw wei formatting renders a decaying
-      // price as 0.000972731682277632 ETH on the card. Display only -- the
-      // value sent to the contract still comes from the unrounded bigint.
-      originalPriceEth: formatEthShort(p.paid > 0n ? p.paid : plan?.price || 0n),
-      listingPriceEth: formatEthShort(p.current),
-      isListed: p.listed > 0n,
-      tier: "PRO",
-      features: ["On-chain Access", "Resellable", "Fair Value Decay"],
-    };
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current || !scrollContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollContainerRef.current.offsetLeft;
+    const walk = (x - startXRef.current) * 1.5;
+    scrollContainerRef.current.scrollLeft = scrollLeftRef.current - walk;
   };
 
-const CURATED_DEMO_LISTINGS: SubscriptionPass[] = [
-  {
-    tokenId: "101",
-    name: "Cursor Pro (AI Code Editor)",
-    service: "Cursor",
-    owner: "0x71C849A29381710928aBc8910283719028371902" as `0x${string}`,
-    issuer: "0xf5AbE5a5092Af1a7fA31109C98635440fdD83174" as `0x${string}`,
-    expiryTimestamp: Math.floor(Date.now() / 1000) + 18 * 86400,
-    totalDurationSeconds: 30 * 86400,
-    originalPriceEth: "0.0020",
-    listingPriceEth: "0.0011",
-    isListed: true,
-    tier: "PRO",
-    features: ["GPT-4o & Claude 3.5 Sonnet", "Unlimited Fast Requests", "Composer Multi-file"],
-  },
-  {
-    tokenId: "102",
-    name: "Figma Organization Suite",
-    service: "Figma",
-    owner: "0x34B88C19283719028aBc89102837190283719028" as `0x${string}`,
-    issuer: "0xf5AbE5a5092Af1a7fA31109C98635440fdD83174" as `0x${string}`,
-    expiryTimestamp: Math.floor(Date.now() / 1000) + 24 * 86400,
-    totalDurationSeconds: 30 * 86400,
-    originalPriceEth: "0.0045",
-    listingPriceEth: "0.0034",
-    isListed: true,
-    tier: "TEAM",
-    features: ["Dev Mode Enabled", "Unlimited Version History", "Custom Design Systems"],
-  },
-  {
-    tokenId: "103",
-    name: "GitHub Copilot Enterprise",
-    service: "GitHub",
-    owner: "0x98E23109283719028aBc89102837190283719028" as `0x${string}`,
-    issuer: "0xf5AbE5a5092Af1a7fA31109C98635440fdD83174" as `0x${string}`,
-    expiryTimestamp: Math.floor(Date.now() / 1000) + 4 * 86400,
-    totalDurationSeconds: 30 * 86400,
-    originalPriceEth: "0.0030",
-    listingPriceEth: "0.0006",
-    isListed: true,
-    tier: "ENTERPRISE",
-    features: ["Fine-tuned Models", "PR Summaries", "CLI Code Completion"],
-  },
-  {
-    tokenId: "104",
-    name: "Claude 3.5 Sonnet API Tier",
-    service: "Claude",
-    owner: "0x44D901B9283719028aBc89102837190283719028" as `0x${string}`,
-    issuer: "0xf5AbE5a5092Af1a7fA31109C98635440fdD83174" as `0x${string}`,
-    expiryTimestamp: Math.floor(Date.now() / 1000) + 12 * 86400,
-    totalDurationSeconds: 30 * 86400,
-    originalPriceEth: "0.0025",
-    listingPriceEth: "0.0010",
-    isListed: true,
-    tier: "DEVELOPER",
-    features: ["200k Context Window", "Artifacts Rendering", "Computer Use Capabilities"],
-  },
-  {
-    tokenId: "105",
-    name: "Notion AI Workspace",
-    service: "Notion",
-    owner: "0x12A99449283719028aBc89102837190283719028" as `0x${string}`,
-    issuer: "0xf5AbE5a5092Af1a7fA31109C98635440fdD83174" as `0x${string}`,
-    expiryTimestamp: Math.floor(Date.now() / 1000) + 27 * 86400,
-    totalDurationSeconds: 30 * 86400,
-    originalPriceEth: "0.0015",
-    listingPriceEth: "0.0013",
-    isListed: true,
-    tier: "PLUS",
-    features: ["Q&A with Workspace", "Automated Summaries", "Unlimited Blocks"],
-  },
-  {
-    tokenId: "106",
-    name: "Midjourney v6 Unlimited",
-    service: "Midjourney",
-    owner: "0x88C33219283719028aBc89102837190283719028" as `0x${string}`,
-    issuer: "0xf5AbE5a5092Af1a7fA31109C98635440fdD83174" as `0x${string}`,
-    expiryTimestamp: Math.floor(Date.now() / 1000) + 3 * 86400,
-    totalDurationSeconds: 30 * 86400,
-    originalPriceEth: "0.0035",
-    listingPriceEth: "0.0005",
-    isListed: true,
-    tier: "CREATOR",
-    features: ["Relaxed GPU Hours", "Stealth Image Gen", "15 Fast GPU Hours"],
-  },
-];
+  const handleMouseUpOrLeave = () => {
+    isDraggingRef.current = false;
+  };
 
-  const onChainListings = listings.map(toSubscriptionPass);
-  // Merge live on-chain passes with rich curated demo passes
-  const uiListings = [
-    ...onChainListings,
-    ...CURATED_DEMO_LISTINGS.filter(d => !onChainListings.some(o => o.tokenId === d.tokenId))
-  ];
-
-  const filteredPasses = uiListings.filter((p) => {
-    const remainingSeconds = Math.max(0, p.expiryTimestamp - Math.floor(now / 1000));
-    const remainingDays = remainingSeconds / 86400;
-
-    const matchesSearch =
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.tokenId.includes(searchQuery);
-
-    if (!matchesSearch) return false;
-    if (urgencyFilter === "EXPIRING_SOON") return remainingDays < 5 && remainingSeconds > 0;
-    if (urgencyFilter === "FRESH") return remainingDays >= 15;
-    return true;
-  });
-
-  const sortedPasses = [...filteredPasses].sort((a, b) => {
-    const aRem = Math.max(0, a.expiryTimestamp - Math.floor(now / 1000));
-    const bRem = Math.max(0, b.expiryTimestamp - Math.floor(now / 1000));
-    const aPrice = parseFloat(a.listingPriceEth || a.originalPriceEth);
-    const bPrice = parseFloat(b.listingPriceEth || b.originalPriceEth);
-
-    if (sortBy === "EXPIRY_ASC") return aRem - bRem;
-    if (sortBy === "PRICE_ASC") return aPrice - bPrice;
-    if (sortBy === "DISCOUNT_DESC") {
-      const aDisc = (parseFloat(a.originalPriceEth) - aPrice) / parseFloat(a.originalPriceEth);
-      const bDisc = (parseFloat(b.originalPriceEth) - bPrice) / parseFloat(b.originalPriceEth);
-      return bDisc - aDisc;
-    }
-    return 0;
-  });
-
-  const handleBuy = async (uiPass: SubscriptionPass) => {
+  // Real On-Chain Buy Pass
+  const handleBuy = async (pass: SubscriptionPass) => {
     if (!isConnected) {
       alert("Please connect your wallet first!");
       return;
     }
+    setBuyingTokenId(pass.tokenId);
+    setTxError(null);
+    setTxSuccess(null);
+
     try {
-      const isCuratedDemo = parseInt(uiPass.tokenId) >= 100;
-      if (isCuratedDemo) {
-        alert(`Demo purchase simulated successfully! Pass #${uiPass.tokenId} (${uiPass.name}) acquired.`);
-        return;
-      }
-      // The price must come from the unrounded on-chain bigint, never from the
-      // formatted card string: the card shows 6 significant figures, and a
-      // rounded-down value underpays a decaying ask and reverts.
-      const onChain = listings.find((p) => p.tokenId.toString() === uiPass.tokenId);
-      if (!onChain) throw new Error("That listing is no longer on chain.");
-      const priceWei = withBuffer(onChain.current);
+      const tokenIdBig = BigInt(pass.tokenId);
+      const onChainPass = passes.find((p) => p.tokenId === tokenIdBig);
+      const rawCurrent = onChainPass?.current ?? 0n;
+      const valueToSend = withBuffer(rawCurrent);
+
       const hash = await writeContractAsync({
         address: MARKETPLACE_ADDRESS,
         abi: marketplaceAbi,
         functionName: "buy",
-        args: [BigInt(uiPass.tokenId)],
-        value: priceWei,
+        args: [tokenIdBig],
+        value: valueToSend,
+        gas: 800_000n,
       });
-      console.log("Transaction submitted:", hash);
-      alert(`Transaction submitted! Hash: ${hash}`);
+
+      setTxSuccess(`Successfully purchased Pass #${pass.tokenId}! Tx: ${hash.slice(0, 10)}...`);
+      await client?.waitForTransactionReceipt({ hash });
+      await loadData();
     } catch (e) {
-      console.error("Buy failed", e);
-      alert("Transaction failed. Check console.");
+      console.error("Buy failed:", e);
+      setTxError((e as Error).message || "Transaction failed");
+    } finally {
+      setBuyingTokenId(null);
     }
   };
 
   return (
-    <div className="py-12 max-w-[1720px] mx-auto px-4 sm:px-8 xl:px-12 font-sans">
+    <div className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 min-h-screen">
       
-      {/* Header & Market Stats */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-dark-border pb-8 mb-8 gap-6">
+      {/* Toast banners */}
+      {txSuccess && (
+        <div className="p-4 bg-uranium/10 border border-uranium text-uranium font-mono text-xs flex justify-between items-center">
+          <span>{txSuccess}</span>
+          <button onClick={() => setTxSuccess(null)} className="font-bold underline uppercase">Dismiss</button>
+        </div>
+      )}
+      {txError && (
+        <div className="p-4 bg-red-500/10 border border-red-500 text-red-400 font-mono text-xs flex justify-between items-center">
+          <span>{txError}</span>
+          <button onClick={() => setTxError(null)} className="font-bold underline uppercase">Dismiss</button>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-dark-border pb-8 gap-6">
         <div>
-          <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 bg-aviation/10 border border-aviation text-aviation font-mono text-xs font-bold uppercase mb-2">
-            <Flame className="w-3.5 h-3.5" />
-            <span>SECONDARY RESALE LIQUIDITY POOL</span>
+          <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 bg-uranium/10 border border-uranium text-uranium font-mono text-xs font-bold uppercase mb-2">
+            <ShoppingBag className="w-3.5 h-3.5" />
+            <span>ARBITRUM STYLUS SECONDARY MARKET</span>
           </div>
           <h1 className="font-header font-extrabold text-3xl sm:text-5xl text-alabaster tracking-tight">
             Resale Marketplace
           </h1>
-          <p className="font-body text-zincGrey text-sm mt-2 max-w-xl leading-relaxed">
-            Grab unexpired subscription time at steep dynamic discounts. Pricing decays automatically block-by-block based on remaining contract seconds.
+          <p className="font-body text-zincGrey text-sm mt-2 max-w-xl">
+            Live time-decaying software passes listed by other users. 90% goes to the seller, 10% royalty goes to the SaaS issuer.
           </p>
         </div>
 
-        {/* Live Market Telemetry Card */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 font-mono text-xs p-4 bg-dark-card border border-dark-border shadow-grunge">
-          <div>
-            <span className="text-zincGrey block text-[10px]">ACTIVE LISTINGS</span>
-            <span className="text-uranium font-bold text-base">{listings.length} PASSES</span>
+        {/* Live Market Metrics HUD */}
+        <div className="flex items-center gap-6">
+          <div className="p-4 bg-dark-card border border-dark-border font-mono text-xs space-y-1">
+            <div className="text-zincGrey text-[10px] uppercase">ACTIVE LISTINGS</div>
+            <div className="text-uranium font-bold text-lg">{uiListings.length}</div>
           </div>
-          <div>
-            <span className="text-zincGrey block text-[10px]">PRIMARY VOLUME</span>
-            <span className="text-aviation font-bold text-base">{stats ? formatEther(stats.primaryVolume).slice(0, 5) : "--"} ETH</span>
-          </div>
-          <div className="col-span-2 sm:col-span-1">
-            <span className="text-zincGrey block text-[10px]">ROYALTY SPLIT</span>
-            <span className="text-alabaster font-bold text-base">90% / 10%</span>
+          <div className="p-4 bg-dark-card border border-dark-border font-mono text-xs space-y-1">
+            <div className="text-zincGrey text-[10px] uppercase">CREATOR ROYALTY</div>
+            <div className="text-alabaster font-bold text-lg">10% Immutable</div>
           </div>
         </div>
       </div>
 
-      {/* Filter and Search Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-8">
-        
-        {/* Search Box */}
-        <div className="md:col-span-4 relative">
-          <Search className="w-4 h-4 text-zincGrey absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search service, name, or token ID..."
-            className="w-full pl-9 pr-4 py-3 bg-dark-card border border-dark-border text-alabaster font-mono text-xs focus:border-uranium focus:outline-none"
-          />
-        </div>
-
-        {/* Urgency Filter Tabs */}
-        <div className="md:col-span-5 flex flex-wrap gap-2">
-          <button
-            onClick={() => setUrgencyFilter("ALL")}
-            className={`px-3 py-2 text-xs font-mono uppercase transition-all ${
-              urgencyFilter === "ALL"
-                ? "bg-uranium text-ink font-extrabold"
-                : "bg-dark-card border border-dark-border text-zincGrey hover:text-alabaster"
-            }`}
-          >
-            All Listings
-          </button>
-          <button
-            onClick={() => setUrgencyFilter("EXPIRING_SOON")}
-            className={`px-3 py-2 text-xs font-mono uppercase flex items-center space-x-1 transition-all ${
-              urgencyFilter === "EXPIRING_SOON"
-                ? "bg-aviation text-ink font-extrabold shadow-[0_0_15px_rgba(255,159,28,0.3)]"
-                : "bg-dark-card border border-dark-border text-aviation hover:bg-dark-surface"
-            }`}
-          >
-            <Flame className="w-3.5 h-3.5" />
-            <span>🔥 Steals (&lt;5D)</span>
-          </button>
-          <button
-            onClick={() => setUrgencyFilter("FRESH")}
-            className={`px-3 py-2 text-xs font-mono uppercase flex items-center space-x-1 transition-all ${
-              urgencyFilter === "FRESH"
-                ? "bg-uranium text-ink font-extrabold"
-                : "bg-dark-card border border-dark-border text-zincGrey hover:text-alabaster"
-            }`}
-          >
-            <Zap className="w-3 h-3" />
-            <span>Fresh (&gt;15D)</span>
-          </button>
-        </div>
-
-        {/* Sort Dropdown */}
-        <div className="md:col-span-3">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="w-full p-3 bg-dark-card border border-dark-border text-alabaster font-mono text-xs focus:border-uranium focus:outline-none cursor-pointer"
-          >
-            <option value="EXPIRY_ASC">Sort: Expiration (Soonest)</option>
-            <option value="PRICE_ASC">Sort: Price (Lowest ETH)</option>
-            <option value="DISCOUNT_DESC">Sort: Discount (% Highest)</option>
-          </select>
-        </div>
-
-      </div>
-
-      {/* View switcher & gallery HUD controls */}
-      <div className="flex flex-wrap items-center justify-between mb-6 pb-3 border-b border-dark-border/60 gap-4 font-mono text-xs text-zincGrey">
-        <div className="flex items-center space-x-2">
-          <span className="text-[10px] text-zincGrey uppercase tracking-wider mr-1">VIEW:</span>
-          <div className="inline-flex p-1 bg-dark-card border border-dark-border">
-            <button
-              onClick={() => setViewMode("CAROUSEL")}
-              className={`px-3 py-1.5 text-xs font-mono uppercase flex items-center space-x-1.5 transition-all ${
-                viewMode === "CAROUSEL"
-                  ? "bg-uranium text-black font-extrabold shadow-glow-uranium"
-                  : "text-zincGrey hover:text-alabaster"
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Carousel (Spatial)</span>
-            </button>
-            <button
-              onClick={() => setViewMode("TABLE")}
-              className={`px-3 py-1.5 text-xs font-mono uppercase flex items-center space-x-1.5 transition-all ${
-                viewMode === "TABLE"
-                  ? "bg-uranium text-black font-extrabold shadow-glow-uranium"
-                  : "text-zincGrey hover:text-alabaster"
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Table (Grid)</span>
-            </button>
+      {/* Filters & Mode Switcher */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 font-mono text-xs">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          {/* Search bar */}
+          <div className="relative flex-grow md:w-64">
+            <Search className="w-4 h-4 text-zincGrey absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search passes..."
+              className="w-full pl-9 pr-4 py-2 bg-dark-card border border-dark-border text-alabaster focus:border-uranium focus:outline-none"
+            />
           </div>
-        </div>
 
-        {viewMode === "CAROUSEL" && sortedPasses.length > 0 && (
-          <div className="flex items-center space-x-3">
-            <div className="hidden sm:flex items-center space-x-1 text-[11px] text-zincGrey">
-              <Sparkles className="w-3 h-3 text-uranium" />
-              <span>SPATIAL GALLERY ({sortedPasses.length} PASSES)</span>
-            </div>
-            <div className="flex items-center space-x-1">
+          {/* Urgency filters */}
+          <div className="flex items-center space-x-1">
+            {[
+              { id: "ALL", label: "All" },
+              { id: "EXPIRING_SOON", label: "⚡ Expiring Soon" },
+              { id: "FRESH", label: "🌱 Fresh (>15d)" },
+            ].map((f) => (
               <button
-                onClick={() => scrollGallery("left")}
-                aria-label="Scroll left"
-                className="p-2 bg-dark-card border border-dark-border hover:border-uranium hover:text-uranium transition-colors"
+                key={f.id}
+                onClick={() => setUrgencyFilter(f.id as any)}
+                className={`px-3 py-2 uppercase border transition-all ${
+                  urgencyFilter === f.id
+                    ? "bg-uranium text-black font-extrabold border-uranium"
+                    : "bg-dark-card border-dark-border text-zincGrey hover:text-alabaster"
+                }`}
               >
-                <ChevronLeft className="w-4 h-4" />
+                {f.label}
               </button>
-              <button
-                onClick={() => scrollGallery("right")}
-                aria-label="Scroll right"
-                className="p-2 bg-dark-card border border-dark-border hover:border-uranium hover:text-uranium transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            ))}
           </div>
-        )}
+        </div>
+
+        {/* View mode toggle */}
+        <div className="flex items-center space-x-2 self-end md:self-auto">
+          <button
+            onClick={() => setViewMode("CAROUSEL")}
+            className={`p-2 border transition-all ${
+              viewMode === "CAROUSEL"
+                ? "bg-uranium text-black border-uranium"
+                : "bg-dark-card border-dark-border text-zincGrey hover:text-alabaster"
+            }`}
+            title="3D Spatial Carousel View"
+          >
+            <Layers className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setViewMode("TABLE")}
+            className={`p-2 border transition-all ${
+              viewMode === "TABLE"
+                ? "bg-uranium text-black border-uranium"
+                : "bg-dark-card border-dark-border text-zincGrey hover:text-alabaster"
+            }`}
+            title="Grid Gallery View"
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Passes */}
-      {sortedPasses.length === 0 ? (
+      {/* Main Content Area */}
+      {loading ? (
+        <div className="p-16 text-center border border-dashed border-dark-border bg-dark-card font-mono text-xs text-zincGrey">
+          <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3 text-uranium" />
+          Reading active listings from Stylus Marketplace contract...
+        </div>
+      ) : sortedPasses.length === 0 ? (
         <div className="p-16 text-center border border-dashed border-dark-border bg-dark-card font-mono text-xs text-zincGrey space-y-4">
-          <ShoppingBag className="w-10 h-10 mx-auto text-zincGrey opacity-30" />
-          <p className="uppercase tracking-widest">No active listings match your current filters.</p>
+          <p className="text-base text-alabaster font-header font-bold">No passes are currently listed on the resale market.</p>
+          <p className="max-w-md mx-auto">
+            You can buy a brand new subscription pass from the Issuer portal or list any pass you hold in your vault.
+          </p>
+          <div className="flex justify-center gap-4 pt-2">
+            <Link
+              href="/dashboard"
+              className="px-5 py-2.5 bg-uranium hover:bg-uranium-glow text-black font-extrabold uppercase transition-all shadow-grunge-uranium"
+            >
+              Go to My Passes Vault →
+            </Link>
+            <Link
+              href="/issuer"
+              className="px-5 py-2.5 bg-dark border border-dark-border hover:border-uranium text-alabaster uppercase transition-all"
+            >
+              View Issuer Plans
+            </Link>
+          </div>
         </div>
       ) : viewMode === "CAROUSEL" ? (
-        <div
-          className="relative w-full"
-          onMouseEnter={() => {
-            isCursorInsideRef.current = true;
-          }}
-          onMouseLeave={() => {
-            isCursorInsideRef.current = false;
-            cursorXRatioRef.current = 0.5;
-          }}
-          onMouseMove={handleGalleryMouseMove}
-        >
-          {/* Corner brackets */}
-          <div className="absolute top-4 left-4 w-10 h-10 border-t-2 border-l-2 border-uranium z-30 pointer-events-none" />
-          <div className="absolute top-4 right-4 w-10 h-10 border-t-2 border-r-2 border-uranium z-30 pointer-events-none" />
-          <div className="absolute bottom-4 left-4 w-10 h-10 border-b-2 border-l-2 border-uranium z-30 pointer-events-none" />
-          <div className="absolute bottom-4 right-4 w-10 h-10 border-b-2 border-r-2 border-uranium z-30 pointer-events-none" />
+        <div className="relative py-4">
+          {/* Navigation arrow buttons */}
+          <button
+            onClick={() => scrollGallery("left")}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-30 p-3 bg-dark/90 hover:bg-dark-surface border border-dark-border text-alabaster hover:text-uranium transition-all shadow-grunge backdrop-blur-md"
+            aria-label="Scroll left"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button
+            onClick={() => scrollGallery("right")}
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-30 p-3 bg-dark/90 hover:bg-dark-surface border border-dark-border text-alabaster hover:text-uranium transition-all shadow-grunge backdrop-blur-md"
+            aria-label="Scroll right"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
 
-          {/* Edge fades */}
-          <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-24 bg-gradient-to-r from-[var(--bg-page)] to-transparent z-20 pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-24 bg-gradient-to-l from-[var(--bg-page)] to-transparent z-20 pointer-events-none" />
-
+          {/* Carousel rail container */}
           <div
             ref={scrollContainerRef}
-            className="flex space-x-8 overflow-x-auto pt-16 pb-16 px-12 sm:px-20 snap-x snap-mandatory scroll-smooth no-scrollbar"
-            style={{ perspective: "1200px", scrollbarWidth: "none" }}
+            onMouseEnter={() => { isHoveredRef.current = true; }}
+            onMouseLeave={() => { isHoveredRef.current = false; handleMouseUpOrLeave(); }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUpOrLeave}
+            className="flex gap-8 overflow-x-auto py-8 px-4 scrollbar-none select-none cursor-grab active:cursor-grabbing"
+            style={{ scrollBehavior: isDraggingRef.current ? "auto" : "smooth" }}
           >
-            {sortedPasses.map((pass) => {
-              const isSelected = hoveredTokenId === pass.tokenId;
-              const isAnyHovered = hoveredTokenId !== null;
-              return (
-                <div
-                  key={pass.tokenId}
-                  onMouseEnter={() => setHoveredTokenId(pass.tokenId)}
-                  onMouseLeave={() => setHoveredTokenId(null)}
-                  className="flex-shrink-0 w-[480px] xl:w-[520px] snap-center transition-all duration-500 ease-out"
-                  style={{
-                    transform: isSelected
-                      ? "scale(1.04) translateZ(28px)"
-                      : isAnyHovered
-                        ? "scale(0.95) translateZ(-8px)"
-                        : "scale(1.0) translateZ(0px)",
-                    filter:
-                      isAnyHovered && !isSelected ? "blur(4px) opacity(0.35)" : "none",
-                    zIndex: isSelected ? 30 : 10,
-                  }}
-                >
-                  <PassCard3D
-                    pass={pass}
-                    interactive={true}
-                    onBuy={handleBuy}
-                    showActions={true}
-                  />
-                </div>
-              );
-            })}
+            {sortedPasses.map((pass) => (
+              <div key={pass.tokenId} className="w-[340px] sm:w-[380px] flex-shrink-0">
+                <PassCard3D
+                  pass={pass}
+                  onBuy={handleBuy}
+                  interactive={true}
+                  showActions={true}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-between items-center text-[11px] font-mono text-zincGrey px-2 pt-2">
+            <span>← Drag or use scroll buttons to explore →</span>
+            <span>{sortedPasses.length} live passes</span>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-4">
+        /* Grid Table View */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedPasses.map((pass) => (
-            <PassCard3D
-              key={pass.tokenId}
-              pass={pass}
-              interactive={true}
-              onBuy={handleBuy}
-              showActions={true}
-            />
+            <div key={pass.tokenId} className="w-full">
+              <PassCard3D
+                pass={pass}
+                onBuy={handleBuy}
+                interactive={true}
+                showActions={true}
+              />
+            </div>
           ))}
         </div>
       )}
-
     </div>
   );
 }
