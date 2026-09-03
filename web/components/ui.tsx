@@ -83,19 +83,76 @@ export function useFees() {
  * Contract reverts as sentences a non-technical judge can read.
  * The raw error still reaches the console for debugging.
  */
+type Viemish = Error & {
+  shortMessage?: string;
+  details?: string;
+  walk?: (fn: (err: unknown) => boolean) => unknown;
+};
+
+type Revertedish = {
+  reason?: string;
+  shortMessage?: string;
+  data?: { errorName?: string };
+};
+
+/**
+ * Contract failures as sentences, without losing the reason.
+ *
+ * The reason lives two levels down and viem formats it across two lines:
+ *
+ *   The contract function "list" reverted with the following reason:
+ *   <the actual reason>
+ *
+ * This used to end in `raw.split("\n")[0]`, which kept the label and threw
+ * away the only part worth reading -- so every single failure rendered as a
+ * sentence ending in a colon and nothing after it, and all of them looked
+ * identical no matter what actually went wrong.
+ *
+ * So: walk the cause chain for the decoded revert first, fall back to the
+ * node's own complaint in `details` (out of gas, nonce, fee cap -- none of
+ * which are contract reverts), and never drop a line.
+ */
 export function humanise(e: Error): string {
-  const err = e as Error & { shortMessage?: string; details?: string };
-  const raw = err.shortMessage ?? err.message ?? "Transaction failed";
+  const err = e as Viemish;
   console.error(e);
-  if (/User rejected|denied/i.test(raw)) return "You rejected the transaction in MetaMask.";
-  if (/insufficient funds/i.test(raw)) return "Not enough ETH in your wallet to cover gas and price.";
-  if (/not listed/i.test(raw)) return "That pass is no longer for sale.";
-  if (/expired/i.test(raw)) return "That pass has expired and can no longer be traded.";
-  if (/plan closed/i.test(raw)) return "The issuer has closed this plan to new sales.";
-  if (/wrong value/i.test(raw)) return "The price changed. Refresh and try again.";
-  if (/already owner/i.test(raw)) return "You already own this pass.";
-  if (/not owner/i.test(raw)) return "You don't own that pass.";
-  return raw.split("\n")[0];
+
+  let reason = "";
+  try {
+    const reverted = err.walk?.(
+      (x) => (x as { name?: string } | null)?.name === "ContractFunctionRevertedError",
+    ) as Revertedish | undefined;
+    if (reverted) {
+      reason = reverted.reason ?? reverted.data?.errorName ?? reverted.shortMessage ?? "";
+    }
+  } catch {
+    // Older viem, or a non-viem error. The fallbacks below still apply.
+  }
+
+  const surface = err.shortMessage ?? err.message ?? "Transaction failed";
+  const haystack = [surface, reason, err.details].filter(Boolean).join(" ");
+
+  if (/User rejected|denied/i.test(haystack)) return "You rejected the transaction in MetaMask.";
+  if (/insufficient funds/i.test(haystack)) return "Not enough ETH in your wallet to cover gas and price.";
+  if (/out of gas|gas required exceeds/i.test(haystack))
+    return "The transaction ran out of gas. The hard-coded gas limit is too low for this call.";
+  if (/nonce too low|already known|replacement transaction/i.test(haystack))
+    return "A pending transaction is blocking this one. Wait for it, or reset the account nonce in MetaMask.";
+  if (/max fee per gas less than block base fee|fee cap/i.test(haystack))
+    return "Your wallet's max fee is below the current base fee. Raise it, or let MetaMask estimate.";
+  if (/not listed/i.test(haystack)) return "That pass is no longer for sale.";
+  if (/expired/i.test(haystack)) return "That pass has expired and can no longer be traded.";
+  if (/plan closed/i.test(haystack)) return "The issuer has closed this plan to new sales.";
+  if (/wrong value/i.test(haystack)) return "The price changed. Refresh and try again.";
+  if (/already owner/i.test(haystack)) return "You already own this pass.";
+  if (/not owner/i.test(haystack)) return "You don't own that pass.";
+  if (/not an issuer/i.test(haystack))
+    return "This address isn't on the issuer allowlist. The contract admin has to add it.";
+
+  // Every line, joined -- never just the first.
+  const full = surface.split("\n").map((l) => l.trim()).filter(Boolean).join(" — ");
+  const extra = reason && !full.includes(reason) ? ` (${reason})` : "";
+  const node = err.details && !full.includes(err.details) ? ` [${err.details}]` : "";
+  return `${full}${extra}${node}`;
 }
 
 /**
