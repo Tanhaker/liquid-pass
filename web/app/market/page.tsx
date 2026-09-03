@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { formatEther } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
-import { useNow } from "@/components/ui";
+import { useFees, useNow } from "@/components/ui";
 import { PassCard3D } from "@/components/PassCard3D";
 import { fetchPasses, fetchPlans, marketStats, type MarketStats } from "@/lib/data";
 import {
@@ -35,6 +35,7 @@ export default function MarketPage() {
   const { isConnected, address } = useAccount();
   const client = usePublicClient();
   const { writeContractAsync } = useWriteContract();
+  const fees = useFees();
   const now = useNow(15000) ?? Date.now();
   const { shiftExpiry } = useDemo();
 
@@ -245,6 +246,7 @@ export default function MarketPage() {
         args: [tokenIdBig],
         value: valueToSend,
         gas: 800_000n,
+        ...(await fees()),
       });
 
       setTxSuccess(`Successfully purchased Pass #${pass.tokenId}! Tx: ${hash.slice(0, 10)}...`);

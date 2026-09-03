@@ -382,6 +382,7 @@ export default function PassDetail({
                         value: withBuffer(pass.current),
                         chainId: arbitrumSepolia.id,
                         gas: 800_000n,
+                        ...(await fees()),
                       }),
                     )
                   }
@@ -428,6 +429,7 @@ export default function PassDetail({
                         args: [pass.tokenId],
                         chainId: arbitrumSepolia.id,
                         gas: 800_000n,
+                        ...(await fees()),
                       }),
                     )
                   }
@@ -498,6 +500,7 @@ export default function PassDetail({
                           args: [pass.tokenId, wei],
                           chainId: arbitrumSepolia.id,
                           gas: 800_000n,
+                          ...(await fees()),
                         }),
                       );
                     }}
@@ -543,6 +546,7 @@ export default function PassDetail({
                           args: [target, pass.tokenId],
                           chainId: arbitrumSepolia.id,
                           gas: 800_000n,
+                          ...(await fees()),
                         }),
                       );
                     }}

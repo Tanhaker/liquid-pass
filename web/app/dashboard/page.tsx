@@ -68,6 +68,7 @@ export default function DashboardPage() {
         address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "buyPass",
         args: [plan.id], value: plan.price, chainId: arbitrumSepolia.id,
         gas: 800_000n,
+        ...(await fees()),
       });
       setTx({ hash, what: `Bought pass from plan "${plan.name}"` });
       await client?.waitForTransactionReceipt({ hash });
@@ -83,6 +84,7 @@ export default function DashboardPage() {
         address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "mint",
         args: [address, BigInt(mintDuration)], chainId: arbitrumSepolia.id,
         gas: 800_000n,
+        ...(await fees()),
       });
       setTx({ hash, what: "Minted a new pass" });
       await client?.waitForTransactionReceipt({ hash });

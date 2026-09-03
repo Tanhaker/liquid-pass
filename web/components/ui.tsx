@@ -74,8 +74,28 @@ export function SkeletonGrid({ n = 3 }: { n?: number }) {
 export function useFees() {
   const client = usePublicClient();
   return useCallback(async () => {
-    // Return empty object so MetaMask and Viem natively calculate Arbitrum Sepolia L1+L2 gas fees
-    return {};
+    if (!client) return {};
+    try {
+      const block = await client.getBlock();
+      const base = block.baseFeePerGas ?? 100_000_000n;
+      // A max fee is a CEILING, not a charge: you are billed the real base fee
+      // plus the tip, so headroom is free. 4x plus a 1 gwei floor covers the
+      // base fee moving between the wallet building the transaction and the
+      // sequencer seeing it.
+      //
+      // This used to return {} so MetaMask would estimate natively. MetaMask's
+      // Arbitrum estimate goes stale and gets submitted below the current base
+      // fee, which the node rejects with "max fee per gas less than block base
+      // fee" -- every write failing, with nothing wrong on chain. Supplying the
+      // cap ourselves takes its cache out of the loop.
+      return {
+        maxFeePerGas: base * 4n + 1_000_000_000n,
+        maxPriorityFeePerGas: 10_000_000n,
+      };
+    } catch {
+      // No fee override beats a wrong one: fall back to the wallet.
+      return {};
+    }
   }, [client]);
 }
 
