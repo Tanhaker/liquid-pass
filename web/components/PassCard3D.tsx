@@ -93,7 +93,7 @@ export function PassCard3D({
           rotateY: interactive ? rotateY : "0deg",
           transformStyle: "preserve-3d",
         }}
-        className={`relative w-full h-[600px] flex flex-col justify-between rounded-none border p-8 transition-all duration-200 overflow-hidden ${
+        className={`relative w-full flex flex-col rounded-none border p-5 transition-all duration-200 overflow-hidden ${
           isExpired
             ? "bg-dark-card border-dark-border opacity-60"
             : isUrgent
@@ -126,7 +126,7 @@ export function PassCard3D({
                 {pass.tier}
               </span>
             </div>
-            <h3 className="font-header font-bold text-2xl text-alabaster mt-3 tracking-tight line-clamp-1 h-8">
+            <h3 className="font-header font-bold text-xl text-alabaster mt-2 tracking-tight line-clamp-1">
               {pass.name}
             </h3>
           </div>
@@ -150,8 +150,8 @@ export function PassCard3D({
         </div>
 
         {/* Decay Timeline & Remaining Meter */}
-        <div className="mt-6 p-4 bg-dark border border-dark-border relative z-10">
-          <div className="flex items-center justify-between text-sm font-mono mb-3">
+        <div className="mt-4 p-3 bg-dark border border-dark-border relative z-10">
+          <div className="flex items-center justify-between text-xs font-mono mb-2">
             <span className="text-zincGrey flex items-center space-x-1.5">
               <Clock className="w-4 h-4 text-uranium" />
               <span>TIME REMAINING:</span>
@@ -173,7 +173,7 @@ export function PassCard3D({
             />
           </div>
 
-          <div className="flex justify-between items-center text-[11px] font-mono text-zincGrey mt-2">
+          <div className="flex justify-between items-center text-[10px] font-mono text-zincGrey mt-1.5">
             <span>ISSUED 100%</span>
             <span>HALF-LIFE 50%</span>
             <span>EXPIRES 0%</span>
@@ -181,30 +181,30 @@ export function PassCard3D({
         </div>
 
         {/* Technical Data HUD */}
-        <div className="mt-5 grid grid-cols-2 gap-3 font-mono relative z-10">
-          <div className="p-3 border border-dark-border bg-dark">
-            <span className="text-[11px] text-zincGrey block uppercase mb-1">Original Retail</span>
+        <div className="mt-3 grid grid-cols-2 gap-2 font-mono relative z-10">
+          <div className="p-2.5 border border-dark-border bg-dark">
+            <span className="text-[10px] text-zincGrey block uppercase mb-0.5">Original Retail</span>
             <span className="text-zincGrey-light line-through text-sm">{pass.originalPriceEth} ETH</span>
           </div>
-          <div className="p-3 border border-dark-border bg-dark-surface">
-            <span className="text-[11px] text-uranium block uppercase mb-1">Current Value</span>
-            <span className="text-uranium font-bold text-lg">{effectivePrice} ETH</span>
+          <div className="p-2.5 border border-dark-border bg-dark-surface">
+            <span className="text-[10px] text-uranium block uppercase mb-0.5">Current Value</span>
+            <span className="text-uranium font-bold text-base">{effectivePrice} ETH</span>
           </div>
         </div>
 
         {/* Barcode & Stylus Verification Line */}
-        <div className="mt-6 pt-4 border-t border-dashed border-dark-border flex items-center justify-between relative z-10">
-          <div className="flex items-center space-x-1.5 text-xs font-mono text-zincGrey">
+        <div className="mt-4 pt-3 border-t border-dashed border-dark-border flex items-center justify-between relative z-10">
+          <div className="flex items-center space-x-1.5 text-[11px] font-mono text-zincGrey">
             <ShieldCheck className="w-4 h-4 text-periwinkle" />
             <span>STYLUS SECP256R1 VERIFIED</span>
           </div>
           {/* Faux Barcode */}
-          <div className="flex space-x-[2px] h-5 items-end opacity-40">
+          <div className="flex space-x-[2px] h-4 items-end opacity-40">
             {[4, 2, 5, 3, 6, 2, 4, 1, 5, 3, 2, 6, 4, 2, 5].map((h, i) => (
               <div
                 key={i}
                 className="bg-alabaster w-[1.5px]"
-                style={{ height: `${h * 3}px` }}
+                style={{ height: `${h * 2.4}px` }}
               />
             ))}
           </div>
@@ -212,7 +212,7 @@ export function PassCard3D({
 
         {/* Action Controls */}
         {showActions && (
-          <div className="mt-5 flex items-center space-x-2 relative z-10">
+          <div className="mt-4 flex items-center space-x-2 relative z-10">
             <LinkButton3D
               href={`/pass/${pass.tokenId}`}
               variant="ghost"

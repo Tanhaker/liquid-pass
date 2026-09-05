@@ -114,7 +114,7 @@ export default function Home() {
           {/* Opacity is well below the component default: at full strength
               the terrain competes with the headline sitting on top of it. The
               downward mask in globals.css does the rest. */}
-          <DottedSurface size={10} opacity={0.5} />
+          <DottedSurface size={9} opacity={0.3} />
         </div>
       </div>
 
