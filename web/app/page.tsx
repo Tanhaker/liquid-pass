@@ -10,7 +10,7 @@ import { LiveStats } from "@/components/LiveStats";
 import { DualSettlementAnimation } from "@/components/DualSettlementAnimation";
 import { useNow } from "@/components/ui";
 import dynamic from "next/dynamic";
-const LiquidNetwork = dynamic(() => import("@/components/ui/liquid-network"), { ssr: false });
+const LiquidFlow = dynamic(() => import("@/components/ui/liquid-flow"), { ssr: false });
 import { EXPLORER, LIQUID_PASS_ADDRESS, shortAddress } from "@/lib/contract";
 
 /**
@@ -79,6 +79,22 @@ const REVEAL = {
   transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as const },
 };
 
+/**
+ * Hero entrance.
+ *
+ * `animate`, not `whileInView`. The hero is above the fold, so gating it on an
+ * intersection observer buys nothing -- and it was going wrong: the observer
+ * never reported the column as sufficiently visible, so the reveal stalled
+ * partway and the headline, body copy and CTAs all sat at 40% opacity
+ * permanently. It reads as a washed-out page rather than a broken animation,
+ * which is why it survived this long.
+ */
+const REVEAL_NOW = {
+  initial: { opacity: 0, y: 30 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as const },
+};
+
 export default function Home() {
   const now = useNow(1000);
   const [days, setDays] = useState(24);
@@ -92,7 +108,7 @@ export default function Home() {
       {/* Hero background: value streams flowing through the protocol. */}
       <div className="absolute top-0 left-0 right-0 h-[680px] lg:h-[780px] overflow-hidden pointer-events-none z-0">
         <div className="hero-surface-fade absolute inset-0">
-          <LiquidNetwork />
+          <LiquidFlow />
         </div>
       </div>
 
@@ -101,7 +117,7 @@ export default function Home() {
       {/* ---------------------------------------------------------------- */}
       <section className="relative z-10 mx-auto max-w-7xl px-4 pb-20 pt-12 sm:px-6 lg:px-8 lg:pb-28 lg:pt-20">
         <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12">
-          <motion.div {...REVEAL} className="space-y-6 lg:col-span-7">
+          <motion.div {...REVEAL_NOW} className="space-y-6 lg:col-span-7">
             <h1 className="font-header text-4xl font-extrabold leading-[1.05] tracking-tight text-text sm:text-6xl lg:text-7xl">
               Buy time. Use it.
               <br />
@@ -137,8 +153,7 @@ export default function Home() {
           {/* Interactive scrubber */}
           <motion.div
             initial={{ opacity: 0, x: 40, scale: 0.94 }}
-            whileInView={{ opacity: 1, x: 0, scale: 1 }}
-            viewport={{ once: true, amount: 0.25 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
             className="lg:col-span-5"
           >
