@@ -99,6 +99,52 @@ export default function LuxuryHeroScene({
 
     const random = (min: number, max: number) => min + Math.random() * (max - min);
 
+    /*
+     * Pre-rendered glow sprites.
+     *
+     * Everything luminous here used to be drawn with ctx.shadowBlur, which is a
+     * per-draw gaussian: the browser allocates a scratch surface and blurs it
+     * for every single call. At 140 particles plus ribbons, orbital nodes and
+     * sparks that was ~184 blurred draws a frame, roughly 11,000 blurs a
+     * second, and it is the reason the page dragged.
+     *
+     * A radial-gradient sprite baked once and stamped with drawImage looks the
+     * same and costs a texture blit. Keyed by colour and rebuilt on a theme
+     * flip, since the palette changes.
+     */
+    const spriteCache = new Map<string, HTMLCanvasElement>();
+
+    const glowSprite = (rgb: string) => {
+      const hit = spriteCache.get(rgb);
+      if (hit) return hit;
+
+      const size = 64;
+      const c = document.createElement("canvas");
+      c.width = size;
+      c.height = size;
+      const g = c.getContext("2d");
+      if (g) {
+        const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+        grad.addColorStop(0, `rgba(${rgb},1)`);
+        grad.addColorStop(0.2, `rgba(${rgb},0.7)`);
+        grad.addColorStop(0.5, `rgba(${rgb},0.18)`);
+        grad.addColorStop(1, `rgba(${rgb},0)`);
+        g.fillStyle = grad;
+        g.fillRect(0, 0, size, size);
+      }
+      spriteCache.set(rgb, c);
+      return c;
+    };
+
+    /** Stamp a cached glow. `r` is the radius of the visible core. */
+    const stamp = (rgb: string, x: number, y: number, r: number, alpha: number) => {
+      const sprite = glowSprite(rgb);
+      const d = r * 7; // sprite is mostly falloff, so oversample the box
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(sprite, x - d / 2, y - d / 2, d, d);
+      ctx.globalAlpha = 1;
+    };
+
     /* Neon reads on the void and disappears on paper, so light mode gets the
        WCAG-safe accent from DESIGN_RULES section 2 and a much lower ceiling. */
     const ink = () => (isLight ? "62,122,0" : "183,255,60");
@@ -109,7 +155,9 @@ export default function LuxuryHeroScene({
       const rect = root.getBoundingClientRect();
       width = rect.width;
       height = rect.height;
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // 1.5 rather than 2: this scene is fill-bound, and the extra
+      // quarter-million pixels on a retina panel buy very little here.
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       canvas.style.width = `${width}px`;
@@ -222,7 +270,7 @@ export default function LuxuryHeroScene({
         ctx.save();
         ctx.beginPath();
 
-        const step = 7;
+        const step = 14; // halves the point count; the curve is smooth enough
         for (let x = -150; x <= width + 150; x += step) {
           const primary =
             Math.sin(x * ribbon.frequency + time * ribbon.speed + ribbon.phase) *
@@ -234,23 +282,21 @@ export default function LuxuryHeroScene({
           else ctx.lineTo(x, y);
         }
 
-        // Huge soft glow.
-        ctx.shadowColor = glowHex;
-        ctx.shadowBlur = 42;
+        // Wide, soft, translucent pass. This used to carry shadowBlur 42 on
+        // top; a 7x-width stroke at low alpha already reads as glow, and the
+        // blur was the single most expensive call in the frame.
         ctx.globalAlpha = ribbon.opacity * g;
         ctx.strokeStyle = `rgba(${c},0.16)`;
         ctx.lineWidth = ribbon.width * 7;
         ctx.stroke();
 
-        // Medium glow.
-        ctx.shadowBlur = 14;
+        // Medium pass.
         ctx.strokeStyle = midHex;
         ctx.lineWidth = ribbon.width * 2.5;
         ctx.globalAlpha = ribbon.opacity * 1.4 * g;
         ctx.stroke();
 
         // Sharp centre.
-        ctx.shadowBlur = 0;
         ctx.strokeStyle = glowHex;
         ctx.lineWidth = ribbon.width;
         ctx.globalAlpha = ribbon.opacity * 2 * g;
@@ -265,8 +311,7 @@ export default function LuxuryHeroScene({
     /* ---------------------------------------------------------------- */
     const drawParticles = (time: number) => {
       const g = gain();
-      const dot = isLight ? "#4C7A17" : "#CFFF73";
-      const glowHex = isLight ? "#3E7A00" : "#B7FF3C";
+      const dotRgb = isLight ? "76,122,23" : "207,255,115";
 
       particles.forEach((particle) => {
         if (!reducedMotion) {
@@ -282,15 +327,7 @@ export default function LuxuryHeroScene({
         const twinkle =
           0.65 + Math.sin(time * particle.twinkleSpeed + particle.phase) * 0.35;
 
-        ctx.save();
-        ctx.globalAlpha = particle.opacity * twinkle * g;
-        ctx.fillStyle = dot;
-        ctx.shadowColor = glowHex;
-        ctx.shadowBlur = 9;
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        stamp(dotRgb, particle.x, particle.y, particle.size, particle.opacity * twinkle * g);
       });
     };
 
@@ -300,8 +337,8 @@ export default function LuxuryHeroScene({
     const drawOrbitalSystem = (time: number) => {
       const c = ink();
       const g = gain();
-      const glowHex = isLight ? "#3E7A00" : "#B7FF3C";
-      const brightHex = isLight ? "#5C8F1F" : "#E1FFA7";
+      const inkRgb = c;
+      const brightRgb = isLight ? "92,143,31" : "225,255,167";
 
       const cx = width * 0.76;
       const cy = height * 0.47;
@@ -326,18 +363,16 @@ export default function LuxuryHeroScene({
               ? `rgba(${c},${0.08 * g})`
               : `rgba(${c},${0.025 * g})`;
         ctx.lineWidth = i === 0 ? 1.5 : 0.7;
-        ctx.shadowColor = glowHex;
-        ctx.shadowBlur = i === 0 ? 16 : 4;
         ctx.stroke();
 
         const angle = time * 0.00035 * (i % 2 === 0 ? 1 : -1) + i * 1.7;
-        ctx.globalAlpha = g;
-        ctx.fillStyle = i % 4 === 0 ? brightHex : glowHex;
-        ctx.shadowBlur = 18;
-        ctx.beginPath();
-        ctx.arc(Math.cos(angle) * rx, Math.sin(angle) * ry, i === 0 ? 3 : 1.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
+        stamp(
+          i % 4 === 0 ? brightRgb : inkRgb,
+          Math.cos(angle) * rx,
+          Math.sin(angle) * ry,
+          i === 0 ? 3 : 1.5,
+          g,
+        );
         ctx.restore();
       }
       ctx.restore();
@@ -363,8 +398,7 @@ export default function LuxuryHeroScene({
     const drawSparks = () => {
       const c = ink();
       const g = gain();
-      const coreHex = isLight ? "#4C7A17" : "#D8FF9A";
-      const glowHex = isLight ? "#3E7A00" : "#B7FF3C";
+      const coreRgb = isLight ? "76,122,23" : "216,255,154";
 
       for (let i = sparks.length - 1; i >= 0; i--) {
         const spark = sparks[i];
@@ -375,15 +409,11 @@ export default function LuxuryHeroScene({
         const progress = spark.life / spark.maxLife;
         const alpha = progress < 0.2 ? progress / 0.2 : 1 - (progress - 0.2) / 0.8;
 
-        ctx.save();
-        ctx.globalAlpha = Math.max(0, alpha) * g;
-        ctx.fillStyle = coreHex;
-        ctx.shadowColor = glowHex;
-        ctx.shadowBlur = 20;
-        ctx.beginPath();
-        ctx.arc(spark.x, spark.y, spark.size, 0, Math.PI * 2);
-        ctx.fill();
+        const a = Math.max(0, alpha) * g;
+        stamp(coreRgb, spark.x, spark.y, spark.size, a);
 
+        ctx.save();
+        ctx.globalAlpha = a;
         ctx.strokeStyle = `rgba(${c},0.75)`;
         ctx.lineWidth = 0.5;
         const flare = spark.size * 4;
@@ -549,6 +579,7 @@ export default function LuxuryHeroScene({
     // Repaint in the new palette the moment the theme flips.
     const themeObserver = new MutationObserver(() => {
       isLight = document.documentElement.getAttribute("data-theme") === "light";
+      spriteCache.clear(); // palette changed, so the baked glows are stale
     });
     themeObserver.observe(document.documentElement, {
       attributes: true,
@@ -738,10 +769,13 @@ export default function LuxuryHeroScene({
           background: radial-gradient(
             circle,
             rgba(183, 255, 60, 0.12),
-            rgba(183, 255, 60, 0.035) 35%,
-            transparent 72%
+            rgba(183, 255, 60, 0.055) 28%,
+            rgba(183, 255, 60, 0.02) 52%,
+            transparent 78%
           );
-          filter: blur(10px);
+          /* No filter: blur here. This element is scaled every frame by
+             coreBreath, so the gaussian re-ran continuously; extra gradient
+             stops give the same softness at no per-frame cost. */
           animation: coreBreath 4s ease-in-out infinite;
         }
 
@@ -839,8 +873,14 @@ export default function LuxuryHeroScene({
           width: 180px; height: 280px;
           transform: translate(-50%, -50%);
           border-radius: 50%;
-          background: radial-gradient(ellipse, rgba(183, 255, 60, 0.11), transparent 70%);
-          filter: blur(20px);
+          background: radial-gradient(
+            ellipse,
+            rgba(183, 255, 60, 0.11),
+            rgba(183, 255, 60, 0.04) 40%,
+            transparent 76%
+          );
+          /* Blur removed: the parent is animated and GSAP-transformed, so the
+             gaussian was re-running every frame. */
         }
 
         .hourglass-body {
@@ -972,7 +1012,10 @@ export default function LuxuryHeroScene({
           border: 1px solid rgba(183,255,60,0.23);
           background: linear-gradient(135deg, rgba(255,255,255,0.065), rgba(183,255,60,0.015));
           box-shadow: inset 0 0 20px rgba(183,255,60,0.035);
-          backdrop-filter: blur(5px);
+          /* No backdrop-filter here. Three cubes x six faces is eighteen
+             animated backdrop layers, each recomposited every frame, for a
+             blur nobody can see through a 64px translucent panel. The data
+             panels keep theirs, where it actually reads. */
         }
 
         .cube-front { transform: translateZ(32px); }
