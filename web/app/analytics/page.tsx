@@ -13,6 +13,7 @@ import {
   Zap,
 } from "lucide-react";
 import { SUBGRAPH_URL } from "@/lib/graph";
+import { SubgraphPanel } from "@/components/SubgraphPanel";
 import { GraphPlayground } from "@/components/GraphPlayground";
 
 const MARKETPLACE_TOTALS = gql`
@@ -123,8 +124,13 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* Left: Live GraphQL Playground */}
-        <div className="lg:col-span-8">
+        <div className="lg:col-span-8 space-y-8">
           <GraphPlayground />
+          {/* Probes the subgraph read path in lib/graphql.ts, which was fully
+              implemented and had no caller anywhere in the app. Reports what
+              actually came back; deliberately does not put the indexer in the
+              render path, since the chain stays the source of truth. */}
+          <SubgraphPanel />
         </div>
 
         {/* Right: 90/10 Split Architecture */}

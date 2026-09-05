@@ -20,7 +20,14 @@ import { test as base, expect, type Page } from "@playwright/test";
  * even a bug in this file cannot put a transaction on chain.
  */
 
-export const TEST_ACCOUNT = "0x1111111111111111111111111111111111111111";
+/**
+ * The address that actually holds passes on Arbitrum Sepolia.
+ *
+ * A wallet that owns nothing renders an empty dashboard, which asserts almost
+ * nothing. This is a PUBLIC address used purely to read real state -- no key
+ * exists in this harness and no transaction is ever broadcast.
+ */
+export const TEST_ACCOUNT = "0xf5AbE5a5092Af1a7fA31109C98635440fdD83174";
 export const ARBITRUM_SEPOLIA_HEX = "0x66eee"; // 421614
 export const RPC_URL = "https://sepolia-rollup.arbitrum.io/rpc";
 

@@ -38,6 +38,8 @@ import {
   type Plan,
 } from "@/lib/contract";
 import { fetchActivity, fetchPasses, fetchPlans, type Activity } from "@/lib/data";
+import { PricingOracle } from "@/components/PricingOracle";
+import { planSignals } from "@/lib/signals";
 import { useDemo } from "@/lib/demo";
 
 /**
@@ -71,6 +73,11 @@ export default function PassDetail({
   const [pass, setPass] = useState<Pass | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [history, setHistory] = useState<Activity[]>([]);
+  // Kept unfiltered alongside `history`, which is narrowed to this token.
+  // Pricing signals are computed per PLAN, so they need every resale of every
+  // pass on that plan -- one token's own history says nothing about the market.
+  const [allPasses, setAllPasses] = useState<Pass[]>([]);
+  const [allActivity, setAllActivity] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -94,6 +101,8 @@ export default function PassDetail({
       ]);
       const p = passes.find((x) => x.tokenId === id) ?? null;
       setPass(p);
+      setAllPasses(passes);
+      setAllActivity(acts);
       setPlan(p ? (plans.find((x) => x.id === p.planId) ?? null) : null);
       setHistory(acts.filter((a) => a.tokenId === id));
       setError(null);
@@ -464,6 +473,17 @@ export default function PassDetail({
                 <label htmlFor="p" className="block uppercase text-zincGrey">
                   Asking price in ETH
                 </label>
+
+                {/* What this plan's resales have actually settled at. Renders
+                    nothing when there is no fair price to anchor on, and says
+                    so plainly when there is no history behind the number. */}
+                <PricingOracle
+                  pass={pass}
+                  plan={plan ?? undefined}
+                  signal={planSignals(allActivity, allPasses).get(pass.planId.toString())}
+                  nowMs={nowMs}
+                  onUse={(suggested) => setPrice(suggested)}
+                />
                 <input
                   id="p"
                   value={price}

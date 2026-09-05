@@ -1,13 +1,23 @@
 "use client";
 
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
-import { formatEther } from "viem";
+import { formatEther, isAddress } from "viem";
 import { ESCROW_ADDRESS, escrowAbi } from "@/lib/contract";
 import { arbitrumSepolia } from "wagmi/chains";
 import { useState } from "react";
 
+/**
+ * Aave yield on escrowed sale proceeds.
+ *
+ * EscrowYield.sol is written but has never been deployed: ESCROW_ADDRESS falls
+ * back to the string "0x", which is not an address. Reading `lockedBalances`
+ * off that throws. So the component guards itself rather than trusting every
+ * future caller to remember -- and the dashboard additionally declines to
+ * mount it at all while there is no escrow, so nobody is shown a dead panel.
+ */
 export function YieldDashboard() {
   const { address } = useAccount();
+  const escrowReady = isAddress(ESCROW_ADDRESS);
   const { writeContractAsync } = useWriteContract();
   
   const [busy, setBusy] = useState(false);
@@ -19,12 +29,12 @@ export function YieldDashboard() {
     functionName: "lockedBalances",
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address,
+      enabled: escrowReady && !!address,
       refetchInterval: 5000,
     }
   });
 
-  const hasBalance = balanceWei && balanceWei > 0n;
+  const hasBalance = escrowReady && balanceWei && balanceWei > 0n;
   const balanceEth = balanceWei ? Number(formatEther(balanceWei)).toFixed(5) : "0.00000";
 
   const handleClaim = async () => {

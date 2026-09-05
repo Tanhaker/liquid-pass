@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { arbitrumSepolia } from "wagmi/chains";
-import { parseEther, formatEther } from "viem";
+import { parseEther, formatEther, isAddress } from "viem";
 import Link from "next/link";
 import {
   Wallet,
@@ -11,8 +11,11 @@ import {
   Loader2,
 } from "lucide-react";
 import {
+  ESCROW_ADDRESS,
   LIQUID_PASS_ADDRESS,
+  MARKETPLACE_ADDRESS,
   liquidPassAbi,
+  marketplaceAbi,
   shortAddress,
   remaining,
   lifeFraction,
@@ -23,6 +26,10 @@ import {
 } from "@/lib/contract";
 import { fetchPasses, fetchPlans, passesOf } from "@/lib/data";
 import { Banner, humanise, useFees, useNow } from "@/components/ui";
+import { GiftSplit } from "@/components/GiftSplit";
+import { YieldDashboard } from "@/components/YieldDashboard";
+import { PassBundler } from "@/components/PassBundler";
+import { AutoSell } from "@/components/AutoSell";
 
 export default function DashboardPage() {
   const { address, isConnected, chainId } = useAccount();
@@ -40,6 +47,9 @@ export default function DashboardPage() {
   const [tx, setTx] = useState<{ hash: string; what: string } | null>(null);
   const [mintDuration, setMintDuration] = useState<number>(2592000);
   const [isMinting, setIsMinting] = useState(false);
+  // Which pass is mid-transaction. Per-token rather than a single `busy` flag
+  // so one pending gift does not grey out the controls on every other card.
+  const [busyToken, setBusyToken] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -57,6 +67,11 @@ export default function DashboardPage() {
   useEffect(() => { void load(); }, [load]);
 
   const planFor = (p: Pass) => plans.find((pl) => pl.id === p.planId);
+  // PassBundler and AutoSell both index plans by id string.
+  const plansMap = useMemo(
+    () => new Map(plans.map((pl) => [pl.id.toString(), pl])),
+    [plans],
+  );
   const myPasses = passesOf(passes, address);
   const myListings = myPasses.filter((p) => p.listed > 0n && p.active);
 
@@ -75,6 +90,73 @@ export default function DashboardPage() {
       await load();
     } catch (e) { setError(humanise(e as Error)); } finally { setBusy(false); }
   };
+
+  /**
+   * The three owner-only actions that had UI built for them but no page to
+   * live on: gift, split and list. All three follow the same shape as the
+   * handlers above -- explicit gas, fees from useFees(), receipt awaited, then
+   * reload -- so a reader does not have to hold two patterns in their head.
+   */
+  const runOwnerAction = useCallback(
+    async (tokenId: bigint, what: string, send: () => Promise<`0x${string}`>) => {
+      if (!isConnected || wrongNetwork) return;
+      setBusyToken(tokenId.toString());
+      setTx(null);
+      setError(null);
+      try {
+        const hash = await send();
+        setTx({ hash, what });
+        await client?.waitForTransactionReceipt({ hash });
+        await load();
+      } catch (e) {
+        setError(humanise(e as Error));
+      } finally {
+        setBusyToken(null);
+      }
+    },
+    [client, isConnected, load, wrongNetwork],
+  );
+
+  const handleGift = (tokenId: bigint, to: `0x${string}`) =>
+    runOwnerAction(tokenId, `Gifted pass #${tokenId} to ${shortAddress(to)}`, async () =>
+      writeContractAsync({
+        address: LIQUID_PASS_ADDRESS,
+        abi: liquidPassAbi,
+        functionName: "transferPass",
+        args: [to, tokenId],
+        chainId: arbitrumSepolia.id,
+        gas: 800_000n,
+        ...(await fees()),
+      }),
+    );
+
+  const handleSplit = (tokenId: bigint, parts: bigint) =>
+    runOwnerAction(tokenId, `Split pass #${tokenId} into ${parts} consecutive passes`, async () =>
+      writeContractAsync({
+        address: LIQUID_PASS_ADDRESS,
+        abi: liquidPassAbi,
+        functionName: "split",
+        args: [tokenId, parts],
+        chainId: arbitrumSepolia.id,
+        // Splitting writes a full set of storage slots per slice, so this
+        // needs materially more headroom than a transfer.
+        gas: 3_000_000n,
+        ...(await fees()),
+      }),
+    );
+
+  const handleList = (tokenId: bigint, price: bigint) =>
+    runOwnerAction(tokenId, `Listed pass #${tokenId}`, async () =>
+      writeContractAsync({
+        address: MARKETPLACE_ADDRESS,
+        abi: marketplaceAbi,
+        functionName: "list",
+        args: [tokenId, price],
+        chainId: arbitrumSepolia.id,
+        gas: 800_000n,
+        ...(await fees()),
+      }),
+    );
 
   const handleMint = async () => {
     if (!isConnected || !address || wrongNetwork) return;
@@ -186,12 +268,49 @@ export default function DashboardPage() {
                           Verify
                         </Link>
                       </div>
+
+                      {/* Gift and split. `split()` has been in the Stylus
+                          contract all along -- this is the first page that
+                          lets anyone reach it. */}
+                      <GiftSplit
+                        pass={pass}
+                        plan={plan}
+                        nowMs={nowMs}
+                        busy={busyToken === pass.tokenId.toString()}
+                        disabled={!isConnected || wrongNetwork || busyToken !== null}
+                        onGift={(to) => handleGift(pass.tokenId, to)}
+                        onSplit={(parts) => handleSplit(pass.tokenId, parts)}
+                      />
                     </div>
                   );
                 })}
               </div>
             )}
           </div>
+
+          {/* Escrowed sale proceeds earning Aave yield. EscrowYield.sol is
+              written but not deployed, so ESCROW_ADDRESS is still "0x" and
+              this renders nothing at all rather than a dead panel. It appears
+              on its own the moment an escrow address is configured. */}
+          {isAddress(ESCROW_ADDRESS) && <YieldDashboard />}
+
+          {/* Merge several passes on one plan into a single longer pass.
+              Calls bundle() on the Stylus contract. */}
+          {myPasses.length > 1 && (
+            <PassBundler passes={myPasses} plans={plansMap} />
+          )}
+
+          {/* Auto-sell watches. These evaluate locally and hand you a button --
+              nothing here signs on your behalf, which the panel states. */}
+          {myPasses.length > 0 && (
+            <AutoSell
+              passes={myPasses}
+              plans={plansMap}
+              nowMs={nowMs}
+              onList={handleList}
+              busyToken={busyToken}
+            />
+          )}
 
           {plans.filter(p => p.open).length > 0 && (
             <div className="p-8 bg-dark-card border border-dark-border space-y-6">
