@@ -10,6 +10,37 @@ export const ESCROW_ADDRESS = (process.env.NEXT_PUBLIC_ESCROW_ADDRESS ||
   "0x") as `0x${string}`;
 
 export const DEPLOY_BLOCK = 304290900n;
+
+/**
+ * The PassKey wallet: a Stylus contract that verifies a real WebAuthn
+ * secp256r1 (P-256) assertion on chain.
+ *
+ * This is the whole reason the project is on Stylus. Every passkey
+ * authenticator signs with P-256, for which the EVM has no precompile, so
+ * verifying one in Solidity means hand-rolled 256-bit field arithmetic costing
+ * hundreds of thousands of gas. In Rust it is an audited library call.
+ */
+export const PASSKEY_WALLET_ADDRESS =
+  "0x490630168df621c98e6bba22549295a2202de358" as `0x${string}`;
+
+/**
+ * The origin baked into the deployed wallet at compile time.
+ *
+ * The contract's verify_assertion compares the "origin" field of clientDataJSON
+ * against this constant, so an assertion produced on any other origin is
+ * rejected on chain. The contract is deployed and must not be redeployed, so
+ * this is a fixed property of the system, not a setting -- and it means
+ * execute() can only ever succeed for a passkey created at this exact origin.
+ */
+export const PASSKEY_EXPECTED_ORIGIN = "http://localhost:3000";
+
+export const passkeyWalletAbi = parseAbi([
+  "function nonce() view returns (uint256)",
+  "function pubkey() view returns (uint256 x, uint256 y)",
+  "function getChallenge(address target, uint256 value, bytes data) view returns (bytes32)",
+  "function register(uint256 x, uint256 y)",
+  "function execute(address target, uint256 value, bytes data, bytes authData, bytes clientData, bytes32 r, bytes32 s) returns (bytes)",
+]);
 export const EXPLORER = "https://sepolia.arbiscan.io";
 
 export const liquidPassAbi = parseAbi([

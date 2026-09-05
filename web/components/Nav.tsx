@@ -25,6 +25,7 @@ const LINKS = [
   { href: "/explorer", label: "EXPLORER" },
   { href: "/analytics", label: "ANALYTICS" },
   { href: "/verify", label: "VERIFY" },
+  { href: "/passkey", label: "PASSKEY" },
   { href: "/issuer", label: "ISSUER" },
 ];
 

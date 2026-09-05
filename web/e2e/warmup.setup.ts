@@ -23,6 +23,7 @@ const ROUTES = [
   "/analytics",
   "/explorer",
   "/verify",
+  "/passkey",
   "/assistant",
 ];
 

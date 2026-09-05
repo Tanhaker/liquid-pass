@@ -16,6 +16,7 @@ const ROUTES = [
   { path: "/analytics", heading: /.+/ },
   { path: "/explorer", heading: /.+/ },
   { path: "/verify", heading: /verify pass/i },
+  { path: "/passkey", heading: /passkey verifier/i },
   { path: "/assistant", heading: /.+/ },
 ];
 
