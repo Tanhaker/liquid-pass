@@ -94,12 +94,14 @@ export async function fetchPasses(client: PublicClient = publicClient): Promise<
       { address: MARKETPLACE_ADDRESS, abi: marketplaceAbi, functionName: "openingPrice", args: [id] },
       { address: MARKETPLACE_ADDRESS, abi: marketplaceAbi, functionName: "currentPrice", args: [id] },
       { address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "isActive", args: [id] },
+      // Needed to reproduce the decay curve client-side between polls.
+      { address: MARKETPLACE_ADDRESS, abi: marketplaceAbi, functionName: "listings", args: [id] },
     ] as const),
   });
 
   return ids
     .map((tokenId, i) => {
-      const o = i * 8;
+      const o = i * 9;
       return {
         tokenId,
         owner: results[o] as `0x${string}`,
@@ -110,6 +112,9 @@ export async function fetchPasses(client: PublicClient = publicClient): Promise<
         listed: results[o + 5] as bigint,
         current: results[o + 6] as bigint,
         active: results[o + 7] as boolean,
+        // `listings` returns a (openingPrice, listedAt) tuple; only the
+        // second member is new information here.
+        listedAt: (results[o + 8] as readonly [bigint, bigint])[1],
       };
     })
     .reverse();

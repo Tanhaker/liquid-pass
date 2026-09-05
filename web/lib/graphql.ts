@@ -105,6 +105,11 @@ export async function fetchPassesGql(): Promise<Pass[]> {
     listed: p.listedPrice ? BigInt(p.listedPrice) : 0n,
     active: Number(p.expiry) > now,
     current: p.listedPrice ? BigInt(p.listedPrice) : 0n, // Approximate; real decay needs RPC
+    // The subgraph does not index listedAt, so the decay curve cannot be
+    // reconstructed from here. Zero makes decayedPrice() decline to guess and
+    // the UI fall back to the polled on-chain figure, rather than inventing a
+    // slope from a listing time we do not have.
+    listedAt: 0n,
   }));
 }
 

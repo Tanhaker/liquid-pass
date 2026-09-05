@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { SubscriptionPass } from "@/lib/types";
+import { DecayRate, LivePrice } from "@/components/LivePrice";
 import { Clock, ShieldCheck, ArrowRight, Zap, Flame } from "lucide-react";
 import { Button3D, LinkButton3D } from "@/components/Button3D";
 
@@ -187,8 +188,20 @@ export function PassCard3D({
             <span className="text-zincGrey-light line-through text-sm">{pass.originalPriceEth} ETH</span>
           </div>
           <div className="p-2.5 border border-dark-border bg-dark-surface">
-            <span className="text-[10px] text-uranium block uppercase mb-0.5">Current Value</span>
-            <span className="text-uranium font-bold text-base">{effectivePrice} ETH</span>
+            <span className="text-[10px] text-uranium block uppercase mb-0.5">
+              {pass.decay ? "Falling Now" : "Current Value"}
+            </span>
+            {/* When the listing's decay curve is known, price it the way the
+                contract does, once a second. Otherwise show the last polled
+                figure rather than inventing a slope. */}
+            {pass.decay ? (
+              <>
+                <LivePrice decay={pass.decay} className="text-uranium font-bold text-base tnum" />
+                <DecayRate decay={pass.decay} className="block text-[10px] text-aviation mt-0.5" />
+              </>
+            ) : (
+              <span className="text-uranium font-bold text-base">{effectivePrice} ETH</span>
+            )}
           </div>
         </div>
 

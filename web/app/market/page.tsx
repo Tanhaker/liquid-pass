@@ -113,6 +113,16 @@ export default function MarketPage() {
       isListed: p.listed > 0n,
       tier: "PRO",
       features: ["On-chain Access", "Resellable", "Fair Value Decay"],
+      // Only meaningful for a live listing: listedAt is 0 otherwise, and the
+      // curve is undefined without it.
+      decay:
+        p.listed > 0n && p.listedAt > 0n
+          ? {
+              openingWei: p.listed.toString(),
+              listedAt: Number(p.listedAt),
+              expiry: Number(shiftExpiry(p.expiry)),
+            }
+          : undefined,
     };
   }, [planById, shiftExpiry]);
 

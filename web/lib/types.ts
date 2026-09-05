@@ -12,6 +12,17 @@ export interface SubscriptionPass {
   isListed: boolean;
   tier: "PRO" | "ENTERPRISE" | "TEAM" | "ULTRA";
   features: string[];
+  /**
+   * Raw figures needed to redraw the Dutch-auction curve in the browser.
+   * Absent when the pass is not listed, or when the data came from the
+   * subgraph, which does not index the listing time.
+   */
+  decay?: {
+    /** Opening ask in wei, as a decimal string. */
+    openingWei: string;
+    listedAt: number;
+    expiry: number;
+  };
 }
 
 export interface OnChainEvent {
