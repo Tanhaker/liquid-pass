@@ -30,6 +30,7 @@ limit. New on-chain functionality has to go in a separate contract.
 | WebAuthn / P-256 verification | Shipped (contract) | `PassKeyWallet` verifies real secp256r1 assertions on chain. Not yet wired into the website. |
 | Escrow & Aave yield | **Not deployed** | `EscrowYield.sol` is written and `Marketplace.setEscrow` exists, but no escrow address is configured, so `buy()` pays the seller directly. The UI panel stays hidden rather than showing a dead widget. |
 | Account abstraction | **Out of scope** | ERC-4337, bundlers and paymasters are explicitly out per `CLAUDE.md`. `lib/zerodev.ts` is dead code that does not typecheck and is imported by nothing. |
+| Pay-per-second rental | **Written, not deployed** | `StreamRental.sol` + 18 passing tests. Escrows a pass and charges by the second, 90/10 split, accrual capped by both deposit and expiry. Deploy with `scripts/deployStreamRental.js`. |
 | Usage signal service | Shipped (advisory) | `oracle/index.js` reads the pass on chain and returns a recommendation. It holds no key and broadcasts nothing. |
 | The Graph subgraph | Shipped (secondary) | Deployed and configured in production. The app reads from RPC; the subgraph is an accelerator, not the source of truth. |
 
@@ -49,7 +50,9 @@ limit. New on-chain functionality has to go in a separate contract.
 | Issuer console | Shipped | `/issuer` — plans, revenue, royalty terms. |
 | Analytics | Shipped | `/analytics` — primary vs resale volume and royalties. |
 | Yield dashboard | **Hidden** | Built, but not mounted while no escrow is deployed. |
-| Passkey sign-in | **Not built** | The contract works; the website does not call `navigator.credentials` anywhere yet. |
+| Passkey verifier | Shipped | `/passkey` creates a real ES256 credential, signs a challenge read live from the deployed wallet, and verifies the secp256r1 signature in the browser. Shows the challenge match, UP/UV flags and the low-s fold. |
+| Passkey sign-in on chain | **Localhost only** | The deployed wallet was compiled with `EXPECTED_ORIGIN = "http://localhost:3000"` and must not be redeployed, so `execute()` only accepts assertions produced at that origin. `register()` is also one-shot and already used. The page states both plainly. |
+| Pay-per-second rental UI | **Hidden** | Renders once `NEXT_PUBLIC_STREAM_RENTAL_ADDRESS` is set. |
 | Chrome extension | Shipped (read-only) | Lists your passes and time remaining. Holds no keys; buying and selling happen on the site. |
 
 ## Testing
@@ -60,4 +63,11 @@ against the ABI but never broadcast, so the suite costs no testnet ETH.
 
 ```bash
 cd web && npm run e2e
+```
+
+Contract tests run on the Hardhat EVM against a mock core, since the real core
+is Stylus WASM and cannot run there.
+
+```bash
+cd contracts && npm test
 ```
