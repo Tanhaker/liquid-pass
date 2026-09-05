@@ -10,7 +10,7 @@ import { LiveStats } from "@/components/LiveStats";
 import { DualSettlementAnimation } from "@/components/DualSettlementAnimation";
 import { useNow } from "@/components/ui";
 import dynamic from "next/dynamic";
-const DottedSurface = dynamic(() => import("@/components/ui/dotted-surface"), { ssr: false });
+const LiquidNetwork = dynamic(() => import("@/components/ui/liquid-network"), { ssr: false });
 import { EXPLORER, LIQUID_PASS_ADDRESS, shortAddress } from "@/lib/contract";
 
 /**
@@ -89,10 +89,10 @@ export default function Home() {
 
   return (
     <div className="relative overflow-hidden">
-      {/* Background Hero 3D Dotted Surface Wave */}
+      {/* Hero background: value streams flowing through the protocol. */}
       <div className="absolute top-0 left-0 right-0 h-[680px] lg:h-[780px] overflow-hidden pointer-events-none z-0">
         <div className="hero-surface-fade absolute inset-0">
-          <DottedSurface size={12} opacity={0.9} />
+          <LiquidNetwork />
         </div>
       </div>
 
