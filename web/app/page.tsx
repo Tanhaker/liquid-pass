@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, Cpu, Fingerprint, Sliders } from "lucide-react";
 import { PassCard3D } from "@/components/PassCard3D";
 import { LinkButton3D } from "@/components/Button3D";
-import { LiveStats } from "@/components/LiveStats";
 import { DualSettlementAnimation } from "@/components/DualSettlementAnimation";
 import { useNow } from "@/components/ui";
 import dynamic from "next/dynamic";
@@ -17,9 +16,9 @@ import { EXPLORER, LIQUID_PASS_ADDRESS, shortAddress } from "@/lib/contract";
 /**
  * Landing page, in the team's tactical HUD design.
  *
- * The hero scrubber is explicitly a simulation and is labelled as one. It is
- * the only illustrative number on the page -- LiveStats below it reads the
- * chain.
+ * The hero scrubber and the lifecycle strip are both explicitly simulations
+ * and are labelled as such. Every real figure on this site lives on the
+ * market, dashboard and explorer pages, which read the chain directly.
  */
 
 const HERO_TOTAL_DAYS = 30;
@@ -28,7 +27,9 @@ const HERO_OPENING_PRICE = 35_000_000_000_000_000n;
 
 const LIFECYCLE = [
   {
-    stage: "STAGE 01 // FRESH MINT",
+    n: "01",
+    stage: "FRESH MINT",
+    holder: "HOLDER 01",
     daysLeft: "30 DAYS LEFT",
     percent: 100,
     price: "0.0020 ETH",
@@ -39,7 +40,9 @@ const LIFECYCLE = [
     desc: "Bought straight from the SaaS issuer for a month-long sprint.",
   },
   {
-    stage: "STAGE 02 // MID-CYCLE RESALE",
+    n: "02",
+    stage: "MID-CYCLE RESALE",
+    holder: "HOLDER 02",
     daysLeft: "18 DAYS LEFT",
     percent: 60,
     price: "0.0012 ETH",
@@ -50,7 +53,9 @@ const LIFECYCLE = [
     desc: "Work finished early; the remaining 18 days go on the secondary market.",
   },
   {
-    stage: "STAGE 03 // DECAYING VALUE",
+    n: "03",
+    stage: "DECAYING VALUE",
+    holder: "HOLDER 03",
     daysLeft: "7 DAYS LEFT",
     percent: 23,
     price: "0.0005 ETH",
@@ -61,7 +66,9 @@ const LIFECYCLE = [
     desc: "The curve makes short-project access genuinely cheap.",
   },
   {
-    stage: "STAGE 04 // FIRE SALE",
+    n: "04",
+    stage: "FIRE SALE",
+    holder: "HOLDER 04",
     daysLeft: "2 DAYS LEFT",
     percent: 7,
     price: "0.0001 ETH",
@@ -214,27 +221,49 @@ export default function Home() {
       {/* ---------------------------------------------------------------- */}
       <section className="technical-grid border-y border-dark-border bg-surface/40">
         <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
-          <motion.div {...REVEAL} className="mb-12 border-l-2 border-uranium pl-6">
-            <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-uranium">
-              One pass, over thirty days
-            </h2>
-            <p className="mt-2 font-header text-3xl font-bold tracking-tight text-text">
-              The same token, four owners, one expiry.
-            </p>
+          <motion.div
+            {...REVEAL}
+            className="mb-14 flex flex-col gap-4 border-l-2 border-uranium pl-6 sm:flex-row sm:items-end sm:justify-between"
+          >
+            <div>
+              <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-uranium">
+                One pass, over thirty days
+              </h2>
+              <p className="mt-2 font-header text-3xl font-bold tracking-tight text-text sm:text-4xl">
+                The same token, four owners, one expiry.
+              </p>
+            </div>
+            {/* Names what the four cards have in common, so the row reads as one
+                asset changing hands rather than four separate offers. */}
+            <span className="shrink-0 border border-dark-border bg-chip-bg px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest text-chip-text">
+              TOKEN #042 &middot; UNCHANGED EXPIRY
+            </span>
           </motion.div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {LIFECYCLE.map((s, i) => (
-              <motion.div
-                key={s.stage}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.6, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
-                className="flex flex-col justify-between border border-dark-border bg-surface p-5 transition-colors hover:border-uranium"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
+          <div className="relative">
+            {/* The thread the cards hang from. Behind them, and only on wide
+                screens where the row actually reads left to right. */}
+            <div className="pointer-events-none absolute inset-x-0 top-[86px] hidden h-px bg-gradient-to-r from-transparent via-dark-border to-transparent lg:block" />
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {LIFECYCLE.map((s, i) => (
+                <motion.div
+                  key={s.n}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.6, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                  className={`group relative flex flex-col overflow-hidden border border-dark-border bg-surface p-5 transition-all duration-300 hover:-translate-y-1.5 hover:border-uranium hover:shadow-glow-uranium ${
+                    i % 2 === 1 ? "lg:mt-8" : ""
+                  }`}
+                >
+                  {/* Oversized stage numeral, set well back. Gives the row a
+                      reading order without spending another line on a label. */}
+                  <span className="pointer-events-none absolute -right-3 -top-6 select-none font-header text-[86px] font-black leading-none text-text opacity-[0.045] transition-opacity duration-300 group-hover:opacity-[0.09]">
+                    {s.n}
+                  </span>
+
+                  <div className="relative z-10 flex items-start justify-between gap-2">
                     <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-grey">
                       {s.stage}
                     </span>
@@ -245,47 +274,44 @@ export default function Home() {
                     </span>
                   </div>
 
-                  <p className="mt-4 font-header text-2xl font-bold text-text">{s.price}</p>
-                  <p className="font-mono text-[11px] uppercase tracking-wider text-aviation">
+                  <p className="relative z-10 mt-5 font-header text-[28px] font-bold leading-none tracking-tight text-text">
+                    {s.price}
+                  </p>
+                  <p className="relative z-10 mt-1.5 font-mono text-[11px] uppercase tracking-wider text-aviation">
                     {s.discount}
                   </p>
-                </div>
 
-                <div className="mt-6">
-                  <div className="h-1.5 w-full overflow-hidden border border-dark-border bg-raised">
-                    <div className={`h-full ${s.barClass}`} style={{ width: `${s.percent}%` }} />
+                  <div className="relative z-10 mt-6">
+                    <div className="relative h-1.5 w-full overflow-hidden border border-dark-border bg-raised">
+                      <div
+                        className={`h-full transition-[width] duration-700 ${s.barClass}`}
+                        style={{ width: `${s.percent}%` }}
+                      />
+                    </div>
+                    <div className="mt-1.5 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-wider">
+                      <span className="text-zinc-grey">{s.daysLeft}</span>
+                      <span className="text-zinc-grey/70">{s.percent}%</span>
+                    </div>
                   </div>
-                  <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-zinc-grey">
-                    {s.daysLeft}
-                  </p>
-                  <p className="mt-3 font-body text-[13px] leading-relaxed text-zinc-grey">
+
+                  <p className="relative z-10 mt-4 font-body text-[13px] leading-relaxed text-zinc-grey">
                     {s.desc}
                   </p>
-                </div>
-              </motion.div>
-            ))}
+
+                  {/* Same token, next holder -- the point of the section. */}
+                  <div className="relative z-10 mt-auto flex items-center gap-2 border-t border-dark-border pt-4 font-mono text-[10px] uppercase tracking-widest text-zinc-grey">
+                    <span className="size-1.5 shrink-0 bg-uranium" />
+                    {s.holder}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ---------------------------------------------------------------- */}
-      {/* LIVE STATE                                                       */}
-      {/* ---------------------------------------------------------------- */}
-      <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
-        <motion.div {...REVEAL} className="mb-12 border-l-2 border-uranium pl-6">
-          <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-uranium">
-            Live on-chain activity
-          </h2>
-          <p className="mt-2 font-header text-3xl font-bold tracking-tight text-text">
-            Real state. No mock data.
-          </p>
-        </motion.div>
-        <LiveStats />
-      </section>
-
-      {/* Dual-settlement animation, mounted where the drop places it: directly
-          after the live stats. It visualises the 90/10 split the contract
-          performs on every resale. */}
+      {/* Dual-settlement animation: the 90/10 split the contract performs on
+          every resale. */}
       <DualSettlementAnimation />
 
       {/* ---------------------------------------------------------------- */}
