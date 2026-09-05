@@ -82,12 +82,15 @@ const REVEAL = {
 /**
  * Hero entrance.
  *
- * `animate`, not `whileInView`. The hero is above the fold, so gating it on an
- * intersection observer buys nothing -- and it was going wrong: the observer
- * never reported the column as sufficiently visible, so the reveal stalled
- * partway and the headline, body copy and CTAs all sat at 40% opacity
- * permanently. It reads as a washed-out page rather than a broken animation,
- * which is why it survived this long.
+ * `animate`, not `whileInView`: the hero is above the fold, so gating it on an
+ * intersection observer buys nothing and only adds a way to fail.
+ *
+ * Correcting an earlier note here, which claimed this reveal was stuck at 40%
+ * opacity: it never was. That reading came from measuring the page in a hidden
+ * browser pane, where requestAnimationFrame does not tick, so Framer Motion
+ * stalls partway through any transition. Real users never saw it. Worth
+ * remembering when a headless screenshot shows a half-finished animation --
+ * check whether frames are being presented at all before chasing it.
  */
 const REVEAL_NOW = {
   initial: { opacity: 0, y: 30 },
