@@ -34,6 +34,30 @@ export const PASSKEY_WALLET_ADDRESS =
  */
 export const PASSKEY_EXPECTED_ORIGIN = "http://localhost:3000";
 
+/**
+ * Pay-per-second rental. Empty until StreamRental.sol is deployed.
+ *
+ * The UI is gated on this being a real address, so nothing rental-related
+ * renders until it points somewhere. Deploy with
+ * contracts/scripts/deployStreamRental.js and set
+ * NEXT_PUBLIC_STREAM_RENTAL_ADDRESS.
+ */
+export const STREAM_RENTAL_ADDRESS = (process.env.NEXT_PUBLIC_STREAM_RENTAL_ADDRESS ||
+  "0x") as `0x${string}`;
+
+export const streamRentalAbi = parseAbi([
+  "function streams(uint256 tokenId) view returns (address owner, uint256 ratePerSecond, address renter, uint256 startedAt, uint256 deposit)",
+  "function activeRenter(uint256 tokenId) view returns (address)",
+  "function owedNow(uint256 tokenId) view returns (uint256)",
+  "function refundNow(uint256 tokenId) view returns (uint256)",
+  "function secondsRemaining(uint256 tokenId) view returns (uint256)",
+  "function openStream(uint256 tokenId, uint256 ratePerSecond)",
+  "function setRate(uint256 tokenId, uint256 ratePerSecond)",
+  "function reclaim(uint256 tokenId)",
+  "function startRent(uint256 tokenId) payable",
+  "function settle(uint256 tokenId)",
+]);
+
 export const passkeyWalletAbi = parseAbi([
   "function nonce() view returns (uint256)",
   "function pubkey() view returns (uint256 x, uint256 y)",

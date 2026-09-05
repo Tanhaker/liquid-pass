@@ -39,6 +39,7 @@ import {
 } from "@/lib/contract";
 import { fetchActivity, fetchPasses, fetchPlans, type Activity } from "@/lib/data";
 import { PricingOracle } from "@/components/PricingOracle";
+import { StreamRentalPanel } from "@/components/StreamRentalPanel";
 import { planSignals } from "@/lib/signals";
 import { useDemo } from "@/lib/demo";
 
@@ -629,6 +630,10 @@ export default function PassDetail({
           </ol>
         )}
       </section>
+
+      {/* Pay-per-second rental. Renders nothing until StreamRental.sol is
+          deployed and NEXT_PUBLIC_STREAM_RENTAL_ADDRESS is set. */}
+      <StreamRentalPanel pass={pass} onDone={() => void load()} />
 
       {showQr && pass.listed > 0n && (
         <QrPanel
