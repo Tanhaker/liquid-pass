@@ -60,7 +60,16 @@ export default function MarketPage() {
   const isDraggingRef = useRef<boolean>(false);
   const startXRef = useRef<number>(0);
   const scrollLeftRef = useRef<number>(0);
-  const animFrameRef = useRef<number | null>(null);
+
+  // Drift state. Kept in refs because the animation loop must not re-render.
+  const posRef = useRef<number>(0);        // float position, so 0.6px/frame accumulates
+  const dirRef = useRef<1 | -1>(1);        // travel direction; flips at either end
+  const pauseUntilRef = useRef<number>(0); // drift yields after a user gesture
+  const draggedPxRef = useRef<number>(0);  // to tell a drag from a click
+  const onScreenRef = useRef<boolean>(true);
+
+  // Only this is state: the arrows and edge fades need to re-render on it.
+  const [rail, setRail] = useState({ overflow: false, atStart: true, atEnd: false });
 
   const loadData = useCallback(async () => {
     if (!client) return;
@@ -146,81 +155,183 @@ export default function MarketPage() {
     });
   }, [filteredPasses, now, sortBy]);
 
-  // Smooth carousel buttons
-  const scrollGallery = (direction: "left" | "right") => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = 480;
-      scrollContainerRef.current.scrollBy({
-        left: direction === "left" ? -scrollAmount : scrollAmount,
-        behavior: "smooth",
-      });
-    }
+  /** Hand the rail back to the user for a moment after they gesture at it. */
+  const yieldDrift = (ms: number) => {
+    pauseUntilRef.current = Date.now() + ms;
   };
 
-  // Continuous auto-drifting / moving animation for the carousel
+  const scrollGallery = (direction: "left" | "right") => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    // Step by what is actually on screen rather than a hardcoded 480px, which
+    // was either one card or two depending on the viewport.
+    const amount = Math.max(300, el.clientWidth * 0.8);
+    dirRef.current = direction === "left" ? -1 : 1;
+    yieldDrift(1400); // let the smooth scroll land before the drift resumes
+    el.scrollBy({ left: direction === "left" ? -amount : amount, behavior: "smooth" });
+  };
+
+  /*
+   * Auto-drift.
+   *
+   * The old loop wrote el.scrollLeft every frame while the element carried
+   * `scroll-behavior: smooth`, so each write started a fresh smooth-scroll
+   * animation towards a target 0.6px away and cancelled the previous one --
+   * the rail crawled, stuttered, and dragging felt like wading. The inline
+   * style read that flag from a ref, which never re-renders, so the element
+   * was smooth-scrolling always, including mid-drag.
+   *
+   * The behaviour lives here now: this loop writes an explicit float position
+   * with no CSS scroll animation in the way, and the only smooth scrolls left
+   * are the ones the arrow buttons ask for by name.
+   */
   useEffect(() => {
     if (viewMode !== "CAROUSEL") return;
-    
-    let lastTime = performance.now();
-    const speed = 40; // px per second continuous smooth travel
+    const el = scrollContainerRef.current;
+    if (!el) return;
 
-    const loop = (currentTime: number) => {
-      const dt = (currentTime - lastTime) / 1000;
-      lastTime = currentTime;
+    const SPEED = 40; // px/sec
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-      const el = scrollContainerRef.current;
-      if (el && !isHoveredRef.current && !isDraggingRef.current) {
-        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 10) {
-          // Wrap around gently when reaching the end
-          el.scrollLeft = 0;
-        } else {
-          el.scrollLeft += speed * dt;
-        }
-      }
-
-      animFrameRef.current = requestAnimationFrame(loop);
+    const syncRail = () => {
+      const max = el.scrollWidth - el.clientWidth;
+      const overflow = max > 4;
+      const atStart = el.scrollLeft <= 2;
+      const atEnd = el.scrollLeft >= max - 2;
+      setRail((prev) =>
+        prev.overflow === overflow && prev.atStart === atStart && prev.atEnd === atEnd
+          ? prev // same object back -> React bails out, so drifting is free
+          : { overflow, atStart, atEnd },
+      );
     };
 
-    animFrameRef.current = requestAnimationFrame(loop);
+    let raf = 0;
+    let last = performance.now();
+
+    const tick = (t: number) => {
+      raf = requestAnimationFrame(tick);
+      const dt = Math.min((t - last) / 1000, 0.05); // clamp a background-tab stall
+      last = t;
+
+      const max = el.scrollWidth - el.clientWidth;
+      syncRail();
+
+      // Nothing to drift through, or the user is busy with it.
+      if (
+        max <= 4 ||
+        reduced ||
+        document.hidden ||
+        !onScreenRef.current ||
+        isHoveredRef.current ||
+        isDraggingRef.current ||
+        Date.now() < pauseUntilRef.current
+      ) {
+        posRef.current = el.scrollLeft; // stay in step with whatever they did
+        return;
+      }
+
+      // Resync if something else moved the rail (keyboard, trackpad, anchor).
+      if (Math.abs(el.scrollLeft - posRef.current) > 2) posRef.current = el.scrollLeft;
+
+      let next = posRef.current + SPEED * dt * dirRef.current;
+      if (next >= max) {
+        next = max;
+        dirRef.current = -1;
+        yieldDrift(900); // a beat at the end, then back the other way
+      } else if (next <= 0) {
+        next = 0;
+        dirRef.current = 1;
+        yieldDrift(900);
+      }
+      posRef.current = next;
+      el.scrollLeft = next;
+    };
+
+    // Don't animate a rail nobody is looking at.
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        onScreenRef.current = entry.isIntersecting;
+      },
+      { threshold: 0.05 },
+    );
+    io.observe(el);
+
+    const ro = new ResizeObserver(syncRail);
+    ro.observe(el);
+
+    syncRail();
+    raf = requestAnimationFrame(tick);
     return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      cancelAnimationFrame(raf);
+      io.disconnect();
+      ro.disconnect();
     };
   }, [viewMode, sortedPasses.length]);
 
-  // Mouse wheel horizontal scroll support
+  // Vertical wheel drives the rail horizontally.
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el || viewMode !== "CAROUSEL") return;
 
     const onWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        e.preventDefault();
-        el.scrollLeft += e.deltaY * 1.5;
-      }
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      const max = el.scrollWidth - el.clientWidth;
+      if (max <= 4) return;
+      // At either end, let the page scroll instead of swallowing the gesture.
+      const atEdge = (e.deltaY < 0 && el.scrollLeft <= 0) || (e.deltaY > 0 && el.scrollLeft >= max);
+      if (atEdge) return;
+      e.preventDefault();
+      yieldDrift(1200);
+      el.scrollLeft += e.deltaY;
     };
 
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [viewMode]);
+    // sortedPasses.length matters: on the first render the rail is not mounted
+    // yet (loading state), so the ref is null and there is nothing to bind to.
+    // Without this the wheel listener was never attached at all.
+  }, [viewMode, sortedPasses.length]);
 
-  // Mouse Drag Scroll Handlers
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!scrollContainerRef.current) return;
+  /*
+   * Drag to pan. Mouse only -- touch keeps the browser's own momentum
+   * scrolling, which beats anything reimplemented here.
+   *
+   * No pointer capture: capturing retargets the mouseup, which moves the
+   * synthesised click up to this container and would stop the Buy button
+   * inside a card from ever firing.
+   */
+  const handleMouseDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
     isDraggingRef.current = true;
-    startXRef.current = e.pageX - scrollContainerRef.current.offsetLeft;
-    scrollLeftRef.current = scrollContainerRef.current.scrollLeft;
+    draggedPxRef.current = 0;
+    startXRef.current = e.clientX;
+    scrollLeftRef.current = scrollContainerRef.current?.scrollLeft ?? 0;
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current || !scrollContainerRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (x - startXRef.current) * 1.5;
-    scrollContainerRef.current.scrollLeft = scrollLeftRef.current - walk;
+    const dx = e.clientX - startXRef.current;
+    draggedPxRef.current = Math.max(draggedPxRef.current, Math.abs(dx));
+    // 1:1, not 1.5:1 -- the cards should stay under the cursor.
+    scrollContainerRef.current.scrollLeft = scrollLeftRef.current - dx;
   };
 
   const handleMouseUpOrLeave = () => {
+    if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
+    yieldDrift(1800);
+  };
+
+  /*
+   * A drag that ended over the Buy button used to fire it -- which opens a
+   * wallet and asks for money. Swallow the click if the rail actually moved.
+   */
+  const handleRailClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (draggedPxRef.current > 6) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    draggedPxRef.current = 0;
   };
 
   // Real On-Chain Buy Pass
@@ -398,32 +509,70 @@ export default function MarketPage() {
         </div>
       ) : viewMode === "CAROUSEL" ? (
         <div className="relative py-4">
-          {/* Navigation arrow buttons */}
-          <button
-            onClick={() => scrollGallery("left")}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-30 p-3 bg-dark/90 hover:bg-dark-surface border border-dark-border text-alabaster hover:text-uranium transition-all shadow-grunge backdrop-blur-md"
-            aria-label="Scroll left"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <button
-            onClick={() => scrollGallery("right")}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-30 p-3 bg-dark/90 hover:bg-dark-surface border border-dark-border text-alabaster hover:text-uranium transition-all shadow-grunge backdrop-blur-md"
-            aria-label="Scroll right"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
+          {/* Edge fades. They sit over the rail, so they must not eat clicks. */}
+          {rail.overflow && (
+            <>
+              <div
+                aria-hidden
+                className={`pointer-events-none absolute inset-y-0 left-0 z-20 w-16 bg-gradient-to-r from-bg-page to-transparent transition-opacity duration-300 ${
+                  rail.atStart ? "opacity-0" : "opacity-100"
+                }`}
+              />
+              <div
+                aria-hidden
+                className={`pointer-events-none absolute inset-y-0 right-0 z-20 w-16 bg-gradient-to-l from-bg-page to-transparent transition-opacity duration-300 ${
+                  rail.atEnd ? "opacity-0" : "opacity-100"
+                }`}
+              />
+            </>
+          )}
 
-          {/* Carousel rail container */}
+          {/* Navigation arrows. Hidden outright when everything already fits. */}
+          {rail.overflow && (
+            <>
+              <button
+                type="button"
+                onClick={() => scrollGallery("left")}
+                disabled={rail.atStart}
+                className="absolute left-0 top-1/2 z-30 -translate-x-3 -translate-y-1/2 border border-dark-border bg-dark/90 p-3 text-alabaster shadow-grunge backdrop-blur-md transition-all hover:bg-dark-surface hover:text-uranium disabled:pointer-events-none disabled:opacity-25"
+                aria-label="Scroll left"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollGallery("right")}
+                disabled={rail.atEnd}
+                className="absolute right-0 top-1/2 z-30 translate-x-3 -translate-y-1/2 border border-dark-border bg-dark/90 p-3 text-alabaster shadow-grunge backdrop-blur-md transition-all hover:bg-dark-surface hover:text-uranium disabled:pointer-events-none disabled:opacity-25"
+                aria-label="Scroll right"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </>
+          )}
+
+          {/* Carousel rail */}
           <div
             ref={scrollContainerRef}
+            role="region"
+            aria-label="Listed passes"
+            tabIndex={0}
             onMouseEnter={() => { isHoveredRef.current = true; }}
             onMouseLeave={() => { isHoveredRef.current = false; handleMouseUpOrLeave(); }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUpOrLeave}
-            className="flex gap-8 overflow-x-auto py-8 px-4 scrollbar-none select-none cursor-grab active:cursor-grabbing"
-            style={{ scrollBehavior: isDraggingRef.current ? "auto" : "smooth" }}
+            onPointerDown={handleMouseDown}
+            onPointerMove={handleMouseMove}
+            onPointerUp={handleMouseUpOrLeave}
+            onPointerCancel={handleMouseUpOrLeave}
+            onClickCapture={handleRailClickCapture}
+            onDragStart={(e) => e.preventDefault()}
+            onKeyDown={(e) => {
+              if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+              e.preventDefault();
+              scrollGallery(e.key === "ArrowLeft" ? "left" : "right");
+            }}
+            className={`flex gap-8 overflow-x-auto overscroll-x-contain px-4 py-8 scrollbar-none select-none focus:outline-none ${
+              rail.overflow ? "cursor-grab active:cursor-grabbing" : ""
+            }`}
           >
             {sortedPasses.map((pass) => (
               <div key={pass.tokenId} className="w-[340px] sm:w-[380px] flex-shrink-0">
@@ -437,9 +586,15 @@ export default function MarketPage() {
             ))}
           </div>
 
-          <div className="flex justify-between items-center text-[11px] font-mono text-zincGrey px-2 pt-2">
-            <span>← Drag or use scroll buttons to explore →</span>
-            <span>{sortedPasses.length} live passes</span>
+          <div className="flex items-center justify-between gap-4 px-2 pt-2 font-mono text-[11px] text-zincGrey">
+            <span>
+              {rail.overflow
+                ? "← Drag, scroll or use the arrows to explore →"
+                : "Every live listing fits on screen"}
+            </span>
+            <span>
+              {sortedPasses.length} live {sortedPasses.length === 1 ? "pass" : "passes"}
+            </span>
           </div>
         </div>
       ) : (
