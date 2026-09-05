@@ -538,25 +538,27 @@ html[data-theme="light"] .grain-overlay::before { opacity: 0.03; }
   cut the dots off at a visible line. Masking fades the canvas's own alpha, so
   the terrain dissolves into the page in both themes and over the grain.
 
-  Held fully opaque through the upper third, then eased out -- the horizon
-  stays crisp where the headline sits and the foreground melts away.
+  The mask does two jobs. It never reaches full opacity even at the top, which
+  knocks the terrain back uniformly so it cannot compete with the headline
+  sitting on it; and it eases to nothing by 92%, so the foreground dissolves
+  into the page instead of ending on a line.
 */
 .hero-surface-fade {
   -webkit-mask-image: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 1) 0%,
-    rgba(0, 0, 0, 1) 34%,
-    rgba(0, 0, 0, 0.72) 58%,
-    rgba(0, 0, 0, 0.28) 80%,
-    rgba(0, 0, 0, 0) 96%
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(0, 0, 0, 0.72) 24%,
+    rgba(0, 0, 0, 0.42) 52%,
+    rgba(0, 0, 0, 0.14) 76%,
+    rgba(0, 0, 0, 0) 92%
   );
   mask-image: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 1) 0%,
-    rgba(0, 0, 0, 1) 34%,
-    rgba(0, 0, 0, 0.72) 58%,
-    rgba(0, 0, 0, 0.28) 80%,
-    rgba(0, 0, 0, 0) 96%
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(0, 0, 0, 0.72) 24%,
+    rgba(0, 0, 0, 0.42) 52%,
+    rgba(0, 0, 0, 0.14) 76%,
+    rgba(0, 0, 0, 0) 92%
   );
 }
 

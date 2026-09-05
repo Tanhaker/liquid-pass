@@ -10,7 +10,7 @@ import { LiveStats } from "@/components/LiveStats";
 import { DualSettlementAnimation } from "@/components/DualSettlementAnimation";
 import { useNow } from "@/components/ui";
 import dynamic from "next/dynamic";
-const LiquidFlow = dynamic(() => import("@/components/ui/liquid-flow"), { ssr: false });
+const DottedSurface = dynamic(() => import("@/components/ui/dotted-surface"), { ssr: false });
 import { EXPLORER, LIQUID_PASS_ADDRESS, shortAddress } from "@/lib/contract";
 
 /**
@@ -108,10 +108,13 @@ export default function Home() {
 
   return (
     <div className="relative overflow-hidden">
-      {/* Hero background: value streams flowing through the protocol. */}
+      {/* Hero background: the amber dotted terrain, faded downward. */}
       <div className="absolute top-0 left-0 right-0 h-[680px] lg:h-[780px] overflow-hidden pointer-events-none z-0">
         <div className="hero-surface-fade absolute inset-0">
-          <LiquidFlow />
+          {/* Opacity is well below the component default: at full strength
+              the terrain competes with the headline sitting on top of it. The
+              downward mask in globals.css does the rest. */}
+          <DottedSurface size={10} opacity={0.5} />
         </div>
       </div>
 
