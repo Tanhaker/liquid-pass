@@ -1,34 +1,63 @@
-# Liquid Pass Project Status
+# Liquid Pass — project status
 
-A complete checklist of the entire architecture, organized by Backend (Smart Contracts/Infra) and Frontend (UI/Integration).
+Every row below was checked against the code and against Arbitrum Sepolia
+rather than from memory. "Implemented" here means *deployed and reachable from
+the website*; anything short of that says so, because a feature nobody can
+click is not shipped.
 
-### 🛠ï¸  Backend & Infrastructure
+## Deployed contracts
 
-| Feature | Status | Description |
+| What | Address | State |
+| :--- | :--- | :--- |
+| Core (Rust / Stylus) | `0xac20ef73723e7c620df1024eb04cc0b71fca1055` | Live · 24,296 bytes of the 24 KB limit |
+| Marketplace (Solidity) | `0x63a9edec92baf3e74f19d301808c56104e786241` | Live · the core trusts this address |
+| PassKeyWallet (Rust / Stylus) | `0x490630168df621c98e6bba22549295a2202de358` | Live · P-256 key registered, nonce 1 |
+| EscrowYield (Solidity) | — | **Written, never deployed** |
+
+The core has roughly 280 bytes of headroom against the 24 KB compressed Stylus
+limit. New on-chain functionality has to go in a separate contract.
+
+## Backend & infrastructure
+
+| Feature | Status | Notes |
 | :--- | :---: | :--- |
-| **Core Pass Contract** (Rust) | âœ… Implemented | Arbitrum Stylus Wasm contract holding the core subscription logic. |
-| **Contract Split Architecture** | âœ… Implemented | Split the monolithic contract into Core + Marketplace to bypass the 24.5KB Stylus limit. |
-| **Pass Bundling Engine** | âœ… Implemented | `bundle()` function in Rust allowing users to burn multiple passes to mint one combined pass. |
-| **Decaying Price Curve** | âœ… Implemented | Intrinsic value drops precisely as time elapses on the subscription. |
-| **Marketplace Contract** (Sol) | âœ… Implemented | Solidity contract handling the 90/10 payout split and routing to Escrow. |
-| **Escrow & Real Yield** (Aave) | âœ… Implemented | `EscrowYield.sol` deposits proceeds into Aave V3 WETH Gateway to earn interest while locked. |
-| **Account Abstraction** | âœ… Implemented | ZeroDev `zerodev.ts` logic to generate ECDSA and strictly-scoped Session Key Validators. |
-| **Usage Detection Oracle** | âœ… Implemented | Node.js backend cron job (`oracle/index.js`) tracking mock off-chain inactivity. |
-| **The Graph (Subgraph)** | ✅ Implemented | Live indexing of Core and Marketplace events deployed to The Graph Studio. |
+| Core pass contract (Rust) | Shipped | Stylus WASM holding mint, plans, transfer, split, bundle. |
+| Split contract architecture | Shipped | Core + Marketplace, to stay under the 24 KB limit. |
+| Time-decay pricing | Shipped | `currentPrice()` decays continuously to zero at expiry — every second, not in daily steps. |
+| Pass bundling | Shipped | `bundle()` burns several passes into one. |
+| Pass splitting | Shipped | `split()` divides a pass into consecutive slices. |
+| Marketplace 90/10 split | Shipped | Enforced in `buy()`; royalty goes to the original issuer. |
+| WebAuthn / P-256 verification | Shipped (contract) | `PassKeyWallet` verifies real secp256r1 assertions on chain. Not yet wired into the website. |
+| Escrow & Aave yield | **Not deployed** | `EscrowYield.sol` is written and `Marketplace.setEscrow` exists, but no escrow address is configured, so `buy()` pays the seller directly. The UI panel stays hidden rather than showing a dead widget. |
+| Account abstraction | **Out of scope** | ERC-4337, bundlers and paymasters are explicitly out per `CLAUDE.md`. `lib/zerodev.ts` is dead code that does not typecheck and is imported by nothing. |
+| Usage signal service | Shipped (advisory) | `oracle/index.js` reads the pass on chain and returns a recommendation. It holds no key and broadcasts nothing. |
+| The Graph subgraph | Shipped (secondary) | Deployed and configured in production. The app reads from RPC; the subgraph is an accelerator, not the source of truth. |
 
----
+## Frontend
 
-### 💻 Frontend & UI
-
-| Feature | Status | Description |
+| Feature | Status | Notes |
 | :--- | :---: | :--- |
-| **Premium Fintech Theme** | ✅ Implemented | "Apple/Stripe" inspired UI with Light/Dark mode toggle and bespoke CSS variables. |
-| **Time-Decay Rings** | ✅ Implemented | SVG rings that visually tick down as the pass expiry approaches. |
-| **Marketplace "STEAL" Badges** | ✅ Implemented | Highlights passes selling significantly below their intrinsic fair-value price. |
-| **Yield Dashboard UI** | ✅ Implemented | Live panel pulling `lockedBalances` from Aave Escrow with a functional "Claim" button. |
-| **Pass Bundler UI** | ✅ Implemented | Grid allowing users to select multiple passes of the same plan and merge them via RPC. |
-| **Auto-Sell Rules Parsing** | ✅ Implemented | Translates plain English ("sell if not used in 7 days") into JSON rule logic. |
-| **Session Key UI** | ✅ Implemented | "Issue Session Key" button in the Auto-Sell panel powered by ZeroDev. |
-| **WalletConnect Mobile** | ✅ Implemented | RainbowKit integration for scanning QR codes (relies on Project ID). |
-| **GraphQL Data Layer** | ✅ Implemented | `web/lib/graphql.ts` cleanly queries the Subgraph for all UI state. |
-| **Issuer B2B Dashboard** | ✅ Implemented | `/issuer` route providing analytics, revenue tracking, and active subscriber metrics. |
+| Theme + design system | Shipped | Light/dark via `data-theme`, Tailwind v4 tokens. |
+| Marketplace carousel | Shipped | Drift, drag, wheel and keyboard, covered by Playwright. |
+| Live decaying price | Shipped | Recomputes `currentPrice()` in the browser once a second at 9 dp. |
+| Time-decay rings | Shipped | SVG rings tracking remaining life. |
+| Gift & split UI | Shipped | On every pass card in the vault. |
+| Pass bundler UI | Shipped | Appears when you hold more than one pass. |
+| Auto-sell rules | Shipped (advisory) | Rules evaluate locally and produce a button. Nothing signs on your behalf, and the panel says so. |
+| Pricing suggestions | Shipped | Median resale behaviour per plan, on the listing form. |
+| Subgraph panel | Shipped | Probes the GraphQL layer and reports what came back. |
+| Issuer console | Shipped | `/issuer` — plans, revenue, royalty terms. |
+| Analytics | Shipped | `/analytics` — primary vs resale volume and royalties. |
+| Yield dashboard | **Hidden** | Built, but not mounted while no escrow is deployed. |
+| Passkey sign-in | **Not built** | The contract works; the website does not call `navigator.credentials` anywhere yet. |
+| Chrome extension | Shipped (read-only) | Lists your passes and time remaining. Holds no keys; buying and selling happen on the site. |
+
+## Testing
+
+Playwright covers the routes, the carousel, the dashboard write paths and the
+decay curve. Reads hit real Arbitrum Sepolia; writes are recorded and asserted
+against the ABI but never broadcast, so the suite costs no testnet ETH.
+
+```bash
+cd web && npm run e2e
+```

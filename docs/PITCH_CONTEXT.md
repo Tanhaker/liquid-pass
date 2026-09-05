@@ -10,9 +10,8 @@ Liquid Pass transforms standard digital subscriptions (like Netflix, Figma, or a
 Unlike competitors who just use the blockchain as a slow database to store hashes, **Liquid Pass uses the blockchain to create a brand new financial primitive: liquid time.**
 
 1. **Arbitrum Stylus (Rust) Core:** The core engine is written in Rust, running on Arbitrum Stylus. We pushed the 24KB WebAssembly limit to handle complex time-decay math, NFT fractionalization, and asset bundling entirely on-chain.
-2. **Solidity Marketplace & DeFi Escrow:** A companion Solidity contract handles the marketplace routing and automatically deposits all creator royalties into **Aave V3** to earn real yield while locked.
-3. **Account Abstraction (ZeroDev):** We integrated ERC-4337 Session Keys so users can delegate highly restricted permissions to an AI oracle.
-4. **The Graph:** All frontend data is indexed instantly via a custom Subgraph deployed to The Graph Studio, eliminating the need for a centralized Web2 backend.
+2. **Solidity Marketplace:** A companion Solidity contract handles marketplace routing and enforces the 90/10 split between seller and original issuer on every sale. A yield escrow that routes proceeds into **Aave V3** is written and wired into `buy()`, but is not currently deployed, so sale proceeds pay the seller directly today.
+3. **The Graph:** A custom Subgraph is deployed to The Graph Studio and indexes core and marketplace events. The app deliberately keeps the chain as its source of truth and treats the indexer as an accelerator, so there is no centralized Web2 backend either way.
 
 ---
 
@@ -26,13 +25,15 @@ Unlike competitors who just use the blockchain as a slow database to store hashe
 - **How it works:** Time is flexible. If you have a 60-day pass, you can call the `split()` function to burn it and mint four 15-day passes that activate sequentially. Conversely, you can use the `bundle()` function to merge two 15-day passes into a single 30-day pass. 
 - **The Magic:** This happens entirely on-chain in the Rust contract. We aren't creating new time out of thin air; we are mathematically slicing the remaining seconds.
 
-### 3. Real Yield Escrow (Aave V3 Integration)
-- **How it works:** When a pass is resold, the 10% creator royalty doesn't just sit idle. The Solidity Escrow contract immediately deposits those funds into the **Aave V3 WETH Gateway** on Arbitrum. 
-- **The Magic:** Creators earn interest on their secondary market royalties before they even claim them.
+### 3. Yield Escrow (Aave V3) — designed, not yet deployed
+- **How it works:** `Marketplace.buy()` already routes sale proceeds through an escrow when one is configured: `EscrowYield.sol` takes the seller's proceeds and deposits them into the **Aave V3 WETH Gateway** on Arbitrum, so the money earns interest while it sits unclaimed.
+- **Status, stated plainly:** the escrow contract is written and `buy()` calls it, but no escrow address is configured on Arbitrum Sepolia yet, so today proceeds pay the seller directly. The dashboard panel stays hidden rather than showing a figure that isn't real.
+- **Note:** it escrows the seller's 90%, not the issuer's 10% royalty — the royalty is transferred to the issuer immediately.
 
-### 4. Autonomous AI Oracle (ZeroDev Session Keys)
-- **How it works:** Users can set plain-English rules: *"If I don't use this software for 5 days, auto-sell my pass."* The frontend uses **ZeroDev** to generate a "Session Key" that is mathematically restricted to *only* be allowed to call the `list()` function on the marketplace.
-- **The Magic:** An external AI Oracle monitors the user's SaaS usage. If it detects abandonment, it uses the Session Key to list the pass on the user's behalf. The Oracle cannot steal funds or transfer the pass; it can only list it.
+### 4. Auto-Sell Rules and the Usage Signal Service
+- **How it works:** Users write plain-English rules — *"if I don't use this for 5 days, sell it"* — which are parsed into a condition and evaluated against the pass. A companion service (`oracle/index.js`) can receive usage webhooks from a SaaS product, read the pass on chain, and report whether the holder looks to have stopped using it.
+- **The honest part:** nothing signs on the user's behalf. The rule and the service both produce a *recommendation*, and the user presses the button. The service holds no key and broadcasts no transaction, and says so on every response.
+- **Why not autonomous:** doing it automatically means account abstraction and session keys, which are explicitly out of scope for this project. A watch that hands you a button is what is actually built, so it is what is claimed.
 
 ### 5. The Issuer Command Center (B2B SaaS Dashboard)
 - **How it works:** A dedicated `/issuer` dashboard where companies (like Figma) can view their total primary revenue, track secondary market trading volume, and see how many active subscribers they have. 

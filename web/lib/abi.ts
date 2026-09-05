@@ -59,4 +59,13 @@ export const passKeyWalletAbi = [
   },
 ] as const;
 
-export const LIQUID_PASS_CONTRACT_ADDRESS = "0xac26B1441B1Fce3B2f520bDFc67d64F7BEE01855" as const;
+/**
+ * Placeholder issuer for the demo-mode fixtures in lib/store.tsx.
+ *
+ * This slot used to hold 0xac26B144...01855, which reads like a deployment and
+ * is not one -- there is no code at that address on Arbitrum Sepolia. It was
+ * never on a real code path, but a plausible-looking dead address sitting in a
+ * file called abi.ts is a trap for the next person. The live addresses are in
+ * lib/contract.ts and nowhere else.
+ */
+export const DEMO_ISSUER = "0x000000000000000000000000000000000000dEaD" as const;

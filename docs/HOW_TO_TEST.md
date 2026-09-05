@@ -84,15 +84,17 @@ This guide explains step-by-step how to manually test every single feature built
 
 ---
 
-## 7. Account Abstraction (ZeroDev Session Keys)
-*This tests the Web3 UX and Autonomous UI components.*
+## 7. Auto-Sell Rules (advisory)
+*This tests the rule parser and the watch, not an autonomous seller.*
 
 1. Go to **My Passes** (`/dashboard`).
-2. Look at the **"Set Auto-Sell Rule"** panel.
-3. Type a natural language rule, like: `"If I don't use this for 5 days, sell it for 0.01 ETH"`.
-4. Click **"Parse Rule"**. The UI will extract the days (5) and the price (0.01 ETH).
-5. Click **"Issue Session Key"**.
-6. This simulates generating an ECDSA keypair scoped *only* to the `list()` function of the Marketplace contract, avoiding the need for you to sign transactions manually in the future.
+2. Find the **Auto-Sell** panel.
+3. Type a rule in plain English: `"If I don't use this for 5 days, sell it for 0.01 ETH"`.
+4. Click **Add rule**. The parser extracts the condition (5 days idle) and the price (0.01 ETH).
+5. When a rule matches, the panel shows a **List** button with the price filled in. You press it and sign; nothing is listed on your behalf.
+
+There is no session key and no autonomous execution. Account abstraction is
+out of scope for this project, so no part of the app can transact without you.
 
 ---
 

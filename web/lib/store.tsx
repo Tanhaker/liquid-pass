@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { SubscriptionPass, OnChainEvent } from "./types";
-import { LIQUID_PASS_CONTRACT_ADDRESS } from "./abi";
+import { DEMO_ISSUER } from "./abi";
 
 interface TxNotification {
   id: string;
@@ -34,7 +34,7 @@ const INITIAL_PASSES: SubscriptionPass[] = [
     name: "Figma Pro Pass",
     service: "Figma",
     owner: "0x39a...71e4",
-    issuer: LIQUID_PASS_CONTRACT_ADDRESS,
+    issuer: DEMO_ISSUER,
     expiryTimestamp: Math.floor(Date.now() / 1000) + 86400 * 19, // 19 days left
     totalDurationSeconds: 86400 * 30, // 30 days total
     originalPriceEth: "0.0020",
@@ -48,7 +48,7 @@ const INITIAL_PASSES: SubscriptionPass[] = [
     name: "Cursor Pro Copilot",
     service: "Cursor",
     owner: "0x82b...44a1",
-    issuer: LIQUID_PASS_CONTRACT_ADDRESS,
+    issuer: DEMO_ISSUER,
     expiryTimestamp: Math.floor(Date.now() / 1000) + 86400 * 3.5, // 3.5 days left -> STEAL
     totalDurationSeconds: 86400 * 30,
     originalPriceEth: "0.0035",
@@ -62,7 +62,7 @@ const INITIAL_PASSES: SubscriptionPass[] = [
     name: "Midjourney V6 Ultra",
     service: "Midjourney",
     owner: "0x14c...99e0",
-    issuer: LIQUID_PASS_CONTRACT_ADDRESS,
+    issuer: DEMO_ISSUER,
     expiryTimestamp: Math.floor(Date.now() / 1000) + 86400 * 24, // 24 days left
     totalDurationSeconds: 86400 * 30,
     originalPriceEth: "0.0060",
@@ -76,7 +76,7 @@ const INITIAL_PASSES: SubscriptionPass[] = [
     name: "Linear Team Workspace",
     service: "Linear",
     owner: "0x77d...230f",
-    issuer: LIQUID_PASS_CONTRACT_ADDRESS,
+    issuer: DEMO_ISSUER,
     expiryTimestamp: Math.floor(Date.now() / 1000) + 86400 * 14, // 14 days left
     totalDurationSeconds: 86400 * 60, // 60 days total
     originalPriceEth: "0.0045",
@@ -90,7 +90,7 @@ const INITIAL_PASSES: SubscriptionPass[] = [
     name: "Claude 3.5 Sonnet Pro",
     service: "Claude",
     owner: "0xDEMO_USER_ACTIVE_WALLET_882", // Owned by current user
-    issuer: LIQUID_PASS_CONTRACT_ADDRESS,
+    issuer: DEMO_ISSUER,
     expiryTimestamp: Math.floor(Date.now() / 1000) + 86400 * 22,
     totalDurationSeconds: 86400 * 30,
     originalPriceEth: "0.0035",
@@ -103,7 +103,7 @@ const INITIAL_PASSES: SubscriptionPass[] = [
     name: "Vercel Enterprise Edge",
     service: "Vercel",
     owner: "0xDEMO_USER_ACTIVE_WALLET_882", // Owned by current user
-    issuer: LIQUID_PASS_CONTRACT_ADDRESS,
+    issuer: DEMO_ISSUER,
     expiryTimestamp: Math.floor(Date.now() / 1000) + 86400 * 12.5,
     totalDurationSeconds: 86400 * 30,
     originalPriceEth: "0.0080",
@@ -360,7 +360,7 @@ export function LiquidPassProvider({ children }: { children: React.ReactNode }) 
       name: `${service} ${tier} Pass`,
       service,
       owner: userAddress,
-      issuer: LIQUID_PASS_CONTRACT_ADDRESS,
+      issuer: DEMO_ISSUER,
       expiryTimestamp: Math.floor(Date.now() / 1000) + days * 86400,
       totalDurationSeconds: days * 86400,
       originalPriceEth: priceEth,

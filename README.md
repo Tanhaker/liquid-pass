@@ -26,7 +26,7 @@ for as long as the pass keeps trading.
 
 ## The Web 2.5 Vision (Bridging Fiat & Crypto)
 
-Liquid Pass is built to be a true B2B SaaS platform for Web3. While we currently use Web3 wallets (with Account Abstraction via ZeroDev), our product roadmap includes **Stripe Crypto Onramps and Coinbase Pay**. 
+Liquid Pass is built to be a true B2B SaaS platform for Web3. Today it uses ordinary Web3 wallets; the product roadmap includes **Stripe Crypto Onramps and Coinbase Pay**. 
 
 This means a university, gym, or SaaS company (like Figma) will be able to onboard users who pay in fiat with a credit card, while the underlying asset (the resellable subscription pass) is tokenized and traded on Arbitrum. We bring the transparency of Web3 to the UX of Web2.
 

@@ -159,12 +159,15 @@ export function AutoSell({
           <h2 className="text-[13px] font-medium">Auto-sell rules</h2>
         </div>
         <span className="rounded-none bg-life-mid/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-life-mid">
-          Powered by ZeroDev
+          Advisory
         </span>
       </div>
 
       <p className="mt-3 text-[12px] leading-relaxed text-muted">
-        Describe when you'd want a pass sold and I'll watch for it. With Account Abstraction (ERC-4337), you can grant the app a Session Key to list your pass autonomously while you sleep.
+        Describe when you&apos;d want a pass sold and this will watch for it.
+        When a rule matches you get a button with the price already filled in
+        &mdash; the sale is still your signature. Nothing here can list or
+        transfer a pass on your behalf.
       </p>
 
       <div className="mt-4 flex flex-col sm:flex-row flex-wrap gap-2">
@@ -184,12 +187,14 @@ export function AutoSell({
             {busy ? "Reading..." : "Add rule"}
           </button>
           
-          <button 
-            onClick={() => alert("Connecting to ZeroDev to create Kernel Account and ECDSA Validator... Check console.")} 
-            className="rounded-none border border-life-mid/40 bg-life-mid/10 px-3.5 py-2 text-[12px] font-medium text-life-mid hover:bg-life-mid/20 transition-colors"
-          >
-            Issue Session Key
-          </button>
+          {/*
+            An "Issue Session Key" button used to sit here. It was an alert()
+            claiming to connect to ZeroDev, and it did nothing at all -- no
+            key, no account, no delegation. Account abstraction is explicitly
+            out of scope for this project (CLAUDE.md), so it is gone rather
+            than reimplemented: a control that lies about what it did is worse
+            than no control.
+          */}
         </div>
       </div>
 

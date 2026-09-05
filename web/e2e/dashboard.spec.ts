@@ -108,9 +108,15 @@ test("gift sends transferPass(to, tokenId) to the Stylus contract", async ({ pag
   );
 });
 
-test("the auto-sell panel renders and says it does not sign", async ({ page }) => {
+test("the auto-sell panel renders and claims nothing it cannot do", async ({ page }) => {
   await openDashboard(page);
   await expect(page.getByText(/auto-?sell/i).first()).toBeVisible();
+
+  // Regression guard. This panel used to carry a "Powered by ZeroDev" badge
+  // and an "Issue Session Key" button that was an alert() and nothing else.
+  // Account abstraction is out of scope, so neither should ever come back.
+  await expect(page.getByRole("button", { name: /session key/i })).toHaveCount(0);
+  await expect(page.getByText(/powered by zerodev/i)).toHaveCount(0);
 });
 
 test("the yield panel stays hidden while no escrow is deployed", async ({ page }) => {

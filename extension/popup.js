@@ -11,8 +11,24 @@
  */
 
 const RPC = "https://sepolia-rollup.arbitrum.io/rpc";
-const CONTRACT = "0x22703fdd3dd77f854ca111e581bbd84cf82c1d36";
-const SITE = "https://liquid-pass.vercel.app";
+
+/**
+ * Two contracts, not one.
+ *
+ * This previously pointed every call at a single address, 0x22703fdd..., which
+ * is a real but SUPERSEDED deployment of the core -- so the extension was
+ * reading a different chain state than the website and quietly disagreed with
+ * it. And `currentPrice` was being called against the core, which does not
+ * implement it; that lives on the Marketplace. Listing prices in this popup
+ * could therefore never have worked.
+ *
+ * Keep these in step with web/lib/contract.ts. A bundler would let the two
+ * share one constant, and this extension deliberately has none.
+ */
+const CORE = "0xac20ef73723e7c620df1024eb04cc0b71fca1055";
+const MARKETPLACE = "0x63a9edec92baf3e74f19d301808c56104e786241";
+
+const SITE = "https://web-tanmaygaming206-5537s-projects.vercel.app";
 
 /**
  * Function selectors: first 4 bytes of keccak256 of the signature.
@@ -48,7 +64,7 @@ function encAddr(a) {
   return pad32(a.toLowerCase().replace(/^0x/, ""));
 }
 
-async function call(data) {
+async function call(data, to = CORE) {
   const res = await fetch(RPC, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -56,7 +72,7 @@ async function call(data) {
       jsonrpc: "2.0",
       id: 1,
       method: "eth_call",
-      params: [{ to: CONTRACT, data }, "latest"],
+      params: [{ to, data }, "latest"],
     }),
   });
   const json = await res.json();
@@ -109,7 +125,10 @@ async function loadFor(address) {
     if (owner.toLowerCase() !== address.toLowerCase()) continue;
     const expiry = asBigInt(await call(SEL.expiryOf + encUint(i)));
     const planId = asBigInt(await call(SEL.planOf + encUint(i)));
-    const listed = asBigInt(await call(SEL.currentPrice + encUint(i)));
+    // Marketplace, not core -- see the note on the addresses above.
+    const listed = asBigInt(
+      await call(SEL.currentPrice + encUint(i), MARKETPLACE),
+    );
     let name = `Pass #${i}`;
     try {
       const n = asString(await call(SEL.planName + encUint(planId)));
