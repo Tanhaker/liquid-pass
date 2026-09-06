@@ -55,6 +55,7 @@ export function StreamRentalPanel({
 
   const [ratePerHour, setRatePerHour] = useState("0.0001");
   const [budget, setBudget] = useState("0.001");
+  const [repricing, setRepricing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -258,6 +259,73 @@ export function StreamRentalPanel({
           >
             {busy === "escrow" ? "Confirm…" : "2 · Hand over the pass"}
           </button>
+        </div>
+      )}
+
+      {/* ── Owner: reprice while idle ────────────────────────────────────── */}
+      {hasStream && isStreamOwner && !renter && (
+        <div className="space-y-2 font-mono text-xs">
+          {!repricing ? (
+            <button
+              onClick={() => {
+                // Seed the box with the current rate so it is an edit, not a
+                // guess from scratch.
+                if (stream) setRatePerHour(formatEther(stream.ratePerSecond * 3600n));
+                setRepricing(true);
+              }}
+              disabled={busy !== null}
+              className="text-[11px] text-uranium underline underline-offset-2 hover:text-uranium-glow disabled:opacity-40"
+            >
+              Change the price
+            </button>
+          ) : (
+            <div className="space-y-2 border border-dark-border bg-dark p-3">
+              <label className="block uppercase text-zincGrey" htmlFor={`nr-${pass.tokenId}`}>
+                New price per hour (ETH)
+              </label>
+              <input
+                id={`nr-${pass.tokenId}`}
+                value={ratePerHour}
+                onChange={(e) => setRatePerHour(e.target.value)}
+                inputMode="decimal"
+                autoFocus
+                className="w-full border border-dark-border bg-ink px-3 py-2 text-alabaster outline-none focus:border-uranium"
+              />
+              <p className="text-[10px] leading-relaxed text-zincGrey">
+                Only possible while nobody is renting. A rental already running
+                keeps the rate it started at.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() =>
+                    run("reprice", async () => {
+                      if (rateWeiPerSecond <= 0n) throw new Error("Enter a price above zero.");
+                      setRepricing(false);
+                      return writeContractAsync({
+                        address: STREAM_RENTAL_ADDRESS,
+                        abi: streamRentalAbi,
+                        functionName: "setRate",
+                        args: [pass.tokenId, rateWeiPerSecond],
+                        chainId: arbitrumSepolia.id,
+                        gas: 400_000n,
+                        ...(await fees()),
+                      });
+                    })
+                  }
+                  disabled={busy !== null || !isConnected || wrongNetwork}
+                  className="flex-1 bg-uranium px-3 py-2 font-extrabold uppercase tracking-wider text-black disabled:opacity-40"
+                >
+                  {busy === "reprice" ? "Confirm…" : "Save"}
+                </button>
+                <button
+                  onClick={() => setRepricing(false)}
+                  className="border border-dark-border px-3 py-2 uppercase text-zincGrey hover:text-alabaster"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

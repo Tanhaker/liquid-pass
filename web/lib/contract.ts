@@ -89,6 +89,10 @@ export const liquidPassAbi = parseAbi([
   "function isIssuer(address who) view returns (bool)",
   "function mint(address to, uint256 durationSeconds) returns (uint256)",
   "function transferPass(address to, uint256 tokenId)",
+  // Admin-only. This is how a SaaS company is authorised to create plans --
+  // the B2B onboarding step -- and it had no ABI entry, so it was unreachable
+  // from the app entirely.
+  "function setIssuer(address issuer, bool allowed)",
   "function split(uint256 tokenId, uint256 parts) returns (uint256)",
   "function bundle(uint256[] tokenIds) returns (uint256)",
   "event PlanCreated(uint256 indexed planId, address indexed issuer, uint256 price, uint256 durationSeconds)",
@@ -96,6 +100,7 @@ export const liquidPassAbi = parseAbi([
   "event PassPurchased(uint256 indexed tokenId, uint256 indexed planId, address indexed buyer, uint256 price, uint256 expiry)",
   "event Minted(uint256 indexed tokenId, address indexed to, address indexed issuer, uint256 expiry)",
   "event PassTransferred(address indexed from, address indexed to, uint256 indexed tokenId)",
+  "event IssuerSet(address indexed issuer, bool allowed)",
 ]);
 
 export const marketplaceAbi = parseAbi([
@@ -143,46 +148,6 @@ export type Pass = {
   /** Unix seconds when the listing opened; 0 when not listed. */
   listedAt: bigint;
 };
-
-/**
- * The asking price right now, computed the way Marketplace.sol computes it.
- *
- * Mirrors `currentPrice()` exactly, including the truncating integer division:
- *
- *     openingPrice * (expiry - now) / (expiry - listedAt)
- *
- * The chain is still the source of truth -- `pass.current` is refreshed by
- * polling -- but a figure that only moves when a poll lands looks static, and
- * the whole point of this asset is that it is not. This fills in the seconds
- * between, and because it is the same formula it cannot drift away from what
- * the contract will actually charge.
- *
- * Returns null when there is nothing to show: not listed, expired, or a
- * listing whose window is degenerate.
- */
-export function decayedPrice(pass: Pass, nowMs: number | null): bigint | null {
-  if (pass.listed <= 0n) return null;
-  if (pass.listedAt <= 0n) return null;
-
-  const now = BigInt(Math.floor((nowMs ?? Date.now()) / 1000));
-  if (now >= pass.expiry) return 0n;
-  if (pass.expiry <= pass.listedAt) return 0n;
-
-  return (pass.listed * (pass.expiry - now)) / (pass.expiry - pass.listedAt);
-}
-
-/**
- * How much value this listing sheds per hour, in wei.
- *
- * The slope is constant for the life of a listing, so this is the whole ask
- * divided by the listing window -- no need to sample two points in time.
- */
-export function decayPerHour(pass: Pass): bigint | null {
-  if (pass.listed <= 0n || pass.listedAt <= 0n) return null;
-  const window = pass.expiry - pass.listedAt;
-  if (window <= 0n) return null;
-  return (pass.listed * 3600n) / window;
-}
 
 export function remaining(expiry: bigint, now = Date.now()): number {
   const left = Number(expiry) - Math.floor(now / 1000);

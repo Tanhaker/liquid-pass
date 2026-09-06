@@ -11,6 +11,7 @@ import {
 } from "@/lib/contract";
 import { fetchPlans } from "@/lib/data";
 import { Banner, humanise, useFees } from "@/components/ui";
+import { IssuerAccess } from "@/components/IssuerAccess";
 
 export default function IssuerPage() {
   const { address, isConnected, chainId } = useAccount();
@@ -120,6 +121,11 @@ export default function IssuerPage() {
           </div>
         </div>
       </div>
+
+      {/* Authorising an issuer is the step that has to happen BEFORE any of
+          the below works, so it sits above the plan form. It had no ABI entry
+          and no UI until now -- every issuer on chain was added by hand. */}
+      <IssuerAccess onChanged={() => void load()} />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-6 p-6 bg-dark-card border border-dark-border shadow-grunge space-y-6">

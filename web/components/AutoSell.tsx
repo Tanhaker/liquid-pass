@@ -14,6 +14,8 @@ import {
   evaluate,
   loadRules,
   removeRule,
+  markUsed,
+  lastUsed,
   type Condition,
   type Rule,
 } from "@/lib/autosell";
@@ -39,6 +41,12 @@ export function AutoSell({
   busyToken: string | null;
 }) {
   const [rules, setRules] = useState<Rule[]>([]);
+  /*
+   * Bumped when an access is logged. lastUsed() reads localStorage, which
+   * React cannot observe, so without this the rule row would keep showing the
+   * old reason until something else happened to re-render.
+   */
+  const [usageTick, setUsageTick] = useState(0);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +153,9 @@ export function AutoSell({
         : rules
             .filter((r) => !r.doneAt)
             .map((r) => evaluate(r, byToken.get(r.tokenId), nowMs)),
-    [rules, byToken, nowMs],
+    // usageTick is a deliberate dependency: logging an access changes what
+    // evaluate() reads out of localStorage without changing any other input.
+    [rules, byToken, nowMs, usageTick],
   );
 
   const armed = evaluated.filter((e) => !e.fired);
@@ -289,6 +299,26 @@ export function AutoSell({
               <div className="min-w-0 flex-1">
                 <p className="text-[12px]">{describe(rule)}</p>
                 <p className="mt-0.5 text-[11px] text-faint">{because}</p>
+
+                {/*
+                  An idle rule measures time since the last access check, and
+                  until something records one it can never fire. The check
+                  itself lives on /verify, which is a long way to go from here,
+                  so the same signal can be recorded in place.
+                */}
+                {rule.condition.kind === "idle" && (
+                  <button
+                    onClick={() => {
+                      markUsed(rule.tokenId);
+                      setUsageTick((n) => n + 1);
+                    }}
+                    className="mt-1.5 text-[11px] text-life-mid underline underline-offset-2 hover:text-text"
+                  >
+                    {lastUsed(rule.tokenId) === null
+                      ? "Log an access to start the clock"
+                      : "Log an access now"}
+                  </button>
+                )}
               </div>
               <button
                 onClick={() => setRules(removeRule(rule.id))}

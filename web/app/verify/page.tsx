@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { usePublicClient } from "wagmi";
 import { ShieldCheck, CheckCircle2, XCircle, Copy, Check, Code2, Loader2 } from "lucide-react";
 import { LIQUID_PASS_ADDRESS, liquidPassAbi, shortAddress, remaining, formatRemaining } from "@/lib/contract";
+import { markUsed } from "@/lib/autosell";
 
 export default function VerifyPage() {
   const client = usePublicClient();
@@ -31,6 +32,11 @@ export default function VerifyPage() {
         setResult({ isValid: false, tokenId: q, message: `Token #${q} does not exist on-chain.` });
       } else {
         const left = remaining(expiry as bigint);
+        // An access check IS the usage signal. lib/autosell reads lastUsed()
+        // for "sell if unused for N days" rules and nothing anywhere wrote
+        // it, so that rule could never fire -- while the panel told people to
+        // "verify it once and the idle clock starts". This is that write.
+        if (isActive as boolean) markUsed(q);
         setResult({
           isValid: isActive as boolean, tokenId: q, owner: owner as string, issuer: issuer as string,
           expiry: Number(expiry as bigint), active: isActive as boolean,
@@ -111,6 +117,12 @@ export async function checkAccess(tokenId: bigint): Promise<boolean> {
                     {result.isValid ? "VERIFIED: ACCESS GRANTED" : "VERIFIED: ACCESS DENIED"}
                   </span>
                   <p className="font-body text-xs text-zincGrey leading-relaxed">{result.message}</p>
+                  {result.active && (
+                    <p className="pt-1 text-[11px] text-aviation">
+                      Access logged &mdash; the idle clock for this pass starts now,
+                      so any &ldquo;sell if unused&rdquo; rule you set has something to measure.
+                    </p>
+                  )}
                   {result.owner && (
                     <div className="pt-3 border-t border-dark-border space-y-1 text-[11px]">
                       <div className="flex justify-between"><span className="text-zincGrey">Owner:</span><span className="text-alabaster font-bold">{shortAddress(result.owner)}</span></div>
