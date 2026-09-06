@@ -6,3 +6,6 @@ deployer.key
 # Build output
 target/
 node_modules/
+
+# Vercel CLI link (local only)
+.vercel

@@ -1,0 +1,28 @@
+# The Vercel project builds from web/, but the CLI uploads from the repo root
+# (that is where the project link lives, because the project's Root Directory
+# setting is "web"). Without this, every sibling project comes along for the
+# ride -- Rust target dirs, Hardhat artifacts, subgraph build output, several
+# node_modules trees -- and the upload trips Vercel's 15,000 file limit.
+#
+# Nothing here is used by the Next.js build.
+
+liquid-pass-master/
+contracts/
+subscription/
+subgraph/
+oracle/
+bench/
+extension/
+docs/
+
+# Build output and caches anywhere in the tree
+**/node_modules/
+**/target/
+**/.next/
+**/artifacts/
+**/cache/
+**/test-results/
+**/playwright-report/
+
+# Never upload a key, whatever else changes
+**/*.key
