@@ -66,6 +66,7 @@ export default function LuxuryHeroScene({
   const cube1Ref = useRef<HTMLDivElement>(null);
   const cube2Ref = useRef<HTMLDivElement>(null);
   const cube3Ref = useRef<HTMLDivElement>(null);
+  const cubeCentreRef = useRef<HTMLDivElement>(null);
   const data1Ref = useRef<HTMLDivElement>(null);
   const data2Ref = useRef<HTMLDivElement>(null);
   const data3Ref = useRef<HTMLDivElement>(null);
@@ -432,6 +433,81 @@ export default function LuxuryHeroScene({
     /* ---------------------------------------------------------------- */
     /* FLOOR GRID                                                        */
     /* ---------------------------------------------------------------- */
+    /*
+     * Neon sweeps, passing behind the cube.
+     *
+     * Drawn on the canvas (z-0) rather than as DOM elements, so they sit
+     * behind the centre cube (z-1) for free and share this one animation
+     * loop instead of starting another.
+     *
+     * Built the same cheap way as the ribbons above: a wide translucent
+     * stroke under a narrow bright one reads as glow, with no ctx.shadowBlur
+     * anywhere. `lighter` compositing does the neon accumulation, and costs
+     * nothing -- unlike the per-draw gaussian that made this scene lag.
+     */
+    const NEON_LANES = 7;
+    const neonLanes = Array.from({ length: NEON_LANES }, (_, i) => ({
+      // Spread across the vertical, biased toward the middle band where the
+      // cube sits, so the lines read as passing behind it.
+      offset: 0.16 + (i / (NEON_LANES - 1)) * 0.68,
+      speed: 0.00022 + (i % 3) * 0.00009,
+      phase: i * 1.9,
+      tilt: (i % 2 === 0 ? 1 : -1) * (0.04 + (i % 4) * 0.015),
+      width: i % 3 === 0 ? 2.2 : 1.2,
+      len: 0.28 + (i % 3) * 0.12,
+    }));
+
+    const drawNeonSweeps = (time: number) => {
+      if (reducedMotion) return;
+
+      const accent = isLight ? "76,122,23" : "152,255,26";
+      const cool = isLight ? "85,109,217" : "123,146,255";
+
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
+
+      neonLanes.forEach((lane, i) => {
+        // Travel left to right and wrap, so a lane is always somewhere.
+        const t = (time * lane.speed + lane.phase) % 1;
+        const span = width * lane.len;
+        const headX = -span + t * (width + span * 2);
+        const y = height * lane.offset;
+
+        const x1 = headX;
+        const y1 = y - span * lane.tilt;
+        const x2 = headX + span;
+        const y2 = y + span * lane.tilt;
+
+        // Fade in and out at the edges so nothing pops.
+        const edge = Math.min(1, Math.min(t, 1 - t) * 6);
+        const rgb = i % 3 === 0 ? cool : accent;
+
+        const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+        grad.addColorStop(0, `rgba(${rgb},0)`);
+        grad.addColorStop(0.5, `rgba(${rgb},1)`);
+        grad.addColorStop(1, `rgba(${rgb},0)`);
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+
+        // Wide, dim.
+        ctx.strokeStyle = grad;
+        ctx.globalAlpha = 0.06 * edge;
+        ctx.lineWidth = lane.width * 9;
+        ctx.stroke();
+
+        // Narrow, bright.
+        ctx.globalAlpha = 0.5 * edge;
+        ctx.lineWidth = lane.width;
+        ctx.stroke();
+      });
+
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    };
+
     const drawFloor = (time: number) => {
       const c = ink();
       const g = gain();
@@ -486,6 +562,7 @@ export default function LuxuryHeroScene({
       drawBackground(time);
       drawLightColumns(time);
       drawRibbons(time);
+      drawNeonSweeps(time);
       drawFloor(time);
       drawOrbitalSystem(time);
       drawParticles(time);
@@ -523,6 +600,9 @@ export default function LuxuryHeroScene({
         [cube1Ref.current, -40, -25, 1.8],
         [cube2Ref.current, 30, -22, 2],
         [cube3Ref.current, 50, 30, 1.7],
+        // Gentler than the satellites: the centrepiece should feel anchored,
+        // not swimming around behind the headline.
+        [cubeCentreRef.current, -14, -10, 2.2],
         [data1Ref.current, 25, -20, 1.6],
         [data2Ref.current, -30, 25, 1.8],
         [data3Ref.current, 40, 15, 1.4],
@@ -634,6 +714,28 @@ export default function LuxuryHeroScene({
           </div>
           <div className="hourglass-bottom" />
           <div className="hourglass-label">TIME DECAYS</div>
+        </div>
+
+        {/*
+          The centrepiece. Same wireframe-and-glass language as the three
+          satellites, just larger, centred and slowly turning, so the neon
+          sweeps on the canvas behind it read as passing through the scene.
+
+          Two nested elements on purpose: the wrapper floats on a transform
+          while the cube itself rotates. The satellites float by animating
+          margin-top, which drives layout every frame -- fine for 64px of
+          decoration at the edges, not for a 220px object in the middle.
+        */}
+        <div ref={cubeCentreRef} className="cube-centre-wrap">
+          <div className="cube cube-centre">
+            <div className="cube-face cube-front" />
+            <div className="cube-face cube-back" />
+            <div className="cube-face cube-left" />
+            <div className="cube-face cube-right" />
+            <div className="cube-face cube-top" />
+            <div className="cube-face cube-bottom" />
+            <div className="cube-core" />
+          </div>
         </div>
 
         <div ref={cube1Ref} className="cube cube-one">
@@ -1006,6 +1108,92 @@ export default function LuxuryHeroScene({
           transform: rotateX(45deg) rotateY(-40deg);
         }
 
+        .cube-centre-wrap {
+          position: absolute;
+          left: 50%;
+          top: 46%;
+          width: 220px;
+          height: 220px;
+          margin-left: -110px;
+          margin-top: -110px;
+          transform-style: preserve-3d;
+          animation: centreFloat 11s ease-in-out infinite;
+        }
+
+        .cube-centre {
+          position: absolute;
+          inset: 0;
+          width: 220px;
+          height: 220px;
+          transform-style: preserve-3d;
+          /* Overrides .cube's margin-top float; this one turns instead. */
+          animation: centreSpin 34s linear infinite;
+        }
+
+        /* Half of 220px. The satellites bake in translateZ(32px) for their
+           64px bodies, so a larger cube needs its own depth or the faces
+           collapse into a flat plate. */
+        .cube-centre .cube-face { transform: translateZ(110px); }
+        .cube-centre .cube-back { transform: rotateY(180deg) translateZ(110px); }
+        .cube-centre .cube-left { transform: rotateY(-90deg) translateZ(110px); }
+        .cube-centre .cube-right { transform: rotateY(90deg) translateZ(110px); }
+        .cube-centre .cube-top { transform: rotateX(90deg) translateZ(110px); }
+        .cube-centre .cube-bottom { transform: rotateX(-90deg) translateZ(110px); }
+
+        /* Brighter than the satellites so it reads as the focal point, and
+           enough edge contrast to survive the sweeps passing behind it. */
+        .cube-centre .cube-face {
+          border-color: rgba(183,255,60,0.36);
+          background: linear-gradient(
+            135deg,
+            rgba(255,255,255,0.075),
+            rgba(183,255,60,0.03)
+          );
+          box-shadow:
+            inset 0 0 40px rgba(183,255,60,0.06),
+            inset 0 0 2px rgba(183,255,60,0.28);
+        }
+
+        .cube-centre .cube-core {
+          width: 30px;
+          height: 30px;
+          transform: translate(-50%, -50%) translateZ(0);
+          box-shadow: 0 0 28px #b7ff3c, 0 0 70px rgba(183,255,60,0.45);
+        }
+
+        /*
+         * On paper, the scene is dropped to opacity 0.5 with brightness(0.7),
+         * which erases anything light-coloured. The satellites can afford to
+         * fade out; the centrepiece cannot, so it gets dark edges that survive
+         * both the opacity and the darkening.
+         */
+        :global(html[data-theme="light"]) .cube-centre .cube-face {
+          border-color: rgba(46, 74, 12, 0.75);
+          background: linear-gradient(
+            135deg,
+            rgba(46, 74, 12, 0.05),
+            rgba(46, 74, 12, 0.015)
+          );
+          box-shadow:
+            inset 0 0 40px rgba(46, 74, 12, 0.05),
+            inset 0 0 2px rgba(46, 74, 12, 0.35);
+        }
+
+        :global(html[data-theme="light"]) .cube-centre .cube-core {
+          background: #3E7A00;
+          box-shadow: 0 0 22px rgba(62, 122, 0, 0.6), 0 0 55px rgba(62, 122, 0, 0.3);
+        }
+
+        @keyframes centreFloat {
+          0%, 100% { transform: translate3d(0, 0, 0); }
+          50% { transform: translate3d(0, -26px, 0); }
+        }
+
+        @keyframes centreSpin {
+          0% { transform: rotateX(-22deg) rotateY(0deg); }
+          100% { transform: rotateX(-22deg) rotateY(360deg); }
+        }
+
         .cube-face {
           position: absolute;
           inset: 0;
@@ -1225,6 +1413,10 @@ export default function LuxuryHeroScene({
 
         @media (max-width: 900px) {
           .luxury-scene { opacity: 0.68; }
+          /* Scaled rather than resized: transform keeps the six faces' fixed
+             translateZ(110px) proportional. Changing width alone would leave
+             the depth at 110px and the cube would read as a stretched box. */
+          .cube-centre-wrap { transform-origin: center; scale: 0.72; }
           .orbital-core { left: 73%; top: 52%; transform: scale(0.75); }
           .hourglass { right: -4%; transform: scale(0.65); }
           .data-panel { display: none; }
@@ -1240,12 +1432,14 @@ export default function LuxuryHeroScene({
           .cube-one { left: -5%; }
           .cube-two { right: 2%; }
           .cube-three { right: -7%; }
+          .cube-centre-wrap { scale: 0.55; top: 42%; }
           .diamond { opacity: 0.5; }
         }
 
         @media (prefers-reduced-motion: reduce) {
           .core-glow, .core-light, .core-ring, .hourglass, .sand-top,
           .sand-bottom, .sand-stream, .sand-particle, .cube, .cube-core,
+          .cube-centre, .cube-centre-wrap,
           .data-panel, .energy-trail span, .diamond, .data-bar span {
             animation: none !important;
           }
