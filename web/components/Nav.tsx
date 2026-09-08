@@ -11,7 +11,7 @@ import { HorizontalThemeWipeToggle } from "@/components/ui/theme-wipe-toggle";
 import { useDemo } from "@/lib/demo";
 
 /**
- * Full-bleed tactical header, per the team's Navbar design.
+ * Full-bleed tactical header, from the team's original header design.
  *
  * Two things are kept from the previous nav rather than taken from the design
  * file: the wallet control is RainbowKit's, not a static address badge, and
