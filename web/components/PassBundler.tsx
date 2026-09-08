@@ -6,6 +6,7 @@ import { arbitrumSepolia } from "wagmi/chains";
 import { Layers, ExternalLink } from "lucide-react";
 import { LIQUID_PASS_ADDRESS, liquidPassAbi, type Pass, type Plan } from "@/lib/contract";
 import { humanise, useFees } from "@/components/ui";
+import { useTxToast } from "@/lib/useTxToast";
 
 /**
  * Merge several passes on one plan into a single longer pass.
@@ -37,6 +38,7 @@ export function PassBundler({
 }) {
   const { writeContractAsync } = useWriteContract();
   const fees = useFees();
+  const txToast = useTxToast();
   const [selected, setSelected] = useState<Set<bigint>>(new Set());
   const [busy, setBusy] = useState(false);
   const [tx, setTx] = useState<{ hash: string; what: string } | null>(null);
@@ -71,17 +73,21 @@ export function PassBundler({
     setTx(null);
     setError(null);
     try {
-      const hash = await writeContractAsync({
-        address: LIQUID_PASS_ADDRESS,
-        abi: liquidPassAbi,
-        functionName: "bundle",
-        args: [tokenIds],
-        chainId: arbitrumSepolia.id,
-        // Scales with the number of inputs: each one is read, burned, and
-        // folded into the new token's expiry and paid value.
-        gas: 1_000_000n + 600_000n * BigInt(tokenIds.length),
-        ...(await fees()),
-      });
+      const hash = await txToast(
+        `Bundled ${tokenIds.length} passes`,
+        async () =>
+          writeContractAsync({
+            address: LIQUID_PASS_ADDRESS,
+            abi: liquidPassAbi,
+            functionName: "bundle",
+            args: [tokenIds],
+            chainId: arbitrumSepolia.id,
+            // Scales with the number of inputs: each one is read, burned, and
+            // folded into the new token's expiry and paid value.
+            gas: 1_000_000n + 600_000n * BigInt(tokenIds.length),
+            ...(await fees()),
+          }),
+      );
       setTx({
         hash,
         what: `Bundled ${tokenIds.length} passes into one`,

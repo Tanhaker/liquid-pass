@@ -30,12 +30,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useDemo } from "@/lib/demo";
+import { useTxToast } from "@/lib/useTxToast";
 
 export default function MarketPage() {
   const { isConnected, address } = useAccount();
   const client = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   const fees = useFees();
+  const txToast = useTxToast();
   const now = useNow(15000) ?? Date.now();
   const { shiftExpiry } = useDemo();
 
@@ -360,18 +362,19 @@ export default function MarketPage() {
       const rawCurrent = onChainPass?.current ?? 0n;
       const valueToSend = withBuffer(rawCurrent);
 
-      const hash = await writeContractAsync({
-        address: MARKETPLACE_ADDRESS,
-        abi: marketplaceAbi,
-        functionName: "buy",
-        args: [tokenIdBig],
-        value: valueToSend,
-        gas: 800_000n,
-        ...(await fees()),
-      });
+      const hash = await txToast(`Bought pass #${pass.tokenId}`, async () =>
+        writeContractAsync({
+          address: MARKETPLACE_ADDRESS,
+          abi: marketplaceAbi,
+          functionName: "buy",
+          args: [tokenIdBig],
+          value: valueToSend,
+          gas: 800_000n,
+          ...(await fees()),
+        }),
+      );
 
       setTxSuccess(`Successfully purchased Pass #${pass.tokenId}! Tx: ${hash.slice(0, 10)}...`);
-      await client?.waitForTransactionReceipt({ hash });
       await loadData();
     } catch (e) {
       console.error("Buy failed:", e);

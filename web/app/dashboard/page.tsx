@@ -26,6 +26,7 @@ import {
 } from "@/lib/contract";
 import { fetchPasses, fetchPlans, passesOf } from "@/lib/data";
 import { Banner, humanise, useFees, useNow } from "@/components/ui";
+import { useTxToast } from "@/lib/useTxToast";
 import { GiftSplit } from "@/components/GiftSplit";
 import { YieldDashboard } from "@/components/YieldDashboard";
 import { PassBundler } from "@/components/PassBundler";
@@ -36,6 +37,7 @@ export default function DashboardPage() {
   const client = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   const fees = useFees();
+  const txToast = useTxToast();
   const nowMs = useNow();
   const wrongNetwork = isConnected && chainId !== arbitrumSepolia.id;
 
@@ -79,14 +81,16 @@ export default function DashboardPage() {
     if (!isConnected || wrongNetwork) return;
     setBusy(true); setTx(null); setError(null);
     try {
-      const hash = await writeContractAsync({
-        address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "buyPass",
-        args: [plan.id], value: plan.price, chainId: arbitrumSepolia.id,
-        gas: 800_000n,
-        ...(await fees()),
-      });
-      setTx({ hash, what: `Bought pass from plan "${plan.name}"` });
-      await client?.waitForTransactionReceipt({ hash });
+      const what = `Bought pass from plan "${plan.name}"`;
+      const hash = await txToast(what, async () =>
+        writeContractAsync({
+          address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "buyPass",
+          args: [plan.id], value: plan.price, chainId: arbitrumSepolia.id,
+          gas: 800_000n,
+          ...(await fees()),
+        }),
+      );
+      setTx({ hash, what });
       await load();
     } catch (e) { setError(humanise(e as Error)); } finally { setBusy(false); }
   };
@@ -104,9 +108,10 @@ export default function DashboardPage() {
       setTx(null);
       setError(null);
       try {
-        const hash = await send();
+        // The toast carries the pending/confirmed lifecycle and already waits
+        // for the receipt, so this no longer waits for it a second time.
+        const hash = await txToast(what, send);
         setTx({ hash, what });
-        await client?.waitForTransactionReceipt({ hash });
         await load();
       } catch (e) {
         setError(humanise(e as Error));
@@ -114,7 +119,7 @@ export default function DashboardPage() {
         setBusyToken(null);
       }
     },
-    [client, isConnected, load, wrongNetwork],
+    [isConnected, load, txToast, wrongNetwork],
   );
 
   const handleGift = (tokenId: bigint, to: `0x${string}`) =>
@@ -162,14 +167,15 @@ export default function DashboardPage() {
     if (!isConnected || !address || wrongNetwork) return;
     setIsMinting(true); setTx(null); setError(null);
     try {
-      const hash = await writeContractAsync({
-        address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "mint",
-        args: [address, BigInt(mintDuration)], chainId: arbitrumSepolia.id,
-        gas: 800_000n,
-        ...(await fees()),
-      });
+      const hash = await txToast("Minted a new pass", async () =>
+        writeContractAsync({
+          address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "mint",
+          args: [address, BigInt(mintDuration)], chainId: arbitrumSepolia.id,
+          gas: 800_000n,
+          ...(await fees()),
+        }),
+      );
       setTx({ hash, what: "Minted a new pass" });
-      await client?.waitForTransactionReceipt({ hash });
       await load();
     } catch (e) { setError(humanise(e as Error)); } finally { setIsMinting(false); }
   };

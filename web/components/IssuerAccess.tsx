@@ -7,6 +7,7 @@ import { isAddress, getAddress } from "viem";
 import { ShieldCheck, ShieldOff, KeyRound, Loader2 } from "lucide-react";
 import { LIQUID_PASS_ADDRESS, liquidPassAbi, shortAddress } from "@/lib/contract";
 import { humanise, useFees } from "@/components/ui";
+import { useTxToast } from "@/lib/useTxToast";
 
 /**
  * Issuer authorisation.
@@ -26,6 +27,7 @@ export function IssuerAccess({ onChanged }: { onChanged?: () => void }) {
   const client = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   const fees = useFees();
+  const txToast = useTxToast();
   const wrongNetwork = isConnected && chainId !== arbitrumSepolia.id;
 
   const [admin, setAdmin] = useState<`0x${string}` | null>(null);
@@ -111,19 +113,22 @@ export function IssuerAccess({ onChanged }: { onChanged?: () => void }) {
 
     setBusy(allowed ? "grant" : "revoke");
     try {
-      const hash = await writeContractAsync({
-        address: LIQUID_PASS_ADDRESS,
-        abi: liquidPassAbi,
-        functionName: "setIssuer",
-        args: [who, allowed],
-        chainId: arbitrumSepolia.id,
-        gas: 400_000n,
-        ...(await fees()),
-      });
+      const hash = await txToast(
+        `${allowed ? "Authorised" : "Revoked"} ${shortAddress(who)}`,
+        async () =>
+          writeContractAsync({
+            address: LIQUID_PASS_ADDRESS,
+            abi: liquidPassAbi,
+            functionName: "setIssuer",
+            args: [who, allowed],
+            chainId: arbitrumSepolia.id,
+            gas: 400_000n,
+            ...(await fees()),
+          }),
+      );
       setNote(
         `${allowed ? "Authorised" : "Revoked"} ${shortAddress(who)} — ${hash.slice(0, 10)}…`,
       );
-      await client?.waitForTransactionReceipt({ hash });
       await load();
       await checkTarget();
       onChanged?.();

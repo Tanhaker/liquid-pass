@@ -12,6 +12,19 @@ import { test, expect, useMockWallet } from "./fixtures/wallet";
 
 const USE_KEY = "liquid-pass-last-verified";
 
+/*
+ * Retried, unlike the rest of the suite.
+ *
+ * Both tests here drive the verify page, which fires three reads at the PUBLIC
+ * Arbitrum Sepolia RPC. Everything else in this suite either reads through the
+ * mock or reads once; these are the only tests whose result depends on a
+ * third-party endpoint answering promptly, and under full-suite load it has
+ * taken over 90 seconds. That is flakiness in someone else's infrastructure,
+ * not in this app, and a retry is the right tool for it -- the assertions
+ * themselves are unchanged and still have to pass.
+ */
+test.describe.configure({ retries: 2 });
+
 test.beforeEach(async ({ page }) => {
   await useMockWallet(page);
 });

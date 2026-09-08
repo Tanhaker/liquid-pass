@@ -23,7 +23,9 @@ interface LiquidPassContextType {
   unlistPass: (tokenId: string) => Promise<boolean>;
   mintPass: (service: string, tier: "PRO" | "ENTERPRISE" | "TEAM" | "ULTRA", days: number, priceEth: string) => Promise<string>;
   txNotifications: TxNotification[];
-  addNotification: (notif: Omit<TxNotification, "id">) => void;
+  /** Returns the new notification's id, so it can be updated in place. */
+  addNotification: (notif: Omit<TxNotification, "id">) => string;
+  updateNotification: (id: string, patch: Partial<Omit<TxNotification, "id">>) => void;
   removeNotification: (id: string) => void;
   verifyPassAccess: (tokenIdOrAddress: string) => { isValid: boolean; pass?: SubscriptionPass; message: string };
 }
@@ -184,16 +186,41 @@ export function LiquidPassProvider({ children }: { children: React.ReactNode }) 
   const [notifications, setNotifications] = useState<TxNotification[]>([]);
   const userAddress = "0xDEMO_USER_ACTIVE_WALLET_882";
 
+  const removeNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const DISMISS_AFTER = 6500;
+
+  /**
+   * A pending notification is NOT auto-dismissed.
+   *
+   * This used to hide every toast after 6.5s regardless of status, which is
+   * wrong for the case that matters most: an Arbitrum Sepolia transaction can
+   * take far longer than that to confirm, so the "broadcast" toast would
+   * vanish while the wallet was still waiting and the user would be left with
+   * nothing on screen. Pending toasts now stay until they are resolved.
+   */
   const addNotification = (notif: Omit<TxNotification, "id">) => {
     const id = Math.random().toString(36).substring(2, 9);
     setNotifications((prev) => [...prev, { ...notif, id }]);
-    setTimeout(() => {
-      removeNotification(id);
-    }, 6500);
+    if (notif.status !== "pending") {
+      setTimeout(() => removeNotification(id), DISMISS_AFTER);
+    }
+    return id;
   };
 
-  const removeNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  /** Resolve a pending toast in place, rather than stacking a second one. */
+  const updateNotification = (
+    id: string,
+    patch: Partial<Omit<TxNotification, "id">>,
+  ) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, ...patch } : n)),
+    );
+    if (patch.status && patch.status !== "pending") {
+      setTimeout(() => removeNotification(id), DISMISS_AFTER);
+    }
   };
 
   const toggleDemoMode = () => {
@@ -446,6 +473,7 @@ export function LiquidPassProvider({ children }: { children: React.ReactNode }) 
         mintPass,
         txNotifications: notifications,
         addNotification,
+        updateNotification,
         removeNotification,
         verifyPassAccess,
       }}

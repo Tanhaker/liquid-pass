@@ -82,33 +82,42 @@ test("the cube turns", async ({ page }) => {
 });
 
 test("the hero holds a smooth frame rate", async ({ page }) => {
+  /*
+   * Measured RELATIVE to a control page, not against a fixed fps number.
+   *
+   * An absolute threshold measures the machine as much as the page. Alone,
+   * this scene reads 57 fps at 1280px; inside the full suite -- a dev server
+   * compiling, other browser contexts live -- the same code read 43.7 / 41.9 /
+   * 48.0 and "failed". Nothing about the hero had changed.
+   *
+   * So the ceiling is measured first, on a route with no canvas and no
+   * animation loop, and the hero is required to stay close to it. When the
+   * machine is busy BOTH numbers fall and the ratio holds; when the hero
+   * genuinely regresses only the hero falls. That is the difference this test
+   * is supposed to detect -- and it does: with backdrop-filter still on the
+   * data panels the ratio was 38.3/58.7 = 0.65, well under the bar.
+   */
+  await page.goto("/verify", { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(800);
+  const ceiling = Math.max((await fps(page)).fps, (await fps(page)).fps);
+
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.locator(".cube-centre").waitFor();
   await page.waitForTimeout(2500);
 
-  /*
-   * Best of three windows, not a single sample.
-   *
-   * A one-shot reading measures the MACHINE as much as the page: inside the
-   * full suite this returned 33.7 fps in one window and 58.6 in another on the
-   * same run, with a dev server compiling in the background. Taking the best
-   * window asks the question that actually matters -- can this scene reach
-   * frame rate at all -- and a structural regression (the ~11,000 blurs a
-   * second this page used to do) fails every window, not just the busy one.
-   *
-   * All three are logged, so a genuine slowdown is still visible in the output
-   * rather than being hidden behind the max.
-   */
   const samples = [] as Array<{ fps: number; frames: number; elapsed: number }>;
   for (let i = 0; i < 3; i++) {
     samples.push(await fps(page));
   }
   const best = samples.reduce((a, b) => (b.fps > a.fps ? b : a));
+  const ratio = best.fps / ceiling;
+
   console.log(
     `\n  hero fps: ${samples.map((s) => s.fps.toFixed(1)).join(" / ")} ` +
-      `(best ${best.fps.toFixed(1)}, ${best.frames} frames in ${best.elapsed.toFixed(0)}ms)\n`,
+      `(best ${best.fps.toFixed(1)}) vs ceiling ${ceiling.toFixed(1)} ` +
+      `= ${(ratio * 100).toFixed(0)}% of an idle page\n`,
   );
 
-  // Chromium paces at 60. If NO window clears 50, frames are genuinely dropping.
-  expect(best.fps).toBeGreaterThan(50);
+  // Within 20% of a page doing no animation at all.
+  expect(ratio).toBeGreaterThan(0.8);
 });
