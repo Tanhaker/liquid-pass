@@ -1236,8 +1236,22 @@ export default function LuxuryHeroScene({
           padding: 12px 14px;
           border: 1px solid rgba(183,255,60,0.13);
           border-radius: 10px;
-          background: linear-gradient(135deg, rgba(13,18,14,0.68), rgba(4,7,5,0.42));
-          backdrop-filter: blur(14px);
+          /*
+             No backdrop-filter here either.
+
+             The earlier perf pass stripped it from the 18 cube faces but kept
+             it on these three panels, on the grounds that the blur actually
+             reads at this size. Measuring across viewports showed what that
+             cost: these panels are hidden below 900px, and frame rate fell off
+             a cliff exactly at that boundary -- 58.7 fps at 768px versus
+             38.3 fps at 1024px, with FEWER canvas pixels at the wider size.
+             Three independently animated backdrop layers, recomposited every
+             frame over a canvas that is already repainting every frame.
+
+             A more opaque gradient gives the same sense of a lit glass panel
+             for nothing, since there is little behind them worth seeing
+             through at 125px wide. */
+          background: linear-gradient(135deg, rgba(13,18,14,0.93), rgba(4,7,5,0.82));
           box-shadow: inset 0 1px rgba(255,255,255,0.045), 0 15px 40px rgba(0,0,0,0.35);
           font-family: monospace;
           transform: translateZ(50px);

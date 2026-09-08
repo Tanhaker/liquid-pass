@@ -162,18 +162,23 @@ export function AutoSell({
   const ready = evaluated.filter((e) => e.fired);
 
   return (
-    <section className="mt-10 rounded-none border border-line bg-surface p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="size-1.5 rounded-full bg-life-mid" />
-          <h2 className="text-[13px] font-medium">Auto-sell rules</h2>
+    <section className="space-y-4 border border-dark-border bg-dark-card p-8 shadow-grunge">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-dark-border pb-4">
+        <div>
+          <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase text-uranium">
+            <span className="size-1.5 rounded-full bg-uranium" />
+            <span>Auto-sell rules</span>
+          </div>
+          <h2 className="mt-1 font-header text-2xl font-bold text-alabaster">
+            Watches that hand you a button
+          </h2>
         </div>
-        <span className="rounded-none bg-life-mid/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-life-mid">
+        <span className="border border-uranium bg-uranium/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-uranium">
           Advisory
         </span>
       </div>
 
-      <p className="mt-3 text-[12px] leading-relaxed text-muted">
+      <p className="mt-3 text-[12px] leading-relaxed text-zincGrey">
         Describe when you&apos;d want a pass sold and this will watch for it.
         When a rule matches you get a button with the price already filled in
         &mdash; the sale is still your signature. Nothing here can list or
@@ -186,13 +191,13 @@ export function AutoSell({
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && parse()}
           placeholder="if I don't use my Notion pass for 7 days, sell it for 0.0002"
-          className="min-w-0 flex-1 rounded-none border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-line-bright"
+          className="min-w-0 flex-1 border border-dark-border bg-dark px-3 py-2.5 font-mono text-xs text-alabaster outline-none focus:border-uranium"
         />
         <div className="flex gap-2">
           <button
             onClick={parse}
             disabled={busy || !text.trim() || passes.length === 0}
-            className="rounded-none bg-text px-3.5 py-2 text-[12px] font-medium text-ink disabled:opacity-40 hover:bg-text/90 transition-colors"
+            className="bg-uranium px-4 py-2.5 font-mono text-xs font-extrabold uppercase tracking-wider text-black transition-all hover:bg-uranium-glow disabled:opacity-40"
           >
             {busy ? "Reading..." : "Add rule"}
           </button>
@@ -209,31 +214,31 @@ export function AutoSell({
       </div>
 
       {passes.length === 0 && (
-        <p className="mt-2 text-[11px] text-faint">
+        <p className="mt-2 text-[11px] text-zincGrey/70">
           You need a pass before a rule has anything to watch.
         </p>
       )}
-      {error && <p className="mt-2 text-[12px] text-life-crit">{error}</p>}
+      {error && <p className="mt-2 text-[12px] text-red-400">{error}</p>}
 
       {pending && (
-        <div className="mt-4 rounded-none border border-life-mid/40 bg-life-mid/10 p-4">
-          <p className="text-[12px] text-life-mid">
+        <div className="mt-4 rounded-none border border-uranium/40 bg-uranium/10 p-4">
+          <p className="text-[12px] text-uranium">
             {pending.restated || "Rule understood."}
           </p>
-          <p className="mt-1 text-[11px] text-muted">
+          <p className="mt-1 text-[11px] text-zincGrey">
             Pass: {labelFor(byToken.get(pending.tokenId)!)} · price:{" "}
             {pending.priceEth ? `${pending.priceEth} ETH` : "its time value at the moment it fires"}
           </p>
           <div className="mt-3 flex gap-2">
             <button
               onClick={confirm}
-              className="rounded-none bg-text px-3 py-1.5 text-[12px] font-medium text-ink"
+              className="rounded-none bg-uranium px-3 py-1.5 text-[12px] font-medium text-black"
             >
               Save rule
             </button>
             <button
               onClick={() => setPending(null)}
-              className="rounded-none border border-line px-3 py-1.5 text-[12px] text-muted"
+              className="rounded-none border border-dark-border px-3 py-1.5 text-[12px] text-zincGrey"
             >
               Discard
             </button>
@@ -259,20 +264,20 @@ export function AutoSell({
             return (
               <div
                 key={rule.id}
-                className="rounded-none border border-life-low/40 bg-life-low/10 p-4"
+                className="rounded-none border border-aviation/40 bg-aviation/10 p-4"
               >
-                <p className="text-[11px] uppercase tracking-[0.16em] text-life-low">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-aviation">
                   Ready to list
                 </p>
                 <p className="mt-1 text-[13px]">{describe(rule)}</p>
-                <p className="mt-1 text-[11px] text-muted">{because}</p>
+                <p className="mt-1 text-[11px] text-zincGrey">{because}</p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => {
                       if (price > 0n) onList(pass.tokenId, price);
                     }}
                     disabled={price <= 0n || busyToken === rule.tokenId}
-                    className="rounded-none bg-text px-3 py-1.5 text-[12px] font-medium text-ink disabled:opacity-40"
+                    className="rounded-none bg-uranium px-3 py-1.5 text-[12px] font-medium text-black disabled:opacity-40"
                   >
                     {busyToken === rule.tokenId
                       ? "Confirm in wallet…"
@@ -280,7 +285,7 @@ export function AutoSell({
                   </button>
                   <button
                     onClick={() => setRules(removeRule(rule.id))}
-                    className="text-[11px] text-faint underline underline-offset-2 hover:text-muted"
+                    className="text-[11px] text-zincGrey/70 underline underline-offset-2 hover:text-zincGrey"
                   >
                     dismiss
                   </button>
@@ -292,13 +297,13 @@ export function AutoSell({
       )}
 
       {armed.length > 0 && (
-        <ul className="mt-5 divide-y divide-line border-t border-line">
+        <ul className="mt-5 divide-y divide-dark-border border-t border-dark-border">
           {armed.map(({ rule, because }) => (
             <li key={rule.id} className="flex items-start gap-3 py-3">
               <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-faint" />
               <div className="min-w-0 flex-1">
                 <p className="text-[12px]">{describe(rule)}</p>
-                <p className="mt-0.5 text-[11px] text-faint">{because}</p>
+                <p className="mt-0.5 text-[11px] text-zincGrey/70">{because}</p>
 
                 {/*
                   An idle rule measures time since the last access check, and
@@ -312,7 +317,7 @@ export function AutoSell({
                       markUsed(rule.tokenId);
                       setUsageTick((n) => n + 1);
                     }}
-                    className="mt-1.5 text-[11px] text-life-mid underline underline-offset-2 hover:text-text"
+                    className="mt-1.5 text-[11px] text-uranium underline underline-offset-2 hover:text-alabaster"
                   >
                     {lastUsed(rule.tokenId) === null
                       ? "Log an access to start the clock"
@@ -322,7 +327,7 @@ export function AutoSell({
               </div>
               <button
                 onClick={() => setRules(removeRule(rule.id))}
-                className="text-[11px] text-faint underline underline-offset-2 hover:text-muted"
+                className="text-[11px] text-zincGrey/70 underline underline-offset-2 hover:text-zincGrey"
               >
                 remove
               </button>
@@ -332,10 +337,10 @@ export function AutoSell({
       )}
 
       {rules.length === 0 && !pending && (
-        <p className="mt-4 text-[11px] text-faint">
+        <p className="mt-4 text-[11px] text-zincGrey/70">
           No rules yet. Conditions I can actually watch: days remaining, a
           calendar date, or how long a pass has gone unused —{" "}
-          <span className="text-muted">
+          <span className="text-zincGrey">
             measured by access checks on this device, not by whether you opened
             the app itself, which nothing on chain can see.
           </span>
@@ -343,7 +348,7 @@ export function AutoSell({
       )}
 
       {rules.length > 0 && (
-        <p className="mt-4 text-[11px] text-faint">
+        <p className="mt-4 text-[11px] text-zincGrey/70">
           Rules are stored in this browser only. They are never sent anywhere
           and cannot act without you.
         </p>

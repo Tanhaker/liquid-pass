@@ -1,5 +1,6 @@
 "use client";
 
+import { Sparkles } from "lucide-react";
 import { formatEthShort, type Pass, type Plan } from "@/lib/contract";
 import { suggestPrice, type PlanSignal } from "@/lib/signals";
 
@@ -13,6 +14,11 @@ import { suggestPrice, type PlanSignal } from "@/lib/signals";
  *
  * When there is no resale history the panel says exactly that and falls back
  * to the time value, marked as a starting point rather than a recommendation.
+ *
+ * STYLING: restyled from the earlier token set (line / ink / faint / muted,
+ * plus inline CSS-variable colours) to the grunge tokens used by the page it
+ * sits on. The grounded/ungrounded distinction is now carried by uranium
+ * versus zincGrey rather than by inline styles.
  */
 export function PricingOracle({
   pass,
@@ -31,35 +37,31 @@ export function PricingOracle({
   if (!s) return null;
 
   return (
-    <div className="mt-3 rounded-none border border-line bg-ink p-3">
+    <div className="border border-dark-border bg-dark p-3">
       <div className="flex items-center gap-1.5">
-        <svg width="11" height="11" viewBox="0 0 14 14" fill="none" aria-hidden>
-          <path
-            d="M7 1.5 8.3 5.2 12 6.5 8.3 7.8 7 11.5 5.7 7.8 2 6.5l3.7-1.3z"
-            stroke={s.grounded ? "var(--color-life-full)" : "var(--color-faint)"}
-            strokeWidth="1.2"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <Sparkles
+          className={`h-3.5 w-3.5 shrink-0 ${s.grounded ? "text-uranium" : "text-zincGrey"}`}
+        />
         <span
-          className="text-[11px] font-medium"
-          style={{ color: s.grounded ? "var(--color-life-full)" : "var(--color-muted)" }}
+          className={`font-mono text-[11px] font-bold uppercase tracking-wider ${
+            s.grounded ? "text-uranium" : "text-zincGrey"
+          }`}
         >
           {s.headline}
         </span>
         {!s.grounded && (
-          <span className="ml-auto text-[9px] uppercase tracking-wider text-faint">
+          <span className="ml-auto shrink-0 border border-dark-border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-zincGrey">
             no history yet
           </span>
         )}
       </div>
 
-      <p className="mt-2 text-[11px] leading-relaxed text-faint">{s.evidence}</p>
+      <p className="mt-2 font-body text-[11px] leading-relaxed text-zincGrey">{s.evidence}</p>
 
       <button
         type="button"
         onClick={() => onUse(formatEthShort(s.price))}
-        className="tnum mt-2.5 rounded-none border border-line px-2.5 py-1 text-[11px] text-muted transition-colors hover:border-line-bright hover:text-text"
+        className="tnum mt-2.5 border border-dark-border bg-dark-surface px-2.5 py-1.5 font-mono text-[11px] uppercase text-zincGrey transition-all hover:border-uranium hover:text-alabaster"
       >
         use {formatEthShort(s.price)} ETH
       </button>

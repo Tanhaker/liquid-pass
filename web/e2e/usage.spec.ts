@@ -26,6 +26,7 @@ const readUsage = (page: import("@playwright/test").Page) =>
   }, USE_KEY);
 
 test("verifying an active pass starts its idle clock", async ({ page }) => {
+  test.setTimeout(180_000);
   await page.goto("/verify", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: /verify pass/i })).toBeVisible();
 
@@ -39,8 +40,18 @@ test("verifying an active pass starts its idle clock", async ({ page }) => {
   await page.getByPlaceholder("e.g. 0, 1, 2...").fill("1");
   await page.getByRole("button", { name: "VERIFY", exact: true }).click();
 
-  await expect(page.getByText(/ACCESS GRANTED/i)).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText(/idle clock for this pass starts now/i)).toBeVisible();
+  // Anchored on the verdict badge, which reads "VERIFIED: ACCESS GRANTED".
+  // A page-wide /ACCESS GRANTED/i also matches the SDK snippet this page
+  // displays ("true = unexpired, access granted"), so the loose version passed
+  // even when the chain read had failed and nothing was granted at all -- which
+  // is exactly how this test went green and then failed on the next assertion.
+  //
+  // The timeout is generous because three reads go to the public Arbitrum RPC
+  // and have taken 15s+ when the machine is busy running the rest of the suite.
+  await expect(page.getByText(/VERIFIED: ACCESS GRANTED/i)).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByText(/idle clock for this pass starts now/i)).toBeVisible({
+    timeout: 15_000,
+  });
 
   const usage = await readUsage(page);
   expect(Object.keys(usage)).toContain("1");
@@ -49,19 +60,25 @@ test("verifying an active pass starts its idle clock", async ({ page }) => {
 });
 
 test("a token that does not exist records nothing", async ({ page }) => {
-  test.setTimeout(150_000);
+  test.setTimeout(180_000);
   await page.goto("/verify", { waitUntil: "domcontentloaded" });
 
   await page.getByPlaceholder("e.g. 0, 1, 2...").fill("99999");
   await page.getByRole("button", { name: "VERIFY", exact: true }).click();
 
-  // Asserts on the verdict rather than the exact sentence, and waits
-  // generously. Three reads go to the public Arbitrum RPC on a cold browser
-  // context and have taken well over 30s; a slow read also renders "Failed to
-  // verify" rather than "does not exist", which is a different message but
-  // the same verdict and the same invariant -- nothing was granted, so nothing
-  // may be recorded.
-  await expect(page.getByText(/ACCESS DENIED/i)).toBeVisible({ timeout: 90_000 });
+  // Waits for the verdict panel to resolve at all, rather than for one exact
+  // sentence.
+  //
+  // ownerOf() returns the zero address for an unknown id without reverting, so
+  // this path is not inherently slow -- but all three reads go to the public
+  // Arbitrum RPC, and inside the full suite that has taken over 90s. Whichever
+  // way it resolves (the token does not exist, or the read itself failed) the
+  // verdict is DENIED and the invariant is identical: nothing was granted, so
+  // nothing may be logged.
+  await expect(page.getByText(/VERIFIED: ACCESS (DENIED|GRANTED)/i)).toBeVisible({
+    timeout: 120_000,
+  });
+  await expect(page.getByText(/VERIFIED: ACCESS DENIED/i)).toBeVisible();
   // Deliberately NOT asserting that "ACCESS GRANTED" is absent from the page:
   // the integration snippet this page displays carries the comment
   // "true = unexpired, access granted", so such a check fails on

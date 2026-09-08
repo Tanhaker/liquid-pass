@@ -297,7 +297,7 @@ export default function DashboardPage() {
           {/* Merge several passes on one plan into a single longer pass.
               Calls bundle() on the Stylus contract. */}
           {myPasses.length > 1 && (
-            <PassBundler passes={myPasses} plans={plansMap} />
+            <PassBundler passes={myPasses} plans={plansMap} onDone={() => void load()} />
           )}
 
           {/* Auto-sell watches. These evaluate locally and hand you a button --

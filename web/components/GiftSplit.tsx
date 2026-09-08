@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Gift, Scissors } from "lucide-react";
 import { formatRemaining, remaining, type Pass, type Plan } from "@/lib/contract";
 
 /**
@@ -13,7 +14,15 @@ import { formatRemaining, remaining, type Pass, type Plan } from "@/lib/contract
  * "so I get twelve passes at once?" would otherwise reasonably assume yes, and
  * the answer matters: parallel slices would be twelve times the access minted
  * from nothing. The contract enforces it via a per-pass start time; this just
- * makes it legible before someone signs.
+ * makes it legible before someone signs -- now with a segmented preview, so
+ * the shape of the answer is visible before the sentence is read.
+ *
+ * STYLING: this was written against the earlier "premium fintech" token set
+ * (line / ink / muted / faint) and then mounted inside the dashboard, which is
+ * entirely grunge tokens (dark-border / dark-card / alabaster / zincGrey /
+ * uranium). It read as a foreign component bolted onto the card. It now uses
+ * the same language as the card that contains it: mono uppercase labels,
+ * squared borders, uranium for the committing action.
  */
 export function GiftSplit({
   pass,
@@ -44,9 +53,19 @@ export function GiftSplit({
 
   const n = Number(parts);
   const sliceSeconds = Number.isFinite(n) && n >= 2 ? Math.floor(left / n) : 0;
+  const validParts = Number.isInteger(n) && n >= 2 && n <= 24;
+
+  const inputClass =
+    "w-full p-2.5 bg-dark border border-dark-border text-alabaster font-mono text-xs focus:border-uranium focus:outline-none";
+  const labelClass =
+    "block font-mono text-[10px] uppercase tracking-wider text-zincGrey";
+  const commitClass =
+    "flex-1 py-2 bg-uranium hover:bg-uranium-glow text-black font-mono text-xs font-extrabold uppercase tracking-wider transition-all disabled:opacity-40";
+  const cancelClass =
+    "px-4 py-2 bg-dark border border-dark-border hover:border-uranium text-zincGrey hover:text-alabaster font-mono text-xs uppercase transition-all";
 
   return (
-    <div className="mt-2 border-t border-line pt-3">
+    <div className="mt-3 border-t border-dashed border-dark-border pt-3">
       {mode === "none" && (
         <div className="flex gap-2">
           <button
@@ -55,8 +74,9 @@ export function GiftSplit({
               setErr(null);
             }}
             disabled={disabled}
-            className="flex-1 rounded-none border border-line px-3 py-1.5 text-[11px] text-muted transition-colors hover:text-text disabled:opacity-40"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-dark hover:bg-dark-surface border border-dark-border hover:border-uranium text-zincGrey hover:text-alabaster font-mono text-xs uppercase transition-all disabled:opacity-40"
           >
+            <Gift className="h-3.5 w-3.5" />
             Gift
           </button>
           <button
@@ -66,16 +86,17 @@ export function GiftSplit({
             }}
             disabled={disabled}
             title={isListed ? "Unlist it first — a split burns the original" : undefined}
-            className="flex-1 rounded-none border border-line px-3 py-1.5 text-[11px] text-muted transition-colors hover:text-text disabled:opacity-40"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-dark hover:bg-dark-surface border border-dark-border hover:border-uranium text-zincGrey hover:text-alabaster font-mono text-xs uppercase transition-all disabled:opacity-40"
           >
+            <Scissors className="h-3.5 w-3.5" />
             Split
           </button>
         </div>
       )}
 
       {mode === "gift" && (
-        <div className="space-y-2">
-          <label className="block text-[11px] text-faint" htmlFor={`g-${pass.tokenId}`}>
+        <div className="space-y-2.5">
+          <label className={labelClass} htmlFor={`g-${pass.tokenId}`}>
             Send this pass to
           </label>
           <input
@@ -85,13 +106,15 @@ export function GiftSplit({
             placeholder="0x…"
             spellCheck={false}
             autoFocus
-            className="tnum w-full rounded-none border border-line bg-ink px-3 py-2 text-[12px] outline-none focus:border-line-bright"
+            className={inputClass}
           />
-          <p className="text-[10px] text-faint">
-            They receive {formatRemaining(left)} of access. Any listing is
-            cleared — the new owner didn&rsquo;t set that price.
+          <p className="font-body text-[11px] leading-relaxed text-zincGrey">
+            They receive{" "}
+            <span className="font-mono text-uranium">{formatRemaining(left)}</span> of
+            access. Any listing is cleared &mdash; the new owner didn&rsquo;t set that
+            price.
           </p>
-          {err && <p className="text-[11px] text-life-crit">{err}</p>}
+          {err && <p className="font-mono text-[11px] text-red-400">{err}</p>}
           <div className="flex gap-2">
             <button
               onClick={() => {
@@ -105,14 +128,11 @@ export function GiftSplit({
                 onGift(a as `0x${string}`);
               }}
               disabled={busy || disabled}
-              className="flex-1 rounded-none bg-text px-3 py-1.5 text-[11px] font-medium text-ink disabled:opacity-40"
+              className={commitClass}
             >
               {busy ? "Confirm…" : "Send"}
             </button>
-            <button
-              onClick={() => setMode("none")}
-              className="rounded-none border border-line px-3 py-1.5 text-[11px] text-muted"
-            >
+            <button onClick={() => setMode("none")} className={cancelClass}>
               Cancel
             </button>
           </div>
@@ -120,8 +140,8 @@ export function GiftSplit({
       )}
 
       {mode === "split" && (
-        <div className="space-y-2">
-          <label className="block text-[11px] text-faint" htmlFor={`s-${pass.tokenId}`}>
+        <div className="space-y-2.5">
+          <label className={labelClass} htmlFor={`s-${pass.tokenId}`}>
             Split into how many?
           </label>
           <input
@@ -130,21 +150,56 @@ export function GiftSplit({
             onChange={(e) => setParts(e.target.value)}
             inputMode="numeric"
             autoFocus
-            className="tnum w-full rounded-none border border-line bg-ink px-3 py-2 text-[12px] outline-none focus:border-line-bright"
+            className={inputClass}
           />
-          <p className="text-[10px] leading-relaxed text-faint">
-            {formatRemaining(left)} becomes {Number.isFinite(n) ? n : "—"}{" "}
-            <span className="text-muted">consecutive</span> passes of about{" "}
-            {sliceSeconds > 0 ? formatRemaining(sliceSeconds) : "—"} each — one
-            after another, not all at once. Only the first is usable today; the
-            rest activate when their turn comes. This pass is burned.
+
+          {/*
+            Segmented preview. The whole risk with split() is someone reading
+            it as N passes usable at once, which would be N times the access
+            minted out of nothing. Showing the slices end to end -- with only
+            the first lit -- says "one after another" faster than the sentence
+            below it can.
+          */}
+          {validParts && sliceSeconds > 0 && (
+            <div>
+              <div className="flex h-2 w-full gap-px overflow-hidden border border-dark-border bg-dark">
+                {Array.from({ length: Math.min(n, 24) }, (_, i) => (
+                  <div
+                    key={i}
+                    className={`h-full flex-1 ${
+                      i === 0 ? "bg-uranium" : "bg-uranium/25"
+                    }`}
+                  />
+                ))}
+              </div>
+              <div className="mt-1 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-wider">
+                <span className="text-uranium">usable now</span>
+                <span className="text-zincGrey">then in turn &rarr;</span>
+              </div>
+            </div>
+          )}
+
+          <p className="font-body text-[11px] leading-relaxed text-zincGrey">
+            <span className="font-mono text-alabaster">{formatRemaining(left)}</span>{" "}
+            becomes{" "}
+            <span className="font-mono text-alabaster">
+              {Number.isFinite(n) ? n : "—"}
+            </span>{" "}
+            <span className="text-aviation">consecutive</span> passes of about{" "}
+            <span className="font-mono text-alabaster">
+              {sliceSeconds > 0 ? formatRemaining(sliceSeconds) : "—"}
+            </span>{" "}
+            each &mdash; one after another, not all at once. Only the first is usable
+            today; the rest activate when their turn comes. This pass is burned.
           </p>
+
           {isListed && (
-            <p className="text-[11px] text-life-low">
-              Remove the listing first — splitting burns the original.
+            <p className="border border-aviation bg-aviation/10 p-2 font-mono text-[11px] text-aviation">
+              Remove the listing first &mdash; splitting burns the original.
             </p>
           )}
-          {err && <p className="text-[11px] text-life-crit">{err}</p>}
+          {err && <p className="font-mono text-[11px] text-red-400">{err}</p>}
+
           <div className="flex gap-2">
             <button
               onClick={() => {
@@ -161,14 +216,11 @@ export function GiftSplit({
                 onSplit(BigInt(n));
               }}
               disabled={busy || disabled || isListed}
-              className="flex-1 rounded-none bg-text px-3 py-1.5 text-[11px] font-medium text-ink disabled:opacity-40"
+              className={commitClass}
             >
               {busy ? "Confirm…" : `Split into ${Number.isFinite(n) ? n : "?"}`}
             </button>
-            <button
-              onClick={() => setMode("none")}
-              className="rounded-none border border-line px-3 py-1.5 text-[11px] text-muted"
-            >
+            <button onClick={() => setMode("none")} className={cancelClass}>
               Cancel
             </button>
           </div>
