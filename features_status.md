@@ -12,6 +12,7 @@ click is not shipped.
 | Core (Rust / Stylus) | `0xac20ef73723e7c620df1024eb04cc0b71fca1055` | Live · 24,296 bytes of the 24 KB limit |
 | Marketplace (Solidity) | `0x63a9edec92baf3e74f19d301808c56104e786241` | Live · the core trusts this address |
 | PassKeyWallet (Rust / Stylus) | `0x490630168df621c98e6bba22549295a2202de358` | Live · P-256 key registered, nonce 1 |
+| StreamRental (Solidity) | `0x3640ee44A5055ffd5Fd17989fFD95eF478929616` | Live · deployed 12 Sep 2026 |
 | EscrowYield (Solidity) | — | **Written, never deployed** |
 
 The core has roughly 280 bytes of headroom against the 24 KB compressed Stylus
@@ -30,7 +31,7 @@ limit. New on-chain functionality has to go in a separate contract.
 | WebAuthn / P-256 verification | Shipped (contract) | `PassKeyWallet` verifies real secp256r1 assertions on chain. Not yet wired into the website. |
 | Escrow & Aave yield | **Not deployed** | `EscrowYield.sol` is written and `Marketplace.setEscrow` exists, but no escrow address is configured, so `buy()` pays the seller directly. The UI panel stays hidden rather than showing a dead widget. |
 | Account abstraction | **Out of scope** | ERC-4337, bundlers and paymasters are explicitly out per `CLAUDE.md`. `lib/zerodev.ts` is dead code that does not typecheck and is imported by nothing. |
-| Pay-per-second rental | **Written, not deployed** | `StreamRental.sol` + 18 passing tests. Escrows a pass and charges by the second, 90/10 split, accrual capped by both deposit and expiry. Deploy with `scripts/deployStreamRental.js`. |
+| Pay-per-second rental | Shipped | `StreamRental.sol` + 18 passing tests. Escrows a pass and charges by the second, 90/10 split, accrual capped by both deposit and expiry. Deploy with `scripts/deployStreamRental.js`. |
 | Usage signal service | Shipped (advisory) | `oracle/index.js` reads the pass on chain and returns a recommendation. It holds no key and broadcasts nothing. |
 | The Graph subgraph | Shipped (secondary) | Deployed and configured in production. The app reads from RPC; the subgraph is an accelerator, not the source of truth. |
 
@@ -52,7 +53,7 @@ limit. New on-chain functionality has to go in a separate contract.
 | Yield dashboard | **Hidden** | Built, but not mounted while no escrow is deployed. |
 | Passkey verifier | Shipped | `/passkey` creates a real ES256 credential, signs a challenge read live from the deployed wallet, and verifies the secp256r1 signature in the browser. Shows the challenge match, UP/UV flags and the low-s fold. |
 | Passkey sign-in on chain | **Localhost only** | The deployed wallet was compiled with `EXPECTED_ORIGIN = "http://localhost:3000"` and must not be redeployed, so `execute()` only accepts assertions produced at that origin. `register()` is also one-shot and already used. The page states both plainly. |
-| Pay-per-second rental UI | **Hidden** | Renders once `NEXT_PUBLIC_STREAM_RENTAL_ADDRESS` is set. |
+| Pay-per-second rental UI | Shipped | Live on `/pass/[tokenId]`. Two-step setup: open the stream while you still own the pass, then hand it over. |
 | Chrome extension | Shipped (read-only) | Lists your passes and time remaining. Holds no keys; buying and selling happen on the site. |
 
 ## Testing

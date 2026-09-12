@@ -35,15 +35,19 @@ export const PASSKEY_WALLET_ADDRESS =
 export const PASSKEY_EXPECTED_ORIGIN = "http://localhost:3000";
 
 /**
- * Pay-per-second rental. Empty until StreamRental.sol is deployed.
+ * Pay-per-second rental, deployed 12 Sep 2026.
  *
- * The UI is gated on this being a real address, so nothing rental-related
- * renders until it points somewhere. Deploy with
- * contracts/scripts/deployStreamRental.js and set
- * NEXT_PUBLIC_STREAM_RENTAL_ADDRESS.
+ * Verified on chain after deploying: liquidPass() returns the core at
+ * 0xac20ef73..., ROYALTY_PERCENT is 10, and every view answers. It needs no
+ * privileged role -- it drives the core through transferPass(), which any
+ * owner may call for themselves -- so nothing about the core changed.
+ *
+ * Committed as the fallback rather than left to an env var, matching the core
+ * and marketplace above. A Vercel override pointing at an address with no code
+ * has silently broken this app before; one committed source of truth cannot.
  */
 export const STREAM_RENTAL_ADDRESS = (process.env.NEXT_PUBLIC_STREAM_RENTAL_ADDRESS ||
-  "0x") as `0x${string}`;
+  "0x3640ee44A5055ffd5Fd17989fFD95eF478929616") as `0x${string}`;
 
 export const streamRentalAbi = parseAbi([
   "function streams(uint256 tokenId) view returns (address owner, uint256 ratePerSecond, address renter, uint256 startedAt, uint256 deposit)",
