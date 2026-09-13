@@ -1,4 +1,4 @@
-import { createPublicClient, http } from "viem";
+import { createPublicClient, fallback, http } from "viem";
 import { arbitrumSepolia } from "viem/chains";
 
 /**
@@ -23,10 +23,11 @@ export const RPC_URL =
 
 export const publicClient = createPublicClient({
   chain: arbitrumSepolia,
-  transport: http(RPC_URL, {
-    // A read that hangs is worse than a read that fails: a failure surfaces a
-    // message, a hang looks identical to "still loading" forever.
-    timeout: 15_000,
-    retryCount: 2,
-  }),
+  // A read that hangs is worse than a read that fails: a failure surfaces a
+  // message, a hang looks identical to "still loading" forever. When the
+  // public RPC drops a request, the backup (lib/wagmi.ts) answers instead.
+  transport: fallback([
+    http(RPC_URL, { timeout: 15_000, retryCount: 2 }),
+    http("https://arbitrum-sepolia-rpc.publicnode.com", { timeout: 15_000, retryCount: 1 }),
+  ]),
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { waitForSuccess } from "@/lib/receipt";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { arbitrumSepolia } from "wagmi/chains";
 import { formatEther, isAddress, parseEther } from "viem";
@@ -60,6 +61,9 @@ export function StreamRentalPanel({
   const [repricing, setRepricing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** The last background refresh failed. Separate from `error`, which is for
+   *  something the user did. */
+  const [stale, setStale] = useState(false);
 
   const load = useCallback(async () => {
     if (!client || !configured) return;
@@ -101,16 +105,30 @@ export function StreamRentalPanel({
       setOwed(o);
       setLeft(secs);
       setEscrowed(holder.toLowerCase() === STREAM_RENTAL_ADDRESS.toLowerCase());
-    } catch (e) {
-      setError((e as Error).message);
+      setStale(false);
+    } catch {
+      /*
+       * A failed REFRESH is not a failed action. This polls five reads every
+       * few seconds against the public Arbitrum RPC, which drops requests when
+       * it is busy ("HTTP request failed ... Failed to fetch"). That used to be
+       * written into the action error box as a raw viem dump, and was never
+       * cleared by the next successful poll -- so a harmless blip after the
+       * hand-over step looked like the hand-over had failed. Keep the last
+       * good figures on screen and say, quietly, that they may be behind.
+       */
+      setStale(true);
     }
   }, [client, configured, pass.tokenId]);
 
   useEffect(() => {
     void load();
     if (!configured) return;
-    // A per-second charge should be visible ticking, not frozen between page loads.
-    const id = setInterval(() => void load(), 5000);
+    // A per-second charge should be visible ticking, not frozen between page
+    // loads. Skipped while the tab is hidden, which is most of what was
+    // tripping the public RPC's limits.
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") void load();
+    }, 8000);
     return () => clearInterval(id);
   }, [load, configured]);
 
@@ -122,7 +140,7 @@ export function StreamRentalPanel({
     setError(null);
     try {
       const hash = await send();
-      await client?.waitForTransactionReceipt({ hash });
+      await waitForSuccess(client, hash);
       await load();
       onDone?.();
     } catch (e) {
@@ -168,6 +186,12 @@ export function StreamRentalPanel({
         <div className="border border-red-500 bg-red-500/10 p-3 font-mono text-[11px] text-red-400">
           {error}
         </div>
+      )}
+      {stale && !error && (
+        <p className="font-mono text-[10px] uppercase tracking-wider text-zincGrey">
+          Couldn&rsquo;t refresh from the network just now. Showing the last
+          figures; retrying.
+        </p>
       )}
 
       {renter && (

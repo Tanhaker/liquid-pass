@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { waitForSuccess } from "@/lib/receipt";
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import { formatEther, parseEther } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
@@ -137,8 +138,10 @@ export default function PassDetail({
     setError(null);
     try {
       const hash = await fn();
+      // The success banner waits for a SUCCESSFUL receipt; a reverted
+      // transaction used to show it anyway.
+      await waitForSuccess(client, hash);
       setTx({ hash, what });
-      await client?.waitForTransactionReceipt({ hash });
       await load();
     } catch (e) {
       setError(humanise(e as Error));
@@ -429,7 +432,7 @@ export default function PassDetail({
                   className="flex items-center space-x-2 border border-dark-border bg-dark px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-alabaster transition-colors hover:border-uranium hover:text-uranium disabled:opacity-40"
                 >
                   <Send className="h-3.5 w-3.5" />
-                  <span>Transfer / Discard</span>
+                  <span>Transfer</span>
                 </button>
               )}
 

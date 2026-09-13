@@ -586,3 +586,11 @@ main:has([data-flush-footer]) + footer {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* A compact scroll area inside a card (issuer plans, access requests). The
+   webkit thumb comes from the global terminal scrollbar above; this adds the
+   Firefox equivalent. */
+.mini-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-accent) transparent;
+}

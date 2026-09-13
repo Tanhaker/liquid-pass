@@ -34,6 +34,11 @@ const IGNORABLE = [
   /pino-pretty/i,
   /async-storage/i,
   /\[Fast Refresh\]/i,
+  // The public Arbitrum RPC refuses requests under load and answers without
+  // CORS headers, which the browser logs even though the app's fallback
+  // transport then retries against a second endpoint and the page loads. The
+  // "dangling loading state" test below still catches a page that never does.
+  /sepolia-rollup\.arbitrum\.io\/rpc.*blocked by CORS policy/i,
 ];
 
 const meaningful = (msgs: string[]) =>

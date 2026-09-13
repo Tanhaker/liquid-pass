@@ -296,9 +296,9 @@ export const test = base.extend<{ errors: PageErrors }>({
  * deliberately load the site with no wallet at all, which is how most visitors
  * arrive and a state that has to keep working.
  */
-export async function useMockWallet(page: Page) {
+export async function useMockWallet(page: Page, account: string = TEST_ACCOUNT) {
   await page.addInitScript(initScript, {
-    account: TEST_ACCOUNT,
+    account,
     chainIdHex: ARBITRUM_SEPOLIA_HEX,
     rpcUrl: RPC_URL,
   });

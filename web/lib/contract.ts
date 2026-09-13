@@ -49,6 +49,24 @@ export const PASSKEY_EXPECTED_ORIGIN = "http://localhost:3000";
 export const STREAM_RENTAL_ADDRESS = (process.env.NEXT_PUBLIC_STREAM_RENTAL_ADDRESS ||
   "0x3640ee44A5055ffd5Fd17989fFD95eF478929616") as `0x${string}`;
 
+/**
+ * IssuerRequests.sol -- a public inbox where a wallet asks the core's admin for
+ * issuer access. Deployed 14 Sep 2026 against the core above. It grants
+ * nothing: approval is still the admin calling the core's own setIssuer().
+ */
+export const ISSUER_REQUESTS_ADDRESS = (process.env.NEXT_PUBLIC_ISSUER_REQUESTS_ADDRESS ||
+  "0xc4F2Ceef3668a3fd878dF7Dd4eC12f0cfB93B766") as `0x${string}`;
+
+export const issuerRequestsAbi = parseAbi([
+  "function request(string company, string note)",
+  "function withdraw()",
+  "function dismiss(address requester)",
+  "function requests(address) view returns (string company, string note, uint64 requestedAt)",
+  "function requesters(uint256) view returns (address)",
+  "function requesterCount() view returns (uint256)",
+  "event AccessRequested(address indexed requester, string company, string note)",
+]);
+
 export const streamRentalAbi = parseAbi([
   "function streams(uint256 tokenId) view returns (address owner, uint256 ratePerSecond, address renter, uint256 startedAt, uint256 deposit)",
   "function activeRenter(uint256 tokenId) view returns (address)",

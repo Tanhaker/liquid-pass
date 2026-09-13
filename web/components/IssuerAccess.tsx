@@ -4,8 +4,14 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { arbitrumSepolia } from "wagmi/chains";
 import { isAddress, getAddress } from "viem";
-import { ShieldCheck, ShieldOff, KeyRound, Loader2 } from "lucide-react";
-import { LIQUID_PASS_ADDRESS, liquidPassAbi, shortAddress } from "@/lib/contract";
+import { ShieldCheck, ShieldOff, KeyRound, Loader2, Send, Inbox } from "lucide-react";
+import {
+  ISSUER_REQUESTS_ADDRESS,
+  LIQUID_PASS_ADDRESS,
+  issuerRequestsAbi,
+  liquidPassAbi,
+  shortAddress,
+} from "@/lib/contract";
 import { humanise, useFees } from "@/components/ui";
 import { useTxToast } from "@/lib/useTxToast";
 
@@ -22,7 +28,35 @@ import { useTxToast } from "@/lib/useTxToast";
  * transaction fail in a wallet: only `admin()` may call it, and the zero
  * address is rejected.
  */
-export function IssuerAccess({ onChanged }: { onChanged?: () => void }) {
+type OpenRequest = {
+  requester: `0x${string}`;
+  company: string;
+  note: string;
+  requestedAt: number;
+};
+
+/** How many of the most recent requesters the admin list reads. */
+const REQUEST_PAGE = 50;
+
+const byteLength = (text: string) => new TextEncoder().encode(text).length;
+
+type Busy =
+  | "grant"
+  | "revoke"
+  | "request"
+  | "withdraw"
+  | `approve:${string}`
+  | `dismiss:${string}`
+  | null;
+
+export function IssuerAccess({
+  onChanged,
+  onStatus,
+}: {
+  onChanged?: () => void;
+  /** Reports whether the connected wallet may create plans, once known. */
+  onStatus?: (status: { isIssuer: boolean | null; isAdmin: boolean }) => void;
+}) {
   const { address, isConnected, chainId } = useAccount();
   const client = usePublicClient();
   const { writeContractAsync } = useWriteContract();
@@ -34,7 +68,14 @@ export function IssuerAccess({ onChanged }: { onChanged?: () => void }) {
   const [selfAllowed, setSelfAllowed] = useState<boolean | null>(null);
   const [target, setTarget] = useState("");
   const [targetAllowed, setTargetAllowed] = useState<boolean | null>(null);
-  const [busy, setBusy] = useState<"grant" | "revoke" | null>(null);
+  const [busy, setBusy] = useState<Busy>(null);
+
+  // Requests (IssuerRequests.sol): the connected wallet's own open request,
+  // and for the admin, everyone's.
+  const [myRequest, setMyRequest] = useState<OpenRequest | null>(null);
+  const [company, setCompany] = useState("");
+  const [requestNote, setRequestNote] = useState("");
+  const [openRequests, setOpenRequests] = useState<OpenRequest[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
@@ -48,14 +89,71 @@ export function IssuerAccess({ onChanged }: { onChanged?: () => void }) {
       });
       setAdmin(a);
       if (address) {
-        setSelfAllowed(
-          await client.readContract({
-            address: LIQUID_PASS_ADDRESS,
-            abi: liquidPassAbi,
-            functionName: "isIssuer",
-            args: [address],
+        const allowed = await client.readContract({
+          address: LIQUID_PASS_ADDRESS,
+          abi: liquidPassAbi,
+          functionName: "isIssuer",
+          args: [address],
+        });
+        setSelfAllowed(allowed);
+
+        const [c, n, at] = await client.readContract({
+          address: ISSUER_REQUESTS_ADDRESS,
+          abi: issuerRequestsAbi,
+          functionName: "requests",
+          args: [address],
+        });
+        setMyRequest(at > 0n ? { requester: address, company: c, note: n, requestedAt: Number(at) } : null);
+      } else {
+        setSelfAllowed(null);
+        setMyRequest(null);
+      }
+
+      // Everyone's open requests, for the admin only.
+      if (address && a.toLowerCase() === address.toLowerCase()) {
+        const count = await client.readContract({
+          address: ISSUER_REQUESTS_ADDRESS,
+          abi: issuerRequestsAbi,
+          functionName: "requesterCount",
+        });
+        const from = count > BigInt(REQUEST_PAGE) ? count - BigInt(REQUEST_PAGE) : 0n;
+        const indexes: bigint[] = [];
+        for (let i = count; i > from; i--) indexes.push(i - 1n); // newest first
+        const who = await Promise.all(
+          indexes.map((i) =>
+            client.readContract({
+              address: ISSUER_REQUESTS_ADDRESS,
+              abi: issuerRequestsAbi,
+              functionName: "requesters",
+              args: [i],
+            }),
+          ),
+        );
+        const rows = await Promise.all(
+          who.map(async (r) => {
+            const [[c, n, at], allowed] = await Promise.all([
+              client.readContract({
+                address: ISSUER_REQUESTS_ADDRESS,
+                abi: issuerRequestsAbi,
+                functionName: "requests",
+                args: [r],
+              }),
+              client.readContract({
+                address: LIQUID_PASS_ADDRESS,
+                abi: liquidPassAbi,
+                functionName: "isIssuer",
+                args: [r],
+              }),
+            ]);
+            // Open = filed, not withdrawn or declined, and not already approved.
+            return at > 0n && !allowed
+              ? { requester: r, company: c, note: n, requestedAt: Number(at) }
+              : null;
           }),
         );
+        setOpenRequests(rows.filter((x): x is OpenRequest => x !== null));
+      } else {
+        setOpenRequests(null);
       }
     } catch (e) {
       setError((e as Error).message);
@@ -68,6 +166,105 @@ export function IssuerAccess({ onChanged }: { onChanged?: () => void }) {
 
   const isAdmin =
     admin !== null && address !== undefined && admin.toLowerCase() === address.toLowerCase();
+
+  useEffect(() => {
+    onStatus?.({ isIssuer: isConnected ? selfAllowed : false, isAdmin });
+  }, [onStatus, selfAllowed, isAdmin, isConnected]);
+
+  /** Shared shape for the request-side writes. */
+  const send = async (
+    label: NonNullable<Busy>,
+    title: string,
+    write: () => Promise<`0x${string}`>,
+    done: string,
+  ) => {
+    setError(null);
+    setNote(null);
+    setBusy(label);
+    try {
+      const hash = await txToast(title, write);
+      setNote(`${done} — ${hash.slice(0, 10)}…`);
+      await load();
+      onChanged?.();
+    } catch (e) {
+      setError(humanise(e as Error));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const fileRequest = () => {
+    const name = company.trim();
+    const why = requestNote.trim();
+    if (!name) return setError("Enter your company or product name.");
+    if (byteLength(name) > 64) return setError("Company name is too long (64 bytes max).");
+    if (byteLength(why) > 280) return setError("Note is too long (280 bytes max).");
+    void send(
+      "request",
+      "Requested issuer access",
+      async () =>
+        writeContractAsync({
+          address: ISSUER_REQUESTS_ADDRESS,
+          abi: issuerRequestsAbi,
+          functionName: "request",
+          args: [name, why],
+          chainId: arbitrumSepolia.id,
+          gas: 400_000n,
+          ...(await fees()),
+        }),
+      "Request sent to the admin",
+    );
+  };
+
+  const approve = (r: OpenRequest) =>
+    void send(
+      `approve:${r.requester}`,
+      `Authorised ${shortAddress(r.requester)}`,
+      async () =>
+        writeContractAsync({
+          address: LIQUID_PASS_ADDRESS,
+          abi: liquidPassAbi,
+          functionName: "setIssuer",
+          args: [r.requester, true],
+          chainId: arbitrumSepolia.id,
+          gas: 400_000n,
+          ...(await fees()),
+        }),
+      `Authorised ${r.company} (${shortAddress(r.requester)})`,
+    );
+
+  const decline = (r: OpenRequest) =>
+    void send(
+      `dismiss:${r.requester}`,
+      `Declined ${shortAddress(r.requester)}`,
+      async () =>
+        writeContractAsync({
+          address: ISSUER_REQUESTS_ADDRESS,
+          abi: issuerRequestsAbi,
+          functionName: "dismiss",
+          args: [r.requester],
+          chainId: arbitrumSepolia.id,
+          gas: 300_000n,
+          ...(await fees()),
+        }),
+      `Declined the request from ${r.company}`,
+    );
+
+  const withdraw = () =>
+    void send(
+      "withdraw",
+      "Withdrew issuer access request",
+      async () =>
+        writeContractAsync({
+          address: ISSUER_REQUESTS_ADDRESS,
+          abi: issuerRequestsAbi,
+          functionName: "withdraw",
+          chainId: arbitrumSepolia.id,
+          gas: 300_000n,
+          ...(await fees()),
+        }),
+      "Request withdrawn",
+    );
 
   /** Look up whoever is typed in the box, so the button says the right thing. */
   const checkTarget = useCallback(async () => {
@@ -198,8 +395,54 @@ export function IssuerAccess({ onChanged }: { onChanged?: () => void }) {
         </div>
       </div>
 
-      {isAdmin ? (
+      {isAdmin && openRequests !== null && (
         <div className="space-y-3 font-mono text-xs">
+          <div className="flex items-center gap-2 uppercase text-zincGrey">
+            <Inbox className="h-4 w-4 text-uranium" />
+            <span>Access requests ({openRequests.length})</span>
+          </div>
+          {openRequests.length === 0 ? (
+            <p className="border border-dashed border-dark-border bg-dark p-3 text-[11px] text-zincGrey">
+              No open requests.
+            </p>
+          ) : (
+            <div className="mini-scroll max-h-72 space-y-2 overflow-y-auto pr-1">
+              {openRequests.map((r) => (
+                <div key={r.requester} className="space-y-2 border border-dark-border bg-dark p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-bold text-alabaster">{r.company}</span>
+                    <span className="text-[10px] text-zincGrey">
+                      {shortAddress(r.requester)} · {new Date(r.requestedAt * 1000).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {r.note && (
+                    <p className="break-words text-[11px] leading-relaxed text-zincGrey">{r.note}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => approve(r)}
+                      disabled={busy !== null || wrongNetwork}
+                      className="flex-1 bg-uranium px-3 py-1.5 font-extrabold uppercase tracking-wider text-black hover:bg-uranium-glow disabled:opacity-40"
+                    >
+                      {busy === `approve:${r.requester}` ? "Confirm…" : "Approve"}
+                    </button>
+                    <button
+                      onClick={() => decline(r)}
+                      disabled={busy !== null || wrongNetwork}
+                      className="flex-1 border border-dark-border bg-dark-surface px-3 py-1.5 font-bold uppercase tracking-wider text-alabaster hover:border-aviation hover:text-aviation disabled:opacity-40"
+                    >
+                      {busy === `dismiss:${r.requester}` ? "Confirm…" : "Decline"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {isAdmin ? (
+        <div className="space-y-3 border-t border-dark-border pt-5 font-mono text-xs">
           <label className="block uppercase text-zincGrey" htmlFor="issuer-addr">
             Issuer address
           </label>
@@ -247,12 +490,74 @@ export function IssuerAccess({ onChanged }: { onChanged?: () => void }) {
             already issued are unaffected and keep working until they expire.
           </p>
         </div>
-      ) : (
+      ) : !isConnected ? (
         <p className="font-mono text-[11px] leading-relaxed text-zincGrey">
-          Only the contract admin can change issuer access. Connect as{" "}
-          {admin ? shortAddress(admin) : "the admin"} to grant or revoke it.
+          Connect a wallet to request access to issue plans.
         </p>
-      )}
+      ) : selfAllowed ? (
+        <p className="font-mono text-[11px] leading-relaxed text-zincGrey">
+          Your wallet can create plans. Only the contract admin can change issuer access.
+        </p>
+      ) : selfAllowed === false && myRequest ? (
+        <div className="space-y-3 border border-uranium/40 bg-uranium/5 p-4 font-mono text-xs">
+          <div className="flex items-center gap-2 font-bold uppercase text-uranium">
+            <Send className="h-4 w-4" />
+            <span>Request sent</span>
+          </div>
+          <p className="text-[11px] leading-relaxed text-zincGrey">
+            Asked as <span className="text-alabaster">{myRequest.company}</span> on{" "}
+            {new Date(myRequest.requestedAt * 1000).toLocaleString()}. The admin,{" "}
+            {admin ? shortAddress(admin) : "the admin"}, sees it on this page. Once it is
+            approved, the plan tools appear here for your wallet.
+          </p>
+          <button
+            onClick={withdraw}
+            disabled={busy !== null || wrongNetwork}
+            className="border border-dark-border bg-dark-surface px-4 py-2 font-bold uppercase tracking-wider text-alabaster hover:border-aviation hover:text-aviation disabled:opacity-40"
+          >
+            {busy === "withdraw" ? "Confirm…" : "Withdraw request"}
+          </button>
+        </div>
+      ) : selfAllowed === false ? (
+        <div className="space-y-3 font-mono text-xs">
+          <p className="text-[11px] leading-relaxed text-zincGrey">
+            Only the contract admin, {admin ? shortAddress(admin) : "the admin"}, can let a wallet
+            create plans. Ask for access below: the request is recorded on-chain and appears on
+            this page for the admin to approve or decline.
+          </p>
+          <label className="block uppercase text-zincGrey" htmlFor="req-company">
+            Company or product
+          </label>
+          <input
+            id="req-company"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            maxLength={64}
+            placeholder="e.g. Acme AI"
+            className="w-full border border-dark-border bg-dark px-3 py-2 text-alabaster outline-none focus:border-uranium"
+          />
+          <label className="block uppercase text-zincGrey" htmlFor="req-note">
+            Note for the admin (optional)
+          </label>
+          <textarea
+            id="req-note"
+            value={requestNote}
+            onChange={(e) => setRequestNote(e.target.value)}
+            maxLength={280}
+            rows={3}
+            placeholder="What plans you want to issue"
+            className="w-full resize-none border border-dark-border bg-dark px-3 py-2 text-alabaster outline-none focus:border-uranium"
+          />
+          <button
+            onClick={fileRequest}
+            disabled={busy !== null || wrongNetwork || !company.trim()}
+            className="inline-flex w-full items-center justify-center gap-2 bg-uranium px-4 py-2.5 font-extrabold uppercase tracking-wider text-black transition-all hover:bg-uranium-glow disabled:opacity-40"
+          >
+            {busy === "request" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {busy === "request" ? "Confirm…" : "Request access"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

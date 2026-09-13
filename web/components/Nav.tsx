@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
 import { arbitrumSepolia } from "wagmi/chains";
-import { Zap } from "lucide-react";
+import { Fingerprint, Zap } from "lucide-react";
 import { HorizontalThemeWipeToggle } from "@/components/ui/theme-wipe-toggle";
 import { useDemo } from "@/lib/demo";
 
@@ -23,11 +23,14 @@ const LINKS = [
   { href: "/market", label: "MARKET" },
   { href: "/dashboard", label: "MY PASSES" },
   { href: "/explorer", label: "EXPLORER" },
+  { href: "/issuer", label: "ISSUER" },
   { href: "/analytics", label: "ANALYTICS" },
   { href: "/verify", label: "VERIFY" },
-  { href: "/passkey", label: "PASSKEY" },
-  { href: "/issuer", label: "ISSUER" },
 ];
+
+// Passkey sits with the account controls on the right, beside the wallet
+// button, rather than among the page sections.
+const PASSKEY = { href: "/passkey", label: "PASSKEY" };
 
 export function Nav() {
   const pathname = usePathname();
@@ -101,6 +104,19 @@ export function Nav() {
               <span className="hidden sm:inline">DEMO:</span>
               <span className="font-bold">{demo ? "ACTIVE" : "ON-CHAIN"}</span>
             </button>
+
+            <Link
+              href={PASSKEY.href}
+              title="Passkey verifier"
+              className={`flex items-center gap-2 border px-3 py-1.5 font-mono text-xs uppercase tracking-wider transition-all ${
+                pathname === PASSKEY.href
+                  ? "border-uranium bg-uranium/10 font-semibold text-uranium"
+                  : "border-dark-border bg-raised text-zinc-grey hover:border-uranium hover:text-text"
+              }`}
+            >
+              <Fingerprint className="size-3.5" />
+              <span className="hidden sm:inline">{PASSKEY.label}</span>
+            </Link>
 
             {wrongNetwork && (
               <span className="hidden border border-life-crit/40 bg-life-crit/10 px-2.5 py-1.5 font-mono text-[11px] uppercase text-life-crit lg:inline">

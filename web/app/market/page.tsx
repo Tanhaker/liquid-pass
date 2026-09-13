@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { formatEther } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
-import { useFees, useNow } from "@/components/ui";
+import { humanise, useFees, useNow } from "@/components/ui";
 import { PassCard3D } from "@/components/PassCard3D";
 import { fetchPasses, fetchPlans, marketStats, type MarketStats } from "@/lib/data";
 import {
@@ -16,6 +16,7 @@ import {
 } from "@/lib/contract";
 import { SubscriptionPass } from "@/lib/types";
 import { tierOf } from "@/lib/tier";
+import { planOrdinals } from "@/lib/planOrdinals";
 import {
   Search,
   Flame,
@@ -129,7 +130,16 @@ export default function MarketPage() {
     };
   }, [planById, shiftExpiry]);
 
-  const uiListings = useMemo(() => listings.map(toSubscriptionPass), [listings, toSubscriptionPass]);
+  // Same-plan listings are numbered within their plan ("Grok Pro #1"); see
+  // lib/planOrdinals.
+  const uiListings = useMemo(() => {
+    const ordinals = planOrdinals(listings);
+    return listings.map((p) => {
+      const ui = toSubscriptionPass(p);
+      const n = ordinals.get(p.tokenId.toString());
+      return n ? { ...ui, name: `${ui.name} #${n}` } : ui;
+    });
+  }, [listings, toSubscriptionPass]);
 
   const filteredPasses = useMemo(() => {
     return uiListings.filter((p) => {
@@ -363,6 +373,26 @@ export default function MarketPage() {
       const rawCurrent = onChainPass?.current ?? 0n;
       const valueToSend = withBuffer(rawCurrent);
 
+      if (address && onChainPass && onChainPass.owner.toLowerCase() === address.toLowerCase()) {
+        throw new Error("This is your own listing. The contract won't sell a pass to its current owner.");
+      }
+
+      // Dry-run first. The write below sets gas explicitly, which skips the
+      // wallet's own estimate -- so a buy the contract would refuse (already
+      // sold, already the owner, price moved) was broadcast anyway and failed
+      // on chain. Simulating surfaces the contract's reason before any wallet
+      // prompt, and costs nothing.
+      if (client && address) {
+        await client.simulateContract({
+          account: address,
+          address: MARKETPLACE_ADDRESS,
+          abi: marketplaceAbi,
+          functionName: "buy",
+          args: [tokenIdBig],
+          value: valueToSend,
+        });
+      }
+
       const hash = await txToast(`Bought pass #${pass.tokenId}`, async () =>
         writeContractAsync({
           address: MARKETPLACE_ADDRESS,
@@ -379,7 +409,7 @@ export default function MarketPage() {
       await loadData();
     } catch (e) {
       console.error("Buy failed:", e);
-      setTxError((e as Error).message || "Transaction failed");
+      setTxError(humanise(e as Error) || "Transaction failed");
     } finally {
       setBuyingTokenId(null);
     }
@@ -593,6 +623,7 @@ export default function MarketPage() {
                 <PassCard3D
                   pass={pass}
                   onBuy={handleBuy}
+                  ownedByViewer={!!address && pass.owner.toLowerCase() === address.toLowerCase()}
                   interactive={true}
                   showActions={true}
                 />
@@ -619,6 +650,7 @@ export default function MarketPage() {
               <PassCard3D
                 pass={pass}
                 onBuy={handleBuy}
+                ownedByViewer={!!address && pass.owner.toLowerCase() === address.toLowerCase()}
                 interactive={true}
                 showActions={true}
               />

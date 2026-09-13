@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { waitForSuccess } from "@/lib/receipt";
 import { usePublicClient } from "wagmi";
 import { useLiquidPass } from "@/lib/store";
 import { humanise } from "@/components/ui";
@@ -49,7 +50,7 @@ export function useTxToast() {
         });
 
         if (opts?.awaitReceipt !== false) {
-          await client?.waitForTransactionReceipt({ hash });
+          await waitForSuccess(client, hash);
         }
 
         updateNotification(id, {

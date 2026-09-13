@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { waitForSuccess } from "@/lib/receipt";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { arbitrumSepolia } from "wagmi/chains";
 import { parseEther } from "viem";
@@ -32,6 +33,14 @@ export default function IssuerPage() {
   const [planDays, setPlanDays] = useState("30");
   const [metadataUri, setMetadataUri] = useState("");
   const [pinningIpfs, setPinningIpfs] = useState(false);
+
+  // Whether the connected wallet may create plans, as reported by IssuerAccess
+  // from the core's isIssuer(). null until known, so nothing flashes.
+  const [canIssue, setCanIssue] = useState<boolean | null>(null);
+  const onStatus = useCallback(
+    ({ isIssuer }: { isIssuer: boolean | null; isAdmin: boolean }) => setCanIssue(isIssuer),
+    [],
+  );
 
   const load = useCallback(async () => {
     try { const pl = await fetchPlans(); setPlans(pl); setError(null); }
@@ -86,8 +95,8 @@ export default function IssuerPage() {
         gas: 800_000n,
         ...(await fees()),
       });
+      await waitForSuccess(client, hash);
       setTx({ hash, what: `Created plan "${planName}"` });
-      await client?.waitForTransactionReceipt({ hash });
       await load();
     } catch (e) { setError(humanise(e as Error)); } finally { setBusy(false); setPinningIpfs(false); }
   };
@@ -102,8 +111,8 @@ export default function IssuerPage() {
         gas: 800_000n,
         ...(await fees()),
       });
+      await waitForSuccess(client, hash);
       setTx({ hash, what: `${plan.open ? "Closed" : "Opened"} plan "${plan.name}"` });
-      await client?.waitForTransactionReceipt({ hash });
       await load();
     } catch (e) { setError(humanise(e as Error)); } finally { setBusy(false); }
   };
@@ -142,8 +151,12 @@ export default function IssuerPage() {
       {/* Authorising an issuer is the step that has to happen BEFORE any of
           the below works, so it sits above the plan form. It had no ABI entry
           and no UI until now -- every issuer on chain was added by hand. */}
-      <IssuerAccess onChanged={() => void load()} />
+      <IssuerAccess onChanged={() => void load()} onStatus={onStatus} />
 
+      {/* Plan tools are for issuers only. The contract would refuse
+          createPlan() from anyone else anyway; showing the form to them only
+          invited a transaction that could not succeed. */}
+      {canIssue === true && (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-6 p-6 bg-dark-card border border-dark-border shadow-grunge space-y-6">
           <div className="flex items-center justify-between border-b border-dark-border pb-4">
@@ -211,7 +224,9 @@ export default function IssuerPage() {
           ) : plans.length === 0 ? (
             <div className="p-8 text-center font-mono text-xs text-zincGrey">No plans created yet. Be the first issuer!</div>
           ) : (
-            <div className="space-y-3 font-mono text-xs">
+            // Capped height with its own scroll, so a long plan list does not
+            // stretch the card far past the form beside it.
+            <div className="mini-scroll max-h-[560px] space-y-3 overflow-y-auto pr-1 font-mono text-xs">
               {plans.map((plan) => {
                 const ipfsCid = plan.uri?.replace("ipfs://", "");
                 const ipfsGatewayUrl = ipfsCid ? `https://gateway.pinata.cloud/ipfs/${ipfsCid}` : null;
@@ -253,6 +268,7 @@ export default function IssuerPage() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

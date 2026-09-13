@@ -12,6 +12,8 @@ interface PassCard3DProps {
   interactive?: boolean;
   onBuy?: (pass: SubscriptionPass) => void;
   showActions?: boolean;
+  /** The connected wallet already owns this pass, so it cannot buy it. */
+  ownedByViewer?: boolean;
 }
 
 export function PassCard3D({
@@ -19,6 +21,7 @@ export function PassCard3D({
   interactive = true,
   onBuy,
   showActions = true,
+  ownedByViewer = false,
 }: PassCard3DProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
@@ -234,7 +237,15 @@ export function PassCard3D({
             >
               Inspect Detail
             </LinkButton3D>
-            {pass.isListed && onBuy && (
+            {/* The contract refuses to sell a pass to its current owner
+                ("Already owner"), so offering the button only produced a
+                transaction that failed in the wallet. */}
+            {pass.isListed && onBuy && ownedByViewer && (
+              <span className="flex flex-1 items-center justify-center border border-dark-border bg-dark px-3 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-zincGrey">
+                Your listing
+              </span>
+            )}
+            {pass.isListed && onBuy && !ownedByViewer && (
               <Button3D onClick={() => onBuy(pass)} size="md" className="flex-1">
                 <span>Acquire Pass</span>
                 <ArrowRight className="w-4 h-4" />

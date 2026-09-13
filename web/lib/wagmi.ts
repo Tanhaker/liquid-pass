@@ -1,6 +1,6 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { arbitrumSepolia } from "wagmi/chains";
-import { http } from "wagmi";
+import { fallback, http } from "wagmi";
 
 /**
  * Wallet configuration, via RainbowKit.
@@ -22,13 +22,24 @@ const projectId =
 export const ARBITRUM_SEPOLIA_RPC =
   process.env.NEXT_PUBLIC_RPC_URL ?? "https://sepolia-rollup.arbitrum.io/rpc";
 
+/**
+ * Second read endpoint. The public Arbitrum RPC drops requests under load and
+ * answers without CORS headers when it does, which the browser reports as
+ * "Failed to fetch". PublicNode serves the same chain with CORS allowed.
+ * Reads only: transactions are signed and sent by the user's wallet.
+ */
+export const ARBITRUM_SEPOLIA_BACKUP_RPC = "https://arbitrum-sepolia-rpc.publicnode.com";
+
 export const config = getDefaultConfig({
   appName: "Liquid Pass",
   appDescription: "Buy time. Use it. Sell what's left.",
   projectId,
   chains: [arbitrumSepolia],
   transports: {
-    [arbitrumSepolia.id]: http(ARBITRUM_SEPOLIA_RPC),
+    [arbitrumSepolia.id]: fallback([
+      http(ARBITRUM_SEPOLIA_RPC, { retryCount: 2 }),
+      http(ARBITRUM_SEPOLIA_BACKUP_RPC, { retryCount: 2 }),
+    ]),
   },
   // Server-side rendering is on, so the config must not touch browser APIs
   // during the first render.
