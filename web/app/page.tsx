@@ -10,7 +10,9 @@ import { DualSettlementAnimation } from "@/components/DualSettlementAnimation";
 import { useNow } from "@/components/ui";
 import dynamic from "next/dynamic";
 // Wrapper, not a backdrop: the hero section renders inside it.
-const LuxuryHeroScene = dynamic(() => import("@/components/ui/luxury-hero-scene"), { ssr: false });
+// Three.js runs in the browser only, and pulling it through next/dynamic keeps
+// the WebGL runtime out of the server bundle and out of first paint.
+const DottedSurface = dynamic(() => import("@/components/ui/dotted-surface"), { ssr: false });
 import { EXPLORER, LIQUID_PASS_ADDRESS, shortAddress } from "@/lib/contract";
 
 /**
@@ -117,10 +119,22 @@ export default function Home() {
   return (
     <div className="relative overflow-hidden">
       {/* ---------------------------------------------------------------- */}
-      {/* HERO -- the scene wraps the content rather than sitting behind it */}
+      {/* HERO                                                             */}
       {/* ---------------------------------------------------------------- */}
-      <LuxuryHeroScene>
-      <section className="relative z-10 mx-auto flex min-h-[760px] max-w-7xl flex-col justify-center px-4 pb-20 pt-12 sm:px-6 lg:px-8 lg:pb-28 lg:pt-20">
+
+      {/* Hero background: the dotted terrain, faded downward. Restored as it
+          was before the luxury scene replaced it -- a backdrop behind the
+          section, not a wrapper around it. */}
+      <div className="absolute top-0 left-0 right-0 h-[680px] lg:h-[780px] overflow-hidden pointer-events-none z-0">
+        <div className="hero-surface-fade absolute inset-0">
+          {/* Opacity is well below the component default: at full strength
+              the terrain competes with the headline sitting on top of it. The
+              downward mask in globals.css does the rest. */}
+          <DottedSurface size={9} opacity={0.3} />
+        </div>
+      </div>
+
+      <section className="relative z-10 mx-auto max-w-7xl px-4 pb-20 pt-12 sm:px-6 lg:px-8 lg:pb-28 lg:pt-20">
         <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12">
           <motion.div {...REVEAL_NOW} className="space-y-6 lg:col-span-7">
             <h1 className="font-header text-4xl font-extrabold leading-[1.05] tracking-tight text-text sm:text-6xl lg:text-7xl">
@@ -214,7 +228,6 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
-      </LuxuryHeroScene>
 
       {/* ---------------------------------------------------------------- */}
       {/* LIFECYCLE                                                        */}

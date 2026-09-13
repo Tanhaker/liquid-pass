@@ -2,34 +2,24 @@ import { test, expect } from "./fixtures/wallet";
 import type { Page } from "@playwright/test";
 
 /**
- * The hero scene: the centre cube, the neon sweeps, and what they cost.
+ * The hero: the dotted terrain, restored.
  *
- * This page was reported laggy earlier, so frame rate is measured rather than
- * asserted. That is only possible in real Chromium -- requestAnimationFrame
- * does not tick in a hidden browser pane, which is why an earlier round of
- * perf work had to rest on structural counts instead of a measurement.
- *
- * Context for the numbers: a Spline (WebGL) version of this cube was built and
- * measured first. It rendered correctly but ran the page at 9.7-15.3 fps with
- * hardware acceleration on, against 59.8 fps without it, and the cost was the
- * runtime's own render loop rather than anything tunable from our side. Hence
- * the CSS-3D cube these assertions cover.
+ * This replaced the CSS-3D "luxury" scene at the user's request, which puts a
+ * WebGL runtime (three.js) back on the homepage. That scene was reported laggy
+ * once already this project, so frame rate is measured here rather than
+ * assumed -- relative to an idle page, which separates a slow scene from a slow
+ * machine.
  */
 
 test.use({
   launchOptions: {
-    // Default headless Chromium falls back to software rendering, which
-    // makes any GPU comparison meaningless.
+    // Default headless Chromium falls back to software rendering, which would
+    // make any WebGL measurement meaningless.
     args: ["--enable-gpu", "--ignore-gpu-blocklist", "--use-angle=default"],
   },
 });
 
-/**
- * Frames actually painted in a fixed window.
- *
- * Counting frames over a known period, rather than waiting for a fixed number
- * of frames, means a slow page returns a low number instead of hanging.
- */
+/** Frames painted in a fixed window, so a slow page returns low, not a hang. */
 async function fps(page: Page, ms = 2500) {
   return page.evaluate(async (duration) => {
     let frames = 0;
@@ -43,73 +33,79 @@ async function fps(page: Page, ms = 2500) {
       requestAnimationFrame(tick);
     });
     const elapsed = performance.now() - start;
-    return { frames, elapsed, fps: (frames / elapsed) * 1000 };
+    return { fps: (frames / elapsed) * 1000, frames, elapsed };
   }, ms);
 }
 
-test("the centre cube renders with all six faces", async ({ page }) => {
-  const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(e.message));
+const TERRAIN = ".hero-surface-fade canvas";
 
+test("the dotted terrain renders a WebGL canvas behind the hero", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
-  const cube = page.locator(".cube-centre");
-  await expect(cube).toHaveCount(1);
-  await expect(cube.locator(".cube-face")).toHaveCount(6);
+  const canvas = page.locator(TERRAIN);
+  await expect(canvas).toHaveCount(1, { timeout: 30_000 });
 
-  // It must actually occupy the middle of the scene, not collapse to nothing.
-  // The wrapper scales down on narrow viewports, so the floor accommodates
-  // the 0.55 mobile scale rather than assuming the full 220px.
-  const box = await cube.boundingBox();
-  expect(box).not.toBeNull();
-  expect(box!.width).toBeGreaterThan(100);
-
-  expect(errors.filter((e) => !/pino-pretty|async-storage/.test(e))).toEqual([]);
+  const info = await canvas.evaluate((el) => {
+    const c = el as HTMLCanvasElement;
+    return { w: c.width, h: c.height };
+  });
+  expect(info.w).toBeGreaterThan(0);
+  expect(info.h).toBeGreaterThan(0);
 });
 
-test("the cube turns", async ({ page }) => {
+test("the terrain sits behind the headline, not over it", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  const cube = page.locator(".cube-centre");
-  await expect(cube).toHaveCount(1);
+  await expect(page.locator(TERRAIN)).toHaveCount(1, { timeout: 30_000 });
 
-  const read = () => cube.evaluate((el) => getComputedStyle(el).transform);
-  const first = await read();
+  // The backdrop must not intercept clicks meant for the hero's buttons.
+  const backdrop = page.locator(".hero-surface-fade").locator("xpath=..");
+  await expect(backdrop).toHaveCSS("pointer-events", "none");
+
+  // And the headline must be readable on top of it.
+  await expect(page.locator("h1").first()).toBeVisible();
+});
+
+/**
+ * Animation, checked by looking at it.
+ *
+ * A WebGL canvas cannot be read back with toDataURL unless the renderer was
+ * created with preserveDrawingBuffer, which this one deliberately is not (it
+ * costs memory and a copy per frame). Element screenshots capture the
+ * composited frame instead, so two of them a moment apart should differ.
+ */
+test("the terrain is actually moving", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  const surface = page.locator(".hero-surface-fade");
+  await expect(page.locator(TERRAIN)).toHaveCount(1, { timeout: 30_000 });
   await page.waitForTimeout(1500);
-  const second = await read();
 
-  // A 34s full turn moves ~16 degrees in 1.5s -- plenty to change the matrix.
-  expect(second).not.toBe(first);
+  const a = await surface.screenshot();
+  await page.waitForTimeout(1200);
+  const b = await surface.screenshot();
+
+  expect(Buffer.compare(a, b)).not.toBe(0);
 });
 
 test("the hero holds a smooth frame rate", async ({ page }) => {
   /*
-   * Measured RELATIVE to a control page, not against a fixed fps number.
-   *
-   * An absolute threshold measures the machine as much as the page. Alone,
-   * this scene reads 57 fps at 1280px; inside the full suite -- a dev server
-   * compiling, other browser contexts live -- the same code read 43.7 / 41.9 /
-   * 48.0 and "failed". Nothing about the hero had changed.
-   *
-   * So the ceiling is measured first, on a route with no canvas and no
-   * animation loop, and the hero is required to stay close to it. When the
-   * machine is busy BOTH numbers fall and the ratio holds; when the hero
-   * genuinely regresses only the hero falls. That is the difference this test
-   * is supposed to detect -- and it does: with backdrop-filter still on the
-   * data panels the ratio was 38.3/58.7 = 0.65, well under the bar.
+   * Relative to a control page, not a fixed fps number. An absolute threshold
+   * measures the machine: under full-suite load the previous scene read 44-48
+   * fps and "failed" with nothing changed. The ceiling is measured on a route
+   * with no animation loop, and the hero must stay near it.
    */
   await page.goto("/verify", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(800);
   const ceiling = Math.max((await fps(page)).fps, (await fps(page)).fps);
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await page.locator(".cube-centre").waitFor();
+  await expect(page.locator(TERRAIN)).toHaveCount(1, { timeout: 30_000 });
   await page.waitForTimeout(2500);
 
   const samples = [] as Array<{ fps: number; frames: number; elapsed: number }>;
   for (let i = 0; i < 3; i++) {
     samples.push(await fps(page));
   }
-  const best = samples.reduce((a, b) => (b.fps > a.fps ? b : a));
+  const best = samples.reduce((x, y) => (y.fps > x.fps ? y : x));
   const ratio = best.fps / ceiling;
 
   console.log(
@@ -118,6 +114,5 @@ test("the hero holds a smooth frame rate", async ({ page }) => {
       `= ${(ratio * 100).toFixed(0)}% of an idle page\n`,
   );
 
-  // Within 20% of a page doing no animation at all.
   expect(ratio).toBeGreaterThan(0.8);
 });
