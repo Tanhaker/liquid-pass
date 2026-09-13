@@ -273,13 +273,20 @@ export default function Home() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.3 }}
                   transition={{ duration: 0.6, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
-                  className={`group relative flex flex-col overflow-hidden border border-dark-border bg-surface p-5 transition-all duration-300 hover:-translate-y-1.5 hover:border-uranium hover:shadow-glow-uranium ${
-                    i % 2 === 1 ? "lg:mt-8" : ""
-                  }`}
+                  // All four level. Cards 02 and 04 used to be pushed down 32px
+                  // (lg:mt-8) for a staggered rhythm, which read as uneven
+                  // rather than deliberate.
+                  className="group relative flex h-full flex-col overflow-hidden border border-dark-border bg-surface p-5 transition-all duration-300 hover:-translate-y-1.5 hover:border-uranium hover:shadow-glow-uranium"
                 >
                   {/* Oversized stage numeral, set well back. Gives the row a
-                      reading order without spending another line on a label. */}
-                  <span className="pointer-events-none absolute -right-3 -top-6 select-none font-header text-[86px] font-black leading-none text-text opacity-[0.045] transition-opacity duration-300 group-hover:opacity-[0.09]">
+                      reading order without spending another line on a label.
+
+                      Bottom-right and fully inside the card. It used to sit at
+                      -top-6, starting the 86px glyph 24px ABOVE the card, so
+                      overflow-hidden sliced the top off every numeral and left
+                      the remainder colliding with the status badge. The bottom
+                      corner is empty space, so the whole glyph fits there. */}
+                  <span className="pointer-events-none absolute bottom-1 right-3 select-none font-header text-[86px] font-black leading-none text-text opacity-[0.05] transition-opacity duration-300 group-hover:opacity-[0.1]">
                     {s.n}
                   </span>
 

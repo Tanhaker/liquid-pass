@@ -254,10 +254,27 @@ body {
   color: #08090C;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-header);
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
+/*
+  In @layer base, not at the top level.
+
+  Tailwind v4 puts utilities in @layer utilities, and any UNLAYERED rule beats
+  every layered one regardless of specificity. As a bare rule this silently
+  overrode the font, tracking and colour utilities on all 39 headings in the
+  app that set them. The visible casualty was the homepage eyebrow "One pass,
+  over thirty days", written as font-mono tracking-[0.2em] text-uranium and
+  rendering as tight white header type; /pass/[tokenId] had the same bug.
+
+  In the base layer it is still the default for any heading that sets nothing,
+  and utilities win when they are present, which is what they were written for.
+  Checked before moving it: text-alabaster and text-text both resolve to
+  --text-primary in both themes, so no heading changes colour.
+*/
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-header);
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+  }
 }
 
 /* ---------------------------------------------------------------------------
