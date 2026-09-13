@@ -14,6 +14,7 @@ import {
   type Pass,
 } from "@/lib/contract";
 import { humanise, useFees } from "@/components/ui";
+import { useTransferPass } from "@/lib/useTransferPass";
 
 /**
  * Pay-per-second rental of a pass.
@@ -38,6 +39,7 @@ export function StreamRentalPanel({
   const client = usePublicClient();
   const { writeContractAsync } = useWriteContract();
   const fees = useFees();
+  const transferPass = useTransferPass();
 
   const configured = isAddress(STREAM_RENTAL_ADDRESS);
   const wrongNetwork = isConnected && chainId !== arbitrumSepolia.id;
@@ -242,17 +244,11 @@ export function StreamRentalPanel({
           </p>
           <button
             onClick={() =>
-              run("escrow", async () =>
-                writeContractAsync({
-                  address: LIQUID_PASS_ADDRESS,
-                  abi: liquidPassAbi,
-                  functionName: "transferPass",
-                  args: [STREAM_RENTAL_ADDRESS, pass.tokenId],
-                  chainId: arbitrumSepolia.id,
-                  gas: 400_000n,
-                  ...(await fees()),
-                }),
-              )
+              // Clears any listing first. A listed pass escrowed here is
+              // only safe today because this contract cannot receive a plain
+              // transfer; configure an escrow and anyone could buy the pass
+              // straight out of the rental.
+              run("escrow", () => transferPass(pass.tokenId, STREAM_RENTAL_ADDRESS))
             }
             disabled={busy !== null || !isConnected || wrongNetwork}
             className="w-full bg-uranium py-2.5 font-extrabold uppercase tracking-wider text-black disabled:opacity-40"

@@ -38,6 +38,7 @@ import {
   type Plan,
 } from "@/lib/contract";
 import { fetchActivity, fetchPasses, fetchPlans, type Activity } from "@/lib/data";
+import { useTransferPass } from "@/lib/useTransferPass";
 import { PricingOracle } from "@/components/PricingOracle";
 import { StreamRentalPanel } from "@/components/StreamRentalPanel";
 import { planSignals } from "@/lib/signals";
@@ -68,6 +69,7 @@ export default function PassDetail({
   const { address, isConnected, chainId } = useAccount();
   const { writeContractAsync } = useWriteContract();
   const fees = useFees();
+  const transferPass = useTransferPass();
   const nowMs = useNow();
   const { shiftExpiry } = useDemo();
 
@@ -559,16 +561,11 @@ export default function PassDetail({
                       const target = (recipient.trim() ||
                         "0x000000000000000000000000000000000000dead") as `0x${string}`;
                       setTransferring(false);
-                      void run(`Transferred pass #${pass.tokenId}`, async () =>
-                        writeContractAsync({
-                          address: LIQUID_PASS_ADDRESS,
-                          abi: liquidPassAbi,
-                          functionName: "transferPass",
-                          args: [target, pass.tokenId],
-                          chainId: arbitrumSepolia.id,
-                          gas: 800_000n,
-                          ...(await fees()),
-                        }),
+                      // Clears any listing first. Without that, even a pass
+                      // "burned" to 0x...dEaD stayed listed and could be bought
+                      // straight back out.
+                      void run(`Transferred pass #${pass.tokenId}`, () =>
+                        transferPass(pass.tokenId, target),
                       );
                     }}
                     disabled={busy || wrongNetwork}

@@ -27,6 +27,7 @@ import {
 import { fetchPasses, fetchPlans, passesOf } from "@/lib/data";
 import { Banner, humanise, useFees, useNow } from "@/components/ui";
 import { useTxToast } from "@/lib/useTxToast";
+import { useTransferPass } from "@/lib/useTransferPass";
 import { GiftSplit } from "@/components/GiftSplit";
 import { YieldDashboard } from "@/components/YieldDashboard";
 import { PassBundler } from "@/components/PassBundler";
@@ -38,6 +39,7 @@ export default function DashboardPage() {
   const { writeContractAsync } = useWriteContract();
   const fees = useFees();
   const txToast = useTxToast();
+  const transferPass = useTransferPass();
   const nowMs = useNow();
   const wrongNetwork = isConnected && chainId !== arbitrumSepolia.id;
 
@@ -122,17 +124,12 @@ export default function DashboardPage() {
     [isConnected, load, txToast, wrongNetwork],
   );
 
+  // Goes through useTransferPass, which clears any listing first. A plain
+  // transferPass left the listing behind, and anyone could then buy the pass
+  // from the recipient at the price the original owner set.
   const handleGift = (tokenId: bigint, to: `0x${string}`) =>
-    runOwnerAction(tokenId, `Gifted pass #${tokenId} to ${shortAddress(to)}`, async () =>
-      writeContractAsync({
-        address: LIQUID_PASS_ADDRESS,
-        abi: liquidPassAbi,
-        functionName: "transferPass",
-        args: [to, tokenId],
-        chainId: arbitrumSepolia.id,
-        gas: 800_000n,
-        ...(await fees()),
-      }),
+    runOwnerAction(tokenId, `Gifted pass #${tokenId} to ${shortAddress(to)}`, () =>
+      transferPass(tokenId, to),
     );
 
   const handleSplit = (tokenId: bigint, parts: bigint) =>

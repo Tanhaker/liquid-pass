@@ -111,9 +111,22 @@ export function GiftSplit({
           <p className="font-body text-[11px] leading-relaxed text-zincGrey">
             They receive{" "}
             <span className="font-mono text-uranium">{formatRemaining(left)}</span> of
-            access. Any listing is cleared &mdash; the new owner didn&rsquo;t set that
-            price.
+            access.
           </p>
+          {/*
+            This panel used to say "Any listing is cleared" unconditionally, and
+            nothing cleared it -- a gifted listed pass could then be bought from
+            the recipient at the old price. The listing really is removed now
+            (see lib/useTransferPass), and since that costs a second signature,
+            say so before the wallet opens rather than after.
+          */}
+          {isListed && (
+            <p className="border border-aviation bg-aviation/10 p-2 font-mono text-[11px] leading-relaxed text-aviation">
+              This pass is listed. Its listing is removed first, so the new owner
+              isn&rsquo;t selling at a price they never set &mdash; that&rsquo;s two
+              confirmations in your wallet.
+            </p>
+          )}
           {err && <p className="font-mono text-[11px] text-red-400">{err}</p>}
           <div className="flex gap-2">
             <button

@@ -41,6 +41,31 @@ contract MockLiquidPass {
         require(_owners[tokenId] == msg.sender, "Not owner");
         _owners[tokenId] = to;
     }
+
+    address public marketplace;
+
+    function setMarketplace(address m) external {
+        marketplace = m;
+    }
+
+    /// Marketplace-only, mirroring market_transfer in the Rust core: the caller
+    /// must be the registered marketplace and `from` must be the current owner.
+    /// Nothing else is checked -- in particular, not whether `from` is a
+    /// contract holding the pass in escrow for someone else.
+    function marketTransfer(address from, address to, uint256 tokenId) external {
+        require(msg.sender == marketplace, "Not marketplace");
+        require(_owners[tokenId] == from, "Not owner");
+        _owners[tokenId] = to;
+    }
+}
+
+/// Accepts depositYield, standing in for EscrowYield without the Aave calls.
+contract MockEscrow {
+    mapping(address => uint256) public lockedBalances;
+
+    function depositYield(address seller) external payable {
+        lockedBalances[seller] += msg.value;
+    }
 }
 
 /// Refuses payment, to prove settlement surfaces the failure rather than
