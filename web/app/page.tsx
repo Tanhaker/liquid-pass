@@ -9,7 +9,6 @@ import { LinkButton3D } from "@/components/Button3D";
 import { DualSettlementAnimation } from "@/components/DualSettlementAnimation";
 import { useNow } from "@/components/ui";
 import dynamic from "next/dynamic";
-// Wrapper, not a backdrop: the hero section renders inside it.
 // Three.js runs in the browser only, and pulling it through next/dynamic keeps
 // the WebGL runtime out of the server bundle and out of first paint.
 const DottedSurface = dynamic(() => import("@/components/ui/dotted-surface"), { ssr: false });
@@ -122,16 +121,24 @@ export default function Home() {
       {/* HERO                                                             */}
       {/* ---------------------------------------------------------------- */}
 
-      {/* Hero background: the dotted terrain, faded downward. Restored as it
-          was before the luxury scene replaced it -- a backdrop behind the
-          section, not a wrapper around it. */}
-      <div className="absolute top-0 left-0 right-0 h-[680px] lg:h-[780px] overflow-hidden pointer-events-none z-0">
-        <div className="hero-surface-fade absolute inset-0">
-          {/* Opacity is well below the component default: at full strength
-              the terrain competes with the headline sitting on top of it. The
-              downward mask in globals.css does the rest. */}
-          <DottedSurface size={9} opacity={0.3} />
-        </div>
+      {/* Hero background: the dotted terrain.
+
+          Matches the reference project (E:\LiquidPass\...\web\app\page.tsx):
+          size 8, opacity 0.8, and a fade ONLY along the bottom edge. The fade
+          is a mask (.hero-surface-fade) rather than the reference's gradient
+          panel, which banded against the page texture.
+
+          The previous restore was invisible in practice. It ran at opacity 0.3
+          inside .hero-surface-fade, a mask over the WHOLE terrain that starts
+          at 0.5 and falls to 0 -- so the brightest dot added about +16/255 and
+          0.04% of the hero's pixels were lit. The component file itself was
+          byte-for-byte identical to the reference; only this mount differed.
+
+          Deliberately NOT copied from the reference: its -z-20. Commit 63280c2
+          moved this to z-0 because -z-20 sank the terrain beneath the body
+          background, which hides it just as completely. */}
+      <div data-hero-terrain className="hero-surface-fade absolute top-0 left-0 right-0 h-[680px] lg:h-[780px] overflow-hidden pointer-events-none z-0">
+        <DottedSurface size={8} opacity={0.8} />
       </div>
 
       <section className="relative z-10 mx-auto max-w-7xl px-4 pb-20 pt-12 sm:px-6 lg:px-8 lg:pb-28 lg:pt-20">

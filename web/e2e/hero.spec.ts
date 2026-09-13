@@ -37,7 +37,7 @@ async function fps(page: Page, ms = 2500) {
   }, ms);
 }
 
-const TERRAIN = ".hero-surface-fade canvas";
+const TERRAIN = "[data-hero-terrain] canvas";
 
 test("the dotted terrain renders a WebGL canvas behind the hero", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
@@ -58,7 +58,7 @@ test("the terrain sits behind the headline, not over it", async ({ page }) => {
   await expect(page.locator(TERRAIN)).toHaveCount(1, { timeout: 30_000 });
 
   // The backdrop must not intercept clicks meant for the hero's buttons.
-  const backdrop = page.locator(".hero-surface-fade").locator("xpath=..");
+  const backdrop = page.locator("[data-hero-terrain]");
   await expect(backdrop).toHaveCSS("pointer-events", "none");
 
   // And the headline must be readable on top of it.
@@ -75,7 +75,7 @@ test("the terrain sits behind the headline, not over it", async ({ page }) => {
  */
 test("the terrain is actually moving", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  const surface = page.locator(".hero-surface-fade");
+  const surface = page.locator("[data-hero-terrain]");
   await expect(page.locator(TERRAIN)).toHaveCount(1, { timeout: 30_000 });
   await page.waitForTimeout(1500);
 
@@ -84,6 +84,60 @@ test("the terrain is actually moving", async ({ page }) => {
   const b = await surface.screenshot();
 
   expect(Buffer.compare(a, b)).not.toBe(0);
+});
+
+/**
+ * Visible, not merely present.
+ *
+ * Every other test in this file passed while the terrain was INVISIBLE: the
+ * canvas existed, it was moving, and it was fast -- and a screenshot of the
+ * hero looked blank. Opacity 0.3 stacked under a mask that started at 0.5 left
+ * the brightest dot at +16/255 over the background, with 0.04% of the hero's
+ * pixels lit. A user reported it before any test did.
+ *
+ * So this measures what a person sees: the hero is screenshotted with the
+ * canvas shown and then hidden, and the difference is the terrain's actual
+ * contribution to the image.
+ *
+ *   invisible version: brightest +15.9, lit 0.04%   -> must fail
+ *   fixed version:     brightest +90.4, lit 0.79%   -> passes
+ */
+test("the terrain is actually visible", async ({ page }) => {
+  const { PNG } = await import("pngjs");
+  const lums = (buf: Buffer) => {
+    const png = PNG.sync.read(buf);
+    const out: number[] = [];
+    for (let i = 0; i < png.data.length; i += 4) {
+      out.push(0.299 * png.data[i] + 0.587 * png.data[i + 1] + 0.114 * png.data[i + 2]);
+    }
+    return out;
+  };
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(TERRAIN)).toHaveCount(1, { timeout: 30_000 });
+  await page.waitForTimeout(2500);
+
+  const box = (await page.locator("[data-hero-terrain]").boundingBox())!;
+  const clip = { x: box.x, y: box.y, width: box.width, height: box.height };
+
+  const shown = lums(await page.screenshot({ clip }));
+  await page.addStyleTag({ content: "[data-hero-terrain] canvas{visibility:hidden!important}" });
+  await page.waitForTimeout(250);
+  const hidden = lums(await page.screenshot({ clip }));
+
+  let brightest = 0;
+  let lit = 0;
+  for (let i = 0; i < shown.length; i++) {
+    const d = shown[i] - hidden[i];
+    if (d > brightest) brightest = d;
+    if (d > 6) lit++;
+  }
+  const litPct = (lit / shown.length) * 100;
+  console.log(`\n  terrain: brightest dot +${brightest.toFixed(1)}/255, lit ${litPct.toFixed(2)}%\n`);
+
+  // Comfortably between the invisible version and the fixed one.
+  expect(brightest).toBeGreaterThan(40);
+  expect(litPct).toBeGreaterThan(0.25);
 });
 
 test("the hero holds a smooth frame rate", async ({ page }) => {
