@@ -9,6 +9,7 @@ import { PassCard3D } from "@/components/PassCard3D";
 import { QrPanel } from "@/components/QrPanel";
 import { humanise, useFees, useNow } from "@/components/ui";
 import type { SubscriptionPass } from "@/lib/types";
+import { tierOf } from "@/lib/tier";
 import {
   Activity as ActivityIcon,
   AlertTriangle,
@@ -28,6 +29,8 @@ import {
   LIQUID_PASS_ADDRESS, MARKETPLACE_ADDRESS, marketplaceAbi,
   discountPct,
   formatEthShort,
+  listingPriceError,
+  retailPrice,
   withBuffer,
   formatRemaining,
   lifeFraction,
@@ -184,7 +187,7 @@ export default function PassDetail({
     originalPriceEth: formatEther(pass.paid > 0n ? pass.paid : (plan?.price ?? 0n)),
     listingPriceEth: pass.listed > 0n ? formatEthShort(pass.current) : undefined,
     isListed: pass.listed > 0n,
-    tier: "PRO",
+    tier: tierOf(plan?.name),
     features: [],
   };
 
@@ -496,6 +499,12 @@ export default function PassDetail({
                   autoFocus
                   className="w-full border border-dark-border bg-dark-base px-3 py-2 text-alabaster outline-none focus:border-uranium"
                 />
+                {retailPrice(pass, plan) > 0n && (
+                  <p className="text-[11px] text-zincGrey">
+                    Max {formatEther(retailPrice(pass, plan))} ETH, the original
+                    retail price. The ask then falls to zero at expiry.
+                  </p>
+                )}
                 <p className="text-[11px] text-zincGrey">
                   On sale: 90% to you, 10% to {shortAddress(pass.issuer)} (the
                   original issuer). Enforced by the contract.
@@ -510,8 +519,9 @@ export default function PassDetail({
                         setError("Enter a number, like 0.0001");
                         return;
                       }
-                      if (wei <= 0n) {
-                        setError("Price must be above zero.");
+                      const refusal = listingPriceError(wei, retailPrice(pass, plan));
+                      if (refusal) {
+                        setError(refusal);
                         return;
                       }
                       setListing(false);

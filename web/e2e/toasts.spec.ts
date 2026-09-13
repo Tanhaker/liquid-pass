@@ -19,8 +19,7 @@ test.beforeEach(async ({ page }) => {
 
 function unlistedCard(page: import("@playwright/test").Page) {
   return page
-    .locator("div.bg-dark-card")
-    .filter({ hasText: /TOKEN #/ })
+    .locator("div.bg-dark-card[data-token-id]")
     .filter({ hasNot: page.locator("text=LISTED") })
     .first();
 }
@@ -28,7 +27,7 @@ function unlistedCard(page: import("@playwright/test").Page) {
 test("a write shows a pending toast, then a confirmed one", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-  await expect(page.locator("text=/TOKEN #\\d+/").first()).toBeVisible({ timeout: 40_000 });
+  await expect(page.locator("[data-token-id]").first()).toBeVisible({ timeout: 40_000 });
 
   // Nothing has happened yet, so there should be no toast.
   await expect(page.getByText("TX_BROADCAST")).toHaveCount(0);
@@ -71,7 +70,7 @@ test("a pending toast is not auto-dismissed", async ({ page }) => {
   );
 
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-  await expect(page.locator("text=/TOKEN #\\d+/").first()).toBeVisible({ timeout: 40_000 });
+  await expect(page.locator("[data-token-id]").first()).toBeVisible({ timeout: 40_000 });
 
   const card = unlistedCard(page);
   await card.getByRole("button", { name: "Split", exact: true }).click();

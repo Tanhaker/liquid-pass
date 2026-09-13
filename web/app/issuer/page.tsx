@@ -28,7 +28,8 @@ export default function IssuerPage() {
 
   const [planName, setPlanName] = useState("Claude Pro");
   const [planPrice, setPlanPrice] = useState("0.002");
-  const [planDays, setPlanDays] = useState(30);
+  // Kept as the raw text so the field can be cleared and retyped; parsed on submit.
+  const [planDays, setPlanDays] = useState("30");
   const [metadataUri, setMetadataUri] = useState("");
   const [pinningIpfs, setPinningIpfs] = useState(false);
 
@@ -43,6 +44,22 @@ export default function IssuerPage() {
   const handleCreatePlan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isConnected || wrongNetwork) return;
+    const days = Number(planDays);
+    if (!Number.isInteger(days) || days < 1 || days > 3650) {
+      setError("Duration must be a whole number of days, from 1 to 3650.");
+      return;
+    }
+    let priceWei: bigint;
+    try {
+      priceWei = parseEther(planPrice.trim());
+    } catch {
+      setError("Enter the original price as a number, like 0.002.");
+      return;
+    }
+    if (priceWei <= 0n) {
+      setError("Original price must be above zero.");
+      return;
+    }
     setBusy(true); setTx(null); setError(null);
     try {
       let uri = metadataUri.trim();
@@ -51,7 +68,7 @@ export default function IssuerPage() {
         try {
           const res = await fetch("/api/ipfs", {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: planName, description: `${planName} subscription pass`, durationDays: planDays, issuer: address }),
+            body: JSON.stringify({ name: planName, description: `${planName} subscription pass`, durationDays: days, issuer: address }),
           });
           if (res.ok) {
             const json = await res.json();
@@ -64,7 +81,7 @@ export default function IssuerPage() {
 
       const hash = await writeContractAsync({
         address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "createPlan",
-        args: [planName, uri, parseEther(planPrice), BigInt(planDays * 86400)],
+        args: [planName, uri, priceWei, BigInt(days * 86400)],
         chainId: arbitrumSepolia.id,
         gas: 800_000n,
         ...(await fees()),
@@ -142,16 +159,16 @@ export default function IssuerPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-zincGrey block mb-1.5 uppercase">Duration (Days):</label>
-                <select value={planDays} onChange={(e) => setPlanDays(parseInt(e.target.value))}
-                  className="w-full p-2.5 bg-dark border border-dark-border text-alabaster focus:border-uranium focus:outline-none">
-                  <option value={7}>7 Days (Sprint)</option><option value={14}>14 Days</option>
-                  <option value={30}>30 Days (Monthly)</option><option value={60}>60 Days</option><option value={90}>90 Days</option>
-                </select>
+                <label htmlFor="plan-days" className="text-zincGrey block mb-1.5 uppercase">Duration (Days):</label>
+                {/* Any whole number of days, so an 11- or 13-day plan is possible. */}
+                <input id="plan-days" type="number" min={1} max={3650} step={1} inputMode="numeric"
+                  value={planDays} onChange={(e) => setPlanDays(e.target.value)} required
+                  placeholder="e.g. 13"
+                  className="w-full p-2.5 bg-dark border border-dark-border text-alabaster focus:border-uranium focus:outline-none" />
               </div>
               <div>
-                <label className="text-zincGrey block mb-1.5 uppercase">Price (ETH):</label>
-                <input type="number" step="0.0005" value={planPrice} onChange={(e) => setPlanPrice(e.target.value)} required
+                <label htmlFor="plan-price" className="text-zincGrey block mb-1.5 uppercase">Original Price (ETH):</label>
+                <input id="plan-price" type="number" min="0" step="any" value={planPrice} onChange={(e) => setPlanPrice(e.target.value)} required
                   className="w-full p-2.5 bg-dark border border-dark-border text-alabaster focus:border-uranium focus:outline-none" />
               </div>
             </div>
@@ -171,6 +188,7 @@ export default function IssuerPage() {
 
             <div className="p-3 bg-dark border border-dark-border text-[11px] text-zincGrey space-y-1">
               <div className="flex justify-between text-alabaster"><span>Secondary Resale Royalty:</span><span className="text-periwinkle font-bold">10% of every sale</span></div>
+              <p>The original price is what a new pass costs. It is shown as Original Retail on every card, and resales listed on this site cannot go above it.</p>
               <p>Metadata will be automatically pinned to IPFS via Pinata.</p>
             </div>
             <button type="submit" disabled={busy || !isConnected || wrongNetwork}

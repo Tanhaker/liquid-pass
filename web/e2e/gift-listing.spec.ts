@@ -27,11 +27,11 @@ const decode = (data?: string) => decodeFunctionData({ abi, data: data as `0x${s
 
 async function openDashboard(page: import("@playwright/test").Page) {
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-  await expect(page.locator("text=/TOKEN #\\d+/").first()).toBeVisible({ timeout: 40_000 });
+  await expect(page.locator("[data-token-id]").first()).toBeVisible({ timeout: 40_000 });
 }
 
 function card(page: import("@playwright/test").Page, listed: boolean) {
-  const base = page.locator("div.bg-dark-card").filter({ hasText: /TOKEN #/ });
+  const base = page.locator("div.bg-dark-card[data-token-id]");
   return (listed
     ? base.filter({ has: page.locator("text=LISTED") })
     : base.filter({ hasNot: page.locator("text=LISTED") })

@@ -15,6 +15,7 @@ import {
   type Plan,
 } from "@/lib/contract";
 import { SubscriptionPass } from "@/lib/types";
+import { tierOf } from "@/lib/tier";
 import {
   Search,
   Flame,
@@ -113,7 +114,7 @@ export default function MarketPage() {
       originalPriceEth: formatEthShort(p.paid > 0n ? p.paid : plan?.price || 0n),
       listingPriceEth: formatEthShort(p.current),
       isListed: p.listed > 0n,
-      tier: "PRO",
+      tier: tierOf(plan?.name),
       features: ["On-chain Access", "Resellable", "Fair Value Decay"],
       // Only meaningful for a live listing: listedAt is 0 otherwise, and the
       // curve is undefined without it.

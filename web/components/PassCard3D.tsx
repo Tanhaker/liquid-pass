@@ -83,6 +83,7 @@ export function PassCard3D({
     <div
       style={{ perspective: "1000px" }}
       className="relative select-none"
+      data-token-id={pass.tokenId}
     >
       <motion.div
         ref={cardRef}
@@ -119,14 +120,13 @@ export function PassCard3D({
         {/* Header Ribbon / Status */}
         <div className="flex items-start justify-between relative z-10">
           <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 border border-dark-border bg-chip-bg text-chip-text font-bold">
-                TOKEN #{pass.tokenId}
-              </span>
-              <span className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 bg-chip-bg border border-dark-border text-chip-text font-bold">
-                {pass.tier}
-              </span>
-            </div>
+            {pass.tier && (
+              <div className="flex items-center space-x-2">
+                <span className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 bg-chip-bg border border-dark-border text-chip-text font-bold">
+                  {pass.tier}
+                </span>
+              </div>
+            )}
             <h3 className="font-header font-bold text-xl text-alabaster mt-2 tracking-tight line-clamp-1">
               {pass.name}
             </h3>

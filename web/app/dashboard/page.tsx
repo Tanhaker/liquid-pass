@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { tierOf } from "@/lib/tier";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { arbitrumSepolia } from "wagmi/chains";
 import { parseEther, formatEther, isAddress } from "viem";
@@ -21,6 +22,8 @@ import {
   lifeFraction,
   formatRemaining,
   formatEthShort,
+  listingPriceError,
+  retailPrice,
   type Pass,
   type Plan,
 } from "@/lib/contract";
@@ -147,8 +150,16 @@ export default function DashboardPage() {
       }),
     );
 
-  const handleList = (tokenId: bigint, price: bigint) =>
-    runOwnerAction(tokenId, `Listed pass #${tokenId}`, async () =>
+  const handleList = (tokenId: bigint, price: bigint) => {
+    // Auto-sell rules can carry a fixed price, so the retail cap is checked
+    // here, where every dashboard listing passes, not only in a form.
+    const pass = myPasses.find((p) => p.tokenId === tokenId);
+    const refusal = pass ? listingPriceError(price, retailPrice(pass, planFor(pass))) : null;
+    if (refusal) {
+      setError(refusal);
+      return;
+    }
+    return runOwnerAction(tokenId, `Listed pass #${tokenId}`, async () =>
       writeContractAsync({
         address: MARKETPLACE_ADDRESS,
         abi: marketplaceAbi,
@@ -159,6 +170,7 @@ export default function DashboardPage() {
         ...(await fees()),
       }),
     );
+  };
 
   const handleMint = async () => {
     if (!isConnected || !address || wrongNetwork) return;
@@ -245,10 +257,12 @@ export default function DashboardPage() {
                   const left = remaining(pass.expiry, nowMs ?? Date.now());
                   const fraction = lifeFraction(pass.expiry, plan?.duration ?? 0n);
                   return (
-                    <div key={pass.tokenId.toString()} className="p-5 bg-dark-card border border-dark-border shadow-grunge space-y-3">
+                    <div key={pass.tokenId.toString()} data-token-id={pass.tokenId.toString()} className="p-5 bg-dark-card border border-dark-border shadow-grunge space-y-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className="font-mono text-[10px] text-zincGrey">TOKEN #{pass.tokenId.toString().padStart(4, "0")}</span>
+                          {tierOf(plan?.name) && (
+                            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zincGrey">{tierOf(plan?.name)}</span>
+                          )}
                           <h3 className="font-header font-bold text-lg text-alabaster">{plan?.name || `Pass #${pass.tokenId}`}</h3>
                         </div>
                         <span className={`px-2 py-0.5 border text-[10px] font-bold uppercase ${

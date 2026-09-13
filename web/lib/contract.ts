@@ -1,4 +1,4 @@
-import { parseAbi } from "viem";
+import { formatEther, parseAbi } from "viem";
 
 export const LIQUID_PASS_ADDRESS = (process.env.NEXT_PUBLIC_LIQUID_PASS_ADDRESS ||
   "0xac20ef73723e7c620df1024eb04cc0b71fca1055") as `0x${string}`;
@@ -163,6 +163,31 @@ export function lifeFraction(expiry: bigint, duration: bigint): number {
   const total = Number(duration);
   if (!total) return left > 0 ? 1 : 0;
   return Math.max(0, Math.min(1, left / total));
+}
+
+/**
+ * A pass's original retail price: what was paid for it, or, for a pass that was
+ * minted rather than bought, its plan's price as set by the issuer. 0n when
+ * neither is known.
+ */
+export function retailPrice(pass: { paid: bigint }, plan?: { price: bigint } | null): bigint {
+  return pass.paid > 0n ? pass.paid : (plan?.price ?? 0n);
+}
+
+/**
+ * Why a resale ask is refused, or null when it is fine.
+ *
+ * The Marketplace contract accepts any opening price, so a pass bought for
+ * 0.002 ETH could be listed at 0.004 and show a "Falling Now" price above its
+ * own "Original Retail". Every listing this site creates goes through here and
+ * is capped at retail. Listings made directly against the contract are not.
+ */
+export function listingPriceError(price: bigint, retail: bigint): string | null {
+  if (price <= 0n) return "Price must be above zero.";
+  if (retail > 0n && price > retail) {
+    return `A resale can't be listed above the original retail price of ${formatEther(retail)} ETH.`;
+  }
+  return null;
 }
 
 export function discountPct(paid: bigint, askingPrice: bigint): number | null {

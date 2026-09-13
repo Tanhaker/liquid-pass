@@ -10,7 +10,8 @@ export interface SubscriptionPass {
   originalPriceEth: string; // e.g. "0.035"
   listingPriceEth?: string; // e.g. "0.012" if listed
   isListed: boolean;
-  tier: "PRO" | "ENTERPRISE" | "TEAM" | "ULTRA";
+  /** From the plan name ("ChatGPT Plus" -> "PLUS"); absent when unrecognised. */
+  tier?: string;
   features: string[];
   /**
    * Raw figures needed to redraw the Dutch-auction curve in the browser.

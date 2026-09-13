@@ -43,17 +43,14 @@ test("the listed price ticks down on its own", async ({ page }) => {
 test("the displayed price is what the contract would charge", async ({ page }) => {
   await page.goto("/market", { waitUntil: "domcontentloaded" });
 
-  const card = page
-    .locator("div")
-    .filter({ hasText: /Falling Now/ })
-    .last();
+  // Cards carry their token id as data-token-id (the "TOKEN #n" chip is no
+  // longer shown), so the id and the price are read from the same card.
+  const card = page.locator("[data-token-id]").filter({ hasText: /Falling Now/ }).first();
   await expect(card).toBeVisible({ timeout: 30_000 });
 
-  // Which token is this card showing?
-  const label = await page.locator("text=/TOKEN #\\d+/").first().innerText();
-  const tokenId = BigInt(label.replace(/\D/g, ""));
+  const tokenId = BigInt((await card.getAttribute("data-token-id"))!);
 
-  const shown = await page
+  const shown = await card
     .getByText(/Falling Now/i)
     .first()
     .locator("xpath=following-sibling::span[1]")

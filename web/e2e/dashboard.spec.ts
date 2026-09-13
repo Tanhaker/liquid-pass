@@ -32,8 +32,7 @@ test.beforeEach(async ({ page }) => {
  */
 function unlistedCard(page: import("@playwright/test").Page) {
   return page
-    .locator("div.bg-dark-card")
-    .filter({ hasText: /TOKEN #/ })
+    .locator("div.bg-dark-card[data-token-id]")
     .filter({ hasNot: page.locator("text=LISTED") })
     .first();
 }
@@ -43,13 +42,13 @@ async function openDashboard(page: import("@playwright/test").Page) {
   // Wallet connection is asynchronous; the vault header reflects it.
   await expect(page.getByText(/HELD PASSES:/i)).toBeVisible({ timeout: 30_000 });
   await expect
-    .poll(async () => page.locator("text=/TOKEN #\\d+/").count(), { timeout: 30_000 })
+    .poll(async () => page.locator("[data-token-id]").count(), { timeout: 30_000 })
     .toBeGreaterThan(0);
 }
 
 test("the mock wallet connects and the vault lists real passes", async ({ page }) => {
   await openDashboard(page);
-  const cards = await page.locator("text=/TOKEN #\\d+/").count();
+  const cards = await page.locator("[data-token-id]").count();
   expect(cards).toBeGreaterThan(0);
 });
 
