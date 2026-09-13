@@ -50,8 +50,20 @@ test("verifying an active pass starts its idle clock", async ({ page }) => {
   // Anchored on the placeholder and on the button's exact label rather than a
   // page-wide search: the nav collapses on narrow viewports and a loose
   // /verify/i match picks up the nav entry instead of the form.
-  await page.getByPlaceholder("e.g. 0, 1, 2...").fill("1");
-  await page.getByRole("button", { name: "VERIFY", exact: true }).click();
+  await page.waitForFunction(() => {
+    // React tags hydrated DOM nodes with __reactProps$...; before that, typing
+    // into the input never reaches component state.
+    const el = document.querySelector('input[placeholder="e.g. 0, 1, 2..."]');
+    return !!el && Object.keys(el).some((k) => k.startsWith("__reactProps"));
+  }, undefined, { timeout: 60_000 });
+  // Retried until the result is for token 1: under suite load the click can
+  // land before React hydrates (nothing requested), or the fill can (the id
+  // never reaches state, which starts at "0", and token #0 gets verified).
+  await expect(async () => {
+    await page.getByPlaceholder("e.g. 0, 1, 2...").fill("1");
+    await page.getByRole("button", { name: "VERIFY", exact: true }).click({ timeout: 2_000 });
+    await expect(page.getByText(/^Token #1 (is|has|exists|does)/)).toBeVisible({ timeout: 25_000 });
+  }).toPass({ timeout: 110_000 });
 
   // Anchored on the verdict badge, which reads "VERIFIED: ACCESS GRANTED".
   // A page-wide /ACCESS GRANTED/i also matches the SDK snippet this page
@@ -76,8 +88,19 @@ test("a token that does not exist records nothing", async ({ page }) => {
   test.setTimeout(180_000);
   await page.goto("/verify", { waitUntil: "domcontentloaded" });
 
-  await page.getByPlaceholder("e.g. 0, 1, 2...").fill("99999");
-  await page.getByRole("button", { name: "VERIFY", exact: true }).click();
+  await page.waitForFunction(() => {
+    // React tags hydrated DOM nodes with __reactProps$...; before that, typing
+    // into the input never reaches component state.
+    const el = document.querySelector('input[placeholder="e.g. 0, 1, 2..."]');
+    return !!el && Object.keys(el).some((k) => k.startsWith("__reactProps"));
+  }, undefined, { timeout: 60_000 });
+  // Retried for the same hydration race as above -- which matters more here:
+  // losing the fill verifies token #0, which IS active and WOULD log usage.
+  await expect(async () => {
+    await page.getByPlaceholder("e.g. 0, 1, 2...").fill("99999");
+    await page.getByRole("button", { name: "VERIFY", exact: true }).click({ timeout: 2_000 });
+    await expect(page.getByText(/^(Token #99999 does not exist|Failed to verify)/)).toBeVisible({ timeout: 25_000 });
+  }).toPass({ timeout: 110_000 });
 
   // Waits for the verdict panel to resolve at all, rather than for one exact
   // sentence.

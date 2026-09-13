@@ -3,7 +3,16 @@
 import React, { useState } from "react";
 import { usePublicClient } from "wagmi";
 import { ShieldCheck, CheckCircle2, XCircle, Copy, Check, Code2, Loader2 } from "lucide-react";
-import { LIQUID_PASS_ADDRESS, liquidPassAbi, shortAddress, remaining, formatRemaining } from "@/lib/contract";
+import { isAddress } from "viem";
+import {
+  LIQUID_PASS_ADDRESS,
+  STREAM_RENTAL_ADDRESS,
+  liquidPassAbi,
+  streamRentalAbi,
+  shortAddress,
+  remaining,
+  formatRemaining,
+} from "@/lib/contract";
 import { markUsed } from "@/lib/autosell";
 
 export default function VerifyPage() {
@@ -11,7 +20,21 @@ export default function VerifyPage() {
   const [inputQuery, setInputQuery] = useState<string>("0");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
-    isValid: boolean; tokenId: string; owner?: string; issuer?: string; expiry?: number; active?: boolean; message: string;
+    /** Whether anyone currently holds access -- not merely whether the pass is unexpired. */
+    isValid: boolean;
+    tokenId: string;
+    /** The real owner. For an escrowed pass this is the stream owner, not the contract. */
+    owner?: string;
+    issuer?: string;
+    expiry?: number;
+    /** The pass itself is unexpired. */
+    active?: boolean;
+    /** Held by the StreamRental contract. */
+    escrowed?: boolean;
+    renter?: string | null;
+    /** Who access actually belongs to right now, if anyone. */
+    accessHolder?: string;
+    message: string;
   } | null>(null);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
 
@@ -32,39 +55,98 @@ export default function VerifyPage() {
         setResult({ isValid: false, tokenId: q, message: `Token #${q} does not exist on-chain.` });
       } else {
         const left = remaining(expiry as bigint);
-        // An access check IS the usage signal. lib/autosell reads lastUsed()
-        // for "sell if unused for N days" rules and nothing anywhere wrote
-        // it, so that rule could never fire -- while the panel told people to
-        // "verify it once and the idle clock starts". This is that write.
-        if (isActive as boolean) markUsed(q);
-        setResult({
-          isValid: isActive as boolean, tokenId: q, owner: owner as string, issuer: issuer as string,
-          expiry: Number(expiry as bigint), active: isActive as boolean,
-          message: (isActive as boolean)
-            ? `Token #${q} is ACTIVE with ${formatRemaining(left)} remaining. Access is granted.`
-            : `Token #${q} exists but has EXPIRED. Access is denied.`,
-        });
+
+        /*
+         * A rented pass is held by the StreamRental contract, so ownerOf()
+         * returns the CONTRACT, not a person. Reading ownerOf alone, this page
+         * named the contract as the owner and -- worse -- granted access
+         * whenever the pass was unexpired, including when it was sitting in
+         * escrow with nobody renting it. Access belongs to activeRenter()
+         * while a rental is live, and to no one while it is idle.
+         */
+        const escrowed =
+          isAddress(STREAM_RENTAL_ADDRESS) &&
+          (owner as string).toLowerCase() === STREAM_RENTAL_ADDRESS.toLowerCase();
+
+        if (escrowed) {
+          const [stream, renter] = await Promise.all([
+            client.readContract({ address: STREAM_RENTAL_ADDRESS, abi: streamRentalAbi, functionName: "streams", args: [tokenId] }),
+            client.readContract({ address: STREAM_RENTAL_ADDRESS, abi: streamRentalAbi, functionName: "activeRenter", args: [tokenId] }),
+          ]);
+          const hasRenter = (renter as string) !== zeroAddr;
+          const granted = (isActive as boolean) && hasRenter;
+
+          // Only a real grant starts the idle clock.
+          if (granted) markUsed(q);
+
+          setResult({
+            isValid: granted,
+            tokenId: q,
+            owner: stream[0] as string,
+            issuer: issuer as string,
+            expiry: Number(expiry as bigint),
+            active: isActive as boolean,
+            escrowed: true,
+            renter: hasRenter ? (renter as string) : null,
+            accessHolder: granted ? (renter as string) : undefined,
+            message: !(isActive as boolean)
+              ? `Token #${q} has EXPIRED. Access is denied.`
+              : hasRenter
+                ? `Token #${q} is being RENTED. Access belongs to the renter, ${shortAddress(renter as string)}, not to the owner.`
+                : `Token #${q} is held in rental escrow and nobody is renting it right now. No one holds access.`,
+          });
+        } else {
+          // An access check IS the usage signal. lib/autosell reads lastUsed()
+          // for "sell if unused for N days" rules and nothing anywhere wrote
+          // it, so that rule could never fire -- while the panel told people to
+          // "verify it once and the idle clock starts". This is that write.
+          if (isActive as boolean) markUsed(q);
+          setResult({
+            isValid: isActive as boolean, tokenId: q, owner: owner as string, issuer: issuer as string,
+            expiry: Number(expiry as bigint), active: isActive as boolean,
+            escrowed: false,
+            accessHolder: (isActive as boolean) ? (owner as string) : undefined,
+            message: (isActive as boolean)
+              ? `Token #${q} is ACTIVE with ${formatRemaining(left)} remaining. Access is granted.`
+              : `Token #${q} exists but has EXPIRED. Access is denied.`,
+          });
+        }
       }
     } catch (e) {
       setResult({ isValid: false, tokenId: q, message: `Failed to verify: ${(e as Error).message}` });
     } finally { setLoading(false); }
   };
 
-  const integrationSnippet = `import { createPublicClient, http } from 'viem';
+  const integrationSnippet = `import { createPublicClient, http, parseAbi, zeroAddress } from 'viem';
 import { arbitrumSepolia } from 'viem/chains';
 
 const client = createPublicClient({ chain: arbitrumSepolia, transport: http() });
+const CORE = '${LIQUID_PASS_ADDRESS}';
+const RENTAL = '${STREAM_RENTAL_ADDRESS}';
 
-export async function checkAccess(tokenId: bigint): Promise<boolean> {
-  const isActive = await client.readContract({
-    address: '${LIQUID_PASS_ADDRESS}',
-    abi: [{ name: 'isActive', type: 'function', stateMutability: 'view',
-            inputs: [{ name: 'tokenId', type: 'uint256' }],
-            outputs: [{ name: '', type: 'bool' }] }],
-    functionName: 'isActive',
-    args: [tokenId],
-  });
-  return isActive; // true = unexpired, access granted
+const core = parseAbi([
+  'function ownerOf(uint256) view returns (address)',
+  'function isActive(uint256) view returns (bool)',
+]);
+const rental = parseAbi(['function activeRenter(uint256) view returns (address)']);
+
+// Who holds access to this pass right now, or null if no one does.
+export async function accessHolder(tokenId: bigint) {
+  const [owner, active] = await Promise.all([
+    client.readContract({ address: CORE, abi: core, functionName: 'ownerOf', args: [tokenId] }),
+    client.readContract({ address: CORE, abi: core, functionName: 'isActive', args: [tokenId] }),
+  ]);
+  if (!active) return null;
+
+  // A rented pass is owned by the rental contract, so ownerOf alone is
+  // wrong here: access belongs to the renter, and to no one if it is idle.
+  if (owner.toLowerCase() === RENTAL.toLowerCase()) {
+    const renter = await client.readContract({
+      address: RENTAL, abi: rental, functionName: 'activeRenter', args: [tokenId],
+    });
+    return renter === zeroAddress ? null : renter;
+  }
+  return owner;
 }`;
 
   const handleCopyCode = () => { navigator.clipboard.writeText(integrationSnippet); setCopiedCode(true); setTimeout(() => setCopiedCode(false), 2000); };
@@ -117,7 +199,7 @@ export async function checkAccess(tokenId: bigint): Promise<boolean> {
                     {result.isValid ? "VERIFIED: ACCESS GRANTED" : "VERIFIED: ACCESS DENIED"}
                   </span>
                   <p className="font-body text-xs text-zincGrey leading-relaxed">{result.message}</p>
-                  {result.active && (
+                  {result.isValid && (
                     <p className="pt-1 text-[11px] text-aviation">
                       Access logged &mdash; the idle clock for this pass starts now,
                       so any &ldquo;sell if unused&rdquo; rule you set has something to measure.
@@ -125,6 +207,27 @@ export async function checkAccess(tokenId: bigint): Promise<boolean> {
                   )}
                   {result.owner && (
                     <div className="pt-3 border-t border-dark-border space-y-1 text-[11px]">
+                      {/* Who access belongs to, which for a rented pass is not the owner. */}
+                      <div className="flex justify-between">
+                        <span className="text-zincGrey">Access holder:</span>
+                        <span className={result.accessHolder ? "text-uranium font-bold" : "text-red-400 font-bold"}>
+                          {result.accessHolder ? shortAddress(result.accessHolder) : "NO ONE"}
+                        </span>
+                      </div>
+                      {result.escrowed && (
+                        <div className="flex justify-between">
+                          <span className="text-zincGrey">Custody:</span>
+                          <span className="text-aviation font-bold">RENTAL ESCROW</span>
+                        </div>
+                      )}
+                      {result.escrowed && (
+                        <div className="flex justify-between">
+                          <span className="text-zincGrey">Rented by:</span>
+                          <span className={result.renter ? "text-alabaster" : "text-zincGrey"}>
+                            {result.renter ? shortAddress(result.renter) : "nobody"}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between"><span className="text-zincGrey">Owner:</span><span className="text-alabaster font-bold">{shortAddress(result.owner)}</span></div>
                       <div className="flex justify-between"><span className="text-zincGrey">Issuer:</span><span className="text-zincGrey">{result.issuer ? shortAddress(result.issuer) : "-"}</span></div>
                       <div className="flex justify-between"><span className="text-zincGrey">Expires:</span><span className="text-uranium">{result.expiry ? new Date(result.expiry * 1000).toLocaleString() : "-"}</span></div>
