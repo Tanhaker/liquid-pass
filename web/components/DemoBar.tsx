@@ -21,19 +21,9 @@ const STOPS = [
 export function DemoBar() {
   const { enabled, setEnabled, timeTravel, setTimeTravel } = useDemo();
 
-  if (!enabled) {
-    return (
-      <div className="mx-auto max-w-6xl px-6 pt-4">
-        <button
-          onClick={() => setEnabled(true)}
-          className="flex items-center gap-2 border border-dark-border bg-surface px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-zinc-grey transition-colors hover:border-uranium hover:text-uranium"
-        >
-          <span className="size-1.5 rounded-full bg-uranium" />
-          LIVE // ARBITRUM SEPOLIA — SWITCH TO DEMO MODE
-        </button>
-      </div>
-    );
-  }
+  // Live mode shows nothing here. Demo mode is switched on from the toggle in
+  // the nav, and once it is on the loud banner below still appears.
+  if (!enabled) return null;
 
   return (
     <div className="mx-auto max-w-6xl px-6 pt-4">

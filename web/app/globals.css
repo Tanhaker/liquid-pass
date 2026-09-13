@@ -565,6 +565,15 @@ html[data-theme="light"] .grain-overlay::before { opacity: 0.03; }
   is what this now matches -- with a mask instead of its gradient panel, so
   the banding described above does not come back.
 */
+/*
+  Pages that end in a full-width bordered band (the homepage CTA) sit flush on
+  the footer. Unlayered on purpose, so it beats the footer's mt-32/mt-40
+  utilities; every other page keeps that breathing room.
+*/
+main:has([data-flush-footer]) + footer {
+  margin-top: 0;
+}
+
 .hero-surface-fade {
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);

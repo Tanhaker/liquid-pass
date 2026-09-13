@@ -6,12 +6,15 @@ import * as THREE from "three";
 interface DottedSurfaceProps {
   size?: number;
   opacity?: number;
+  /** Wave phase advanced per frame. 0.035 is the original pace. */
+  speed?: number;
   className?: string;
 }
 
 export default function DottedSurface({
   size = 7,
   opacity = 0.8,
+  speed = 0.035,
   className = "",
 }: DottedSurfaceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -145,7 +148,7 @@ export default function DottedSurface({
       if (isDisposed) return;
 
       if (isVisible && !prefersReducedMotion) {
-        count += 0.035;
+        count += speed;
 
         const pos = geometry.attributes.position.array as Float32Array;
         let index = 0;
@@ -228,7 +231,7 @@ export default function DottedSurface({
         }
       }
     };
-  }, [size, opacity]);
+  }, [size, opacity, speed]);
 
   return (
     <div

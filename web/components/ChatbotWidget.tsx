@@ -170,7 +170,7 @@ export function ChatbotWidget() {
                 </div>
                 <div className="flex flex-col">
                   <span className="font-bold text-alabaster tracking-wider text-[11px] sm:text-xs">
-                    STYLUS // COPILOT
+                    LIQUIDITYAI
                   </span>
                   <span className="text-[9px] text-uranium uppercase tracking-wider -mt-0.5">
                     ● ACTIVE STREAM
@@ -204,8 +204,7 @@ export function ChatbotWidget() {
             </div>
 
             {/* Sub-header telemetry badge */}
-            <div className="px-3 py-1.5 bg-dark border-b border-dark-border/80 flex items-center justify-between text-[10px] font-mono text-zincGrey">
-              <span>NODE: ARBITRUM SEPOLIA</span>
+            <div className="px-3 py-1.5 bg-dark border-b border-dark-border/80 flex items-center justify-end text-[10px] font-mono text-zincGrey">
               <span className="text-uranium font-bold">LATENCY: 18ms</span>
             </div>
 
@@ -222,7 +221,7 @@ export function ChatbotWidget() {
                       {isBot ? (
                         <>
                           <Bot className="w-3 h-3 text-uranium" />
-                          <span className="text-uranium font-bold">STYLUS AI</span>
+                          <span className="text-uranium font-bold">LiquidityAI</span>
                         </>
                       ) : (
                         <>
@@ -251,7 +250,7 @@ export function ChatbotWidget() {
                 <div className="flex flex-col items-start">
                   <div className="flex items-center space-x-1.5 mb-1 text-[10px] text-zincGrey">
                     <Bot className="w-3 h-3 text-uranium" />
-                    <span className="text-uranium font-bold">STYLUS AI</span>
+                    <span className="text-uranium font-bold">LiquidityAI</span>
                     <span>• thinking</span>
                   </div>
                   <div className="p-3 bg-dark border border-dark-border text-zincGrey flex items-center space-x-1.5">
@@ -315,7 +314,7 @@ export function ChatbotWidget() {
         onMouseLeave={handleMouseLeave}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        aria-label="Toggle Stylus AI Copilot"
+        aria-label="Toggle LiquidityAI"
         className="group relative w-20 h-20 sm:w-24 sm:h-24 bg-dark-card border-2 border-dark-border hover:border-uranium shadow-grunge flex items-center justify-center overflow-hidden transition-all rounded-none p-1.5"
       >
         {/* Active Ambient Glow */}

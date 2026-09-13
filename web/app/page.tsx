@@ -137,11 +137,17 @@ export default function Home() {
           Deliberately NOT copied from the reference: its -z-20. Commit 63280c2
           moved this to z-0 because -z-20 sank the terrain beneath the body
           background, which hides it just as completely. */}
-      <div data-hero-terrain className="hero-surface-fade absolute top-0 left-0 right-0 h-[680px] lg:h-[780px] overflow-hidden pointer-events-none z-0">
-        <DottedSurface size={8} opacity={0.8} />
+      {/* The hero fills the first screen exactly: from under the nav (h-16
+          plus its 1px border) down to the top border of the lifecycle section,
+          so on load that line sits at the bottom edge of the window. min-h, not
+          h, so a phone whose content is taller than its screen still grows. */}
+      <div className="relative flex min-h-[calc(100svh-65px)] flex-col justify-center">
+      <div data-hero-terrain className="hero-surface-fade absolute inset-0 overflow-hidden pointer-events-none z-0">
+        {/* speed 0.027, about a quarter slower than the component's 0.035. */}
+        <DottedSurface size={8} opacity={0.8} speed={0.027} />
       </div>
 
-      <section className="relative z-10 mx-auto max-w-7xl px-4 pb-20 pt-12 sm:px-6 lg:px-8 lg:pb-28 lg:pt-20">
+      <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12">
           <motion.div {...REVEAL_NOW} className="space-y-6 lg:col-span-7">
             <h1 className="font-header text-4xl font-extrabold leading-[1.05] tracking-tight text-text sm:text-6xl lg:text-7xl">
@@ -187,7 +193,7 @@ export default function Home() {
               <div className="mb-4 flex items-center justify-between border-b border-dark-border pb-3 font-mono text-xs text-zinc-grey">
                 <span className="flex items-center gap-1 font-bold text-uranium">
                   <Sliders className="size-3.5" />
-                  <span>LIFECYCLE SCRUBBER</span>
+                  <span>TRY IT YOURSELF</span>
                 </span>
                 <span>{days} DAYS REMAINING</span>
               </div>
@@ -235,6 +241,7 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
+      </div>
 
       {/* ---------------------------------------------------------------- */}
       {/* LIFECYCLE                                                        */}
@@ -247,7 +254,7 @@ export default function Home() {
           >
             <div>
               <h2 className="font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-uranium">
-                One pass, over thirty days
+                You can even split the pass
               </h2>
               <p className="mt-2 font-header text-3xl font-bold tracking-tight text-text sm:text-4xl">
                 The same token, four owners, one expiry.
@@ -256,7 +263,7 @@ export default function Home() {
             {/* Names what the four cards have in common, so the row reads as one
                 asset changing hands rather than four separate offers. */}
             <span className="shrink-0 border border-dark-border bg-chip-bg px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest text-chip-text">
-              TOKEN #042 &middot; UNCHANGED EXPIRY
+              UNCHANGED EXPIRY
             </span>
           </motion.div>
 
@@ -344,7 +351,9 @@ export default function Home() {
       {/* ---------------------------------------------------------------- */}
       {/* CTA                                                              */}
       {/* ---------------------------------------------------------------- */}
-      <section className="technical-dots border-t border-dark-border bg-surface/40">
+      {/* data-flush-footer: the footer's top margin is dropped on this page
+          (globals.css), so the CTA band meets the footer with no dead strip. */}
+      <section data-flush-footer className="technical-dots border-t border-dark-border bg-surface/40">
         <div className="mx-auto max-w-3xl px-4 py-28 text-center sm:px-6">
           <motion.div {...REVEAL}>
             <h2 className="font-header text-[clamp(2.5rem,5vw,4rem)] font-extrabold leading-none tracking-tight text-text">

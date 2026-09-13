@@ -13,6 +13,11 @@ import type { Locator, Page } from "@playwright/test";
 
 const RAIL = '[aria-label="Listed passes"]';
 
+// Narrower than the default desktop window so the rail still overflows with
+// only a few passes listed. The listing count is live chain data and fell from
+// five to three during one session; at 1280 wide three cards barely overflow.
+test.use({ viewport: { width: 900, height: 800 } });
+
 // Hover, drag and wheel are pointer concepts. On touch the rail deliberately
 // hands scrolling back to the browser, so none of this applies.
 test.skip(({ isMobile }) => !!isMobile, "pointer-driven rail behaviour is desktop-only");
@@ -24,8 +29,12 @@ async function railOrSkip(page: Page): Promise<Locator> {
   await expect
     .poll(async () => (await rail.count()) > 0, { timeout: 30_000 })
     .toBe(true);
-  const overflows = await rail.evaluate((el) => el.scrollWidth - el.clientWidth > 4);
-  test.skip(!overflows, "rail does not overflow at this viewport; nothing to scroll");
+  // These tests drag 150px, step by the viewport and watch drift, so a rail
+  // that overflows by a sliver cannot exercise them. The listing count is
+  // live chain state: with three passes listed the rail overflows by 20px at
+  // 1280 wide, and every test here "failed" on that rather than on the code.
+  const overflow = await rail.evaluate((el) => el.scrollWidth - el.clientWidth);
+  test.skip(overflow < 200, `rail overflows by only ${overflow}px with the passes listed right now; nothing meaningful to scroll`);
   return rail;
 }
 
@@ -82,7 +91,11 @@ test("drag tracks the cursor 1:1", async ({ page }) => {
   const rail = await railOrSkip(page);
   const box = (await rail.boundingBox())!;
   const y = box.y + box.height / 2;
-  const startX = box.x + box.width - 60;
+  // From the middle of the rail, not its right edge: the floating chat button
+  // is fixed to the bottom-right of the window, and once the demo bar above
+  // the page was removed the rail's right edge moved up under it -- so the
+  // "drag" was pressing the chat button and the rail never moved.
+  const startX = box.x + box.width / 2;
 
   await rail.evaluate((el) => {
     el.scrollLeft = 0;

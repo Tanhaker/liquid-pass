@@ -22,7 +22,7 @@ export function Footer() {
               </span>
             </div>
             <p className="font-body text-zincGrey text-sm max-w-md leading-relaxed">
-              Buy time. Use it. Sell what's left. Resellable SaaS subscriptions on Arbitrum Stylus with native WebAuthn passkeys and automated 90/10 royalty settlement.
+              Stop paying for days you never use. LiquidPass turns a SaaS subscription into a time-bound pass you can resell, gift or split. Sign in with a passkey, not a password, and every resale pays 90% to the seller and 10% to the issuer automatically on Arbitrum Stylus.
             </p>
             <div className="pt-3 flex items-center space-x-3 text-[11px] text-uranium">
               <span className="px-2.5 py-1 border border-dark-border bg-dark-card">

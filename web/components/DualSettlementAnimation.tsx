@@ -122,7 +122,7 @@ export function DualSettlementAnimation() {
                 }}
                 className="absolute -top-4 -left-3 z-30 px-3.5 py-1.5 bg-aviation border border-aviation-glow text-black font-mono text-xs font-black uppercase tracking-wider shadow-grunge-amber pointer-events-none"
               >
-                PROFIT: +0.00108 ETH
+                SAVED: +0.00108 ETH
               </motion.div>
 
               {/* Impact Flash effect for Seller slam */}
@@ -179,7 +179,7 @@ export function DualSettlementAnimation() {
                     className="p-3 bg-dark border border-dark-border flex justify-between items-center h-12"
                   >
                     <span className="text-zincGrey">Current Progress:</span>
-                    <span className="text-alabaster font-bold">Day 12 / 30 (Done Early)</span>
+                    <span className="text-alabaster font-bold">Day 12 / 30 (Not in Need)</span>
                   </motion.div>
 
                   {/* Row 2: 1.4s */}
@@ -338,7 +338,7 @@ export function DualSettlementAnimation() {
                     <span>BUYER: INSTANT COMPUTE ACCESS</span>
                   </span>
                   <span className="font-mono text-[10px] sm:text-xs px-2.5 py-0.5 bg-dark border border-dark-border text-zincGrey font-bold tracking-wider">
-                    WANTED: 2 WEEKS
+                    NEED: 2 WEEKS
                   </span>
                 </motion.div>
 
@@ -355,7 +355,7 @@ export function DualSettlementAnimation() {
                     }}
                     className="p-3 bg-dark border border-dark-border flex justify-between items-center h-12"
                   >
-                    <span className="text-zincGrey">Needs Compute:</span>
+                    <span className="text-zincGrey">Reason:</span>
                     <span className="text-alabaster font-bold">2-Week Hackathon Sprint</span>
                   </motion.div>
 
