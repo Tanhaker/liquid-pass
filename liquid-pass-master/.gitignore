@@ -1,8 +1,0 @@
-# Secrets — never commit a deploy key
-*.key
-deployer.key
-.env*
-
-# Build output
-target/
-node_modules/
