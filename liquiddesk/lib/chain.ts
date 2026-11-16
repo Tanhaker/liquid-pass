@@ -34,6 +34,13 @@ export const ISSUER = env(
   "0xf5AbE5a5092Af1a7fA31109C98635440fdD83174",
 );
 
+/**
+ * Plans left over from testing the first deployment (plan #0, "Test Plan A").
+ * They cannot be deleted from the chain, so a pass on one is ignored here,
+ * exactly as the main site ignores it (HIDDEN_PLAN_IDS in web/lib/contract.ts).
+ */
+const HIDDEN_PLAN_IDS: readonly bigint[] = [0n];
+
 const abi = parseAbi([
   "function nextTokenId() view returns (uint256)",
   "function ownerOf(uint256 tokenId) view returns (address)",
@@ -115,7 +122,8 @@ export async function checkAccess(wallet: `0x${string}`): Promise<Access> {
         plan: plan.result as bigint,
       };
     })
-    .filter((p): p is NonNullable<typeof p> => p !== null && same(p.issuer, ISSUER));
+    .filter((p): p is NonNullable<typeof p> => p !== null && same(p.issuer, ISSUER))
+    .filter((p) => !HIDDEN_PLAN_IDS.includes(p.plan));
 
   const escrowed = ours.filter((p) => p.active && same(p.owner, RENTAL));
   const renters = escrowed.length

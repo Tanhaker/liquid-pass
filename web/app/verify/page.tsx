@@ -12,12 +12,13 @@ import {
   shortAddress,
   remaining,
   formatRemaining,
+  isHiddenPlan,
 } from "@/lib/contract";
 import { markUsed } from "@/lib/autosell";
 
 export default function VerifyPage() {
   const client = usePublicClient();
-  const [inputQuery, setInputQuery] = useState<string>("0");
+  const [inputQuery, setInputQuery] = useState<string>("8");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
     /** Whether anyone currently holds access -- not merely whether the pass is unexpired. */
@@ -44,14 +45,16 @@ export default function VerifyPage() {
     setLoading(true); setResult(null);
     try {
       const tokenId = BigInt(q);
-      const [owner, isActive, expiry, issuer] = await Promise.all([
+      const [owner, isActive, expiry, issuer, planId] = await Promise.all([
         client.readContract({ address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "ownerOf", args: [tokenId] }),
         client.readContract({ address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "isActive", args: [tokenId] }),
         client.readContract({ address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "expiryOf", args: [tokenId] }),
         client.readContract({ address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "issuerOf", args: [tokenId] }),
+        client.readContract({ address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "planOf", args: [tokenId] }).catch(() => null),
       ]);
       const zeroAddr = "0x0000000000000000000000000000000000000000";
-      if ((owner as string) === zeroAddr) {
+      // A pass from a hidden test plan is reported like one that was never issued.
+      if ((owner as string) === zeroAddr || isHiddenPlan(planId as bigint | null)) {
         setResult({ isValid: false, tokenId: q, message: `Token #${q} does not exist on-chain.` });
       } else {
         const left = remaining(expiry as bigint);
@@ -169,7 +172,7 @@ export async function accessHolder(tokenId: bigint) {
           <div className="space-y-3 font-mono text-xs">
             <label className="text-zincGrey block uppercase">Enter Token ID:</label>
             <div className="flex space-x-2">
-              <input type="text" value={inputQuery} onChange={(e) => setInputQuery(e.target.value)} placeholder="e.g. 0, 1, 2..."
+              <input type="text" value={inputQuery} onChange={(e) => setInputQuery(e.target.value)} placeholder="e.g. 1, 2, 8..."
                 className="flex-1 p-3 bg-dark border border-dark-border text-alabaster focus:border-uranium focus:outline-none" />
               <button onClick={() => handleVerify()} disabled={loading}
                 className="px-6 py-3 bg-uranium hover:bg-uranium-glow text-black font-extrabold uppercase tracking-wider transition-all shadow-grunge-uranium disabled:opacity-50">
@@ -178,8 +181,8 @@ export async function accessHolder(tokenId: bigint) {
             </div>
             <div className="pt-2 flex flex-wrap gap-2 text-[11px]">
               <span className="text-zincGrey py-1">Quick Presets:</span>
-              <button onClick={() => { setInputQuery("0"); handleVerify("0"); }} className="px-2 py-1 bg-dark border border-dark-border text-zincGrey hover:text-uranium">Token #0 (First Pass)</button>
-              <button onClick={() => { setInputQuery("1"); handleVerify("1"); }} className="px-2 py-1 bg-dark border border-dark-border text-zincGrey hover:text-uranium">Token #1</button>
+              <button onClick={() => { setInputQuery("8"); handleVerify("8"); }} className="px-2 py-1 bg-dark border border-dark-border text-zincGrey hover:text-uranium">Token #8 (Active)</button>
+              <button onClick={() => { setInputQuery("1"); handleVerify("1"); }} className="px-2 py-1 bg-dark border border-dark-border text-zincGrey hover:text-uranium">Token #1 (Expired)</button>
               <button onClick={() => { setInputQuery("9999"); handleVerify("9999"); }} className="px-2 py-1 bg-dark border border-dark-border text-zincGrey hover:text-aviation">Token #9999 (Non-existent)</button>
             </div>
           </div>

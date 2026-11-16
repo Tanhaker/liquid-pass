@@ -1,5 +1,5 @@
 import { parseEventLogs, type Log } from "viem";
-import { liquidPassAbi, marketplaceAbi } from "./contract";
+import { isHiddenPlan, liquidPassAbi, marketplaceAbi } from "./contract";
 
 /**
  * The activity feed's shared vocabulary: what an entry is, how a raw log
@@ -101,6 +101,24 @@ export function decodeActivity(logs: RawLog[]): Activity[] {
     })
     .sort((x, y) => Number(y.entry.blockNumber - x.entry.blockNumber) || y.logIndex - x.logIndex)
     .map((x) => x.entry);
+}
+
+/**
+ * Drops everything that belongs to a hidden test plan: the plan's own
+ * events, and every event of a pass that was bought from it.
+ *
+ * Listings, sales and transfers name only the pass, not its plan, so the
+ * passes are found first from their PassPurchased events, which name both.
+ */
+export function visibleActivity(all: Activity[]): Activity[] {
+  const hiddenPasses = new Set(
+    all
+      .filter((a) => a.kind === "PassPurchased" && isHiddenPlan(a.planId) && a.tokenId !== undefined)
+      .map((a) => a.tokenId!.toString()),
+  );
+  return all.filter(
+    (a) => !isHiddenPlan(a.planId) && !(a.tokenId !== undefined && hiddenPasses.has(a.tokenId.toString())),
+  );
 }
 
 /** JSON cannot carry a bigint, so they travel as decimal strings. */

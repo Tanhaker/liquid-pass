@@ -1,3 +1,4 @@
+import { isHiddenPlan } from "./contract";
 import type { Pass, Plan } from "./contract";
 import type { Activity } from "./data";
 
@@ -55,6 +56,7 @@ export async function fetchPlansGql(): Promise<Plan[]> {
 
   return data.plans
     .filter((p) => p.issuer !== "0x0000000000000000000000000000000000000000")
+    .filter((p) => !isHiddenPlan(p.id))
     .map((p) => ({
       id: BigInt(p.id),
       name: "", // Not stored in subgraph; fall back to RPC for name/uri
@@ -95,7 +97,9 @@ export async function fetchPassesGql(): Promise<Pass[]> {
 
   const now = Math.floor(Date.now() / 1000);
 
-  return data.passes.map((p) => ({
+  return data.passes
+    .filter((p) => !isHiddenPlan(p.plan?.id))
+    .map((p) => ({
     tokenId: BigInt(p.id),
     planId: p.plan ? BigInt(p.plan.id) : 0n,
     owner: p.owner as `0x${string}`,

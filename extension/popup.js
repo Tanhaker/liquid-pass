@@ -125,6 +125,8 @@ async function loadFor(address) {
     if (owner.toLowerCase() !== address.toLowerCase()) continue;
     const expiry = asBigInt(await call(SEL.expiryOf + encUint(i)));
     const planId = asBigInt(await call(SEL.planOf + encUint(i)));
+    // Plan #0 is a leftover test plan; the website hides it and so does this.
+    if (planId === 0n) continue;
     // Marketplace, not core -- see the note on the addresses above.
     const listed = asBigInt(
       await call(SEL.currentPrice + encUint(i), MARKETPLACE),

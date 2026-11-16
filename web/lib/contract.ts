@@ -12,6 +12,26 @@ export const ESCROW_ADDRESS = (process.env.NEXT_PUBLIC_ESCROW_ADDRESS ||
 export const DEPLOY_BLOCK = 304290900n;
 
 /**
+ * Plans that exist on chain but are not part of the product.
+ *
+ * Plan #0 ("Test Plan A", a 3,030-day plan) and the pass bought from it were
+ * created while testing the first deployment. Nothing on chain can be
+ * deleted, and the contract must not be redeployed, so they are removed the
+ * only way they can be: every read path drops them. That is lib/data.ts for
+ * plans and passes, lib/activity.ts for the event feed, and the two places
+ * that read a single pass straight from the contract (the Verify page and
+ * the check-in scanner), which answer for such a pass as for one that does
+ * not exist. LiquidDesk keeps its own copy of this list.
+ */
+export const HIDDEN_PLAN_IDS: readonly bigint[] = [0n];
+
+export function isHiddenPlan(planId: bigint | number | string | null | undefined): boolean {
+  if (planId === null || planId === undefined) return false;
+  const id = BigInt(planId);
+  return HIDDEN_PLAN_IDS.some((hidden) => hidden === id);
+}
+
+/**
  * The PassKey wallet: a Stylus contract that verifies a real WebAuthn
  * secp256r1 (P-256) assertion on chain.
  *

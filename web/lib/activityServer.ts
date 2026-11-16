@@ -1,5 +1,5 @@
 import { DEPLOY_BLOCK, LIQUID_PASS_ADDRESS, MARKETPLACE_ADDRESS } from "./contract";
-import { decodeActivity, type Activity, type RawLog } from "./activity";
+import { decodeActivity, visibleActivity, type Activity, type RawLog } from "./activity";
 import snapshot from "./activity-snapshot.json";
 
 /**
@@ -191,7 +191,7 @@ export async function loadActivity(limit = 25): Promise<ActivityResult> {
     }
   }
   return {
-    activity: decodeActivity([...state.logs.values()]).slice(0, limit),
+    activity: visibleActivity(decodeActivity([...state.logs.values()])).slice(0, limit),
     scannedTo: state.scannedTo,
   };
 }

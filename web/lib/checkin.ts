@@ -3,6 +3,7 @@ import { publicClient } from "./publicClient";
 import {
   LIQUID_PASS_ADDRESS,
   STREAM_RENTAL_ADDRESS,
+  isHiddenPlan,
   liquidPassAbi,
   streamRentalAbi,
 } from "./contract";
@@ -191,7 +192,9 @@ export async function verifyCheckIn(
       { address: LIQUID_PASS_ADDRESS, abi: liquidPassAbi, functionName: "planOf", args: [id] },
     ],
   });
-  if (owner.status !== "success" || same(owner.result as string, zeroAddress)) {
+  // A pass from a hidden test plan is answered for as one that was never issued.
+  const hidden = plan.status === "success" && isHiddenPlan(plan.result as bigint);
+  if (hidden || owner.status !== "success" || same(owner.result as string, zeroAddress)) {
     return { admit: false, reason: `Pass #${tokenId} does not exist.`, tokenId, signer };
   }
   if (active.status !== "success" || !active.result) {

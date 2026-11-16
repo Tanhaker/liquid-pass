@@ -4,6 +4,7 @@ import { activityFromJson, type Activity, type ActivityJson } from "./activity";
 import {
   LIQUID_PASS_ADDRESS,
   MARKETPLACE_ADDRESS,
+  isHiddenPlan,
   liquidPassAbi,
   marketplaceAbi,
   type Pass,
@@ -72,6 +73,8 @@ export async function fetchPlans(client: PublicClient = publicClient): Promise<P
   // createPlan, but guards against a bad id reaching this far.
   return plans
     .filter((p) => p.issuer !== "0x0000000000000000000000000000000000000000")
+    // Leftover test plans are not part of the catalogue -- see HIDDEN_PLAN_IDS.
+    .filter((p) => !isHiddenPlan(p.id))
     .reverse();
 }
 
@@ -120,6 +123,8 @@ export async function fetchPasses(client: PublicClient = publicClient): Promise<
         listedAt: (results[o + 8] as readonly [bigint, bigint])[1],
       };
     })
+    // A pass bought from a hidden test plan is hidden with it.
+    .filter((p) => !isHiddenPlan(p.planId))
     .reverse();
 }
 

@@ -53,14 +53,14 @@ test("verifying an active pass starts its idle clock", async ({ page }) => {
   await page.waitForFunction(() => {
     // React tags hydrated DOM nodes with __reactProps$...; before that, typing
     // into the input never reaches component state.
-    const el = document.querySelector('input[placeholder="e.g. 0, 1, 2..."]');
+    const el = document.querySelector('input[placeholder="e.g. 1, 2, 8..."]');
     return !!el && Object.keys(el).some((k) => k.startsWith("__reactProps"));
   }, undefined, { timeout: 60_000 });
   // Retried until the result is for token 1: under suite load the click can
   // land before React hydrates (nothing requested), or the fill can (the id
   // never reaches state, which starts at "0", and token #0 gets verified).
   await expect(async () => {
-    await page.getByPlaceholder("e.g. 0, 1, 2...").fill("1");
+    await page.getByPlaceholder("e.g. 1, 2, 8...").fill("1");
     await page.getByRole("button", { name: "VERIFY", exact: true }).click({ timeout: 2_000 });
     await expect(page.getByText(/^Token #1 (is|has|exists|does)/)).toBeVisible({ timeout: 25_000 });
   }).toPass({ timeout: 110_000 });
@@ -91,13 +91,13 @@ test("a token that does not exist records nothing", async ({ page }) => {
   await page.waitForFunction(() => {
     // React tags hydrated DOM nodes with __reactProps$...; before that, typing
     // into the input never reaches component state.
-    const el = document.querySelector('input[placeholder="e.g. 0, 1, 2..."]');
+    const el = document.querySelector('input[placeholder="e.g. 1, 2, 8..."]');
     return !!el && Object.keys(el).some((k) => k.startsWith("__reactProps"));
   }, undefined, { timeout: 60_000 });
   // Retried for the same hydration race as above -- which matters more here:
   // losing the fill verifies token #0, which IS active and WOULD log usage.
   await expect(async () => {
-    await page.getByPlaceholder("e.g. 0, 1, 2...").fill("99999");
+    await page.getByPlaceholder("e.g. 1, 2, 8...").fill("99999");
     await page.getByRole("button", { name: "VERIFY", exact: true }).click({ timeout: 2_000 });
     await expect(page.getByText(/^(Token #99999 does not exist|Failed to verify)/)).toBeVisible({ timeout: 25_000 });
   }).toPass({ timeout: 110_000 });
