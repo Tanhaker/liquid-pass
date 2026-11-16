@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getAddress, stringToHex } from "viem";
+import { LIQUID_PASS_URL } from "@/lib/site";
+import { LiquidityAI } from "./LiquidityAI";
 
 /**
  * LiquidDesk: a sample SaaS product that shows "Unlock with Liquid Pass" at work.
@@ -16,7 +18,6 @@ import { getAddress, stringToHex } from "viem";
  * screen, mid-session, the moment the pass is sold to someone else.
  */
 
-const LIQUID_PASS_URL = process.env.NEXT_PUBLIC_LIQUID_PASS_URL || "https://liquidpass.xyz";
 const RECHECK_MS = 4_000;
 
 /**
@@ -368,6 +369,8 @@ export default function Page() {
           <span>Arbitrum Sepolia testnet // No real money moves</span>
         </div>
       </footer>
+
+      <LiquidityAI />
     </div>
   );
 }
@@ -500,7 +503,10 @@ function Unlocked({ pass, address, now }: { pass: Pass; address: string; now: nu
         <CheckIcon />
         <div className="panel-body">
           <span className="verdict">Verified: access granted</span>
-          <p>This wallet holds an active LiquidDesk pass, so the Pro workspace is unlocked.</p>
+          <p>
+            This wallet holds an active LiquidDesk pass, so the Pro workspace is unlocked. Opening it counts as using
+            the pass, which resets any &quot;sell if unused&quot; rule you set on Liquid Pass.
+          </p>
           <dl className="rows">
             <div>
               <dt>Plan:</dt>

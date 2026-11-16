@@ -81,6 +81,36 @@ export const KNOWLEDGE: Doc[] = [
     text: "Liquid Pass runs on Arbitrum Sepolia, a test network. The ETH involved has no monetary value. Nothing here is an investment, and passes are access to a service rather than a financial instrument.",
     tags: ["testnet", "sepolia", "real", "money", "investment", "risk", "safe"],
   },
+  {
+    id: "use",
+    title: "Where a pass can be used",
+    text: "Holding a pass is the access. The Use Pass page lists the three places it works: LiquidDesk, a sample online product that unlocks for a wallet holding a valid pass; the QR check-in, for physical venues; and the Verify page, which shows who holds access to any pass. All three read the same contract, so when a pass is sold or gifted they stop working for the old holder and start working for the new one, with the same expiry.",
+    tags: ["use", "using", "unlock", "access", "where", "works", "gateway", "open"],
+  },
+  {
+    id: "liquiddesk",
+    title: "LiquidDesk, the sample app a pass unlocks",
+    text: "LiquidDesk is a separate sample SaaS product at desk.liquidpass.xyz. You sign in with your wallet by signing a one-time message, which is free and sends no transaction. Its server then reads the pass contract and unlocks the Pro workspace, a tool that condenses notes into key points, only while your wallet holds an active pass. It re-checks every few seconds, so if you sell or gift the pass it locks for you and unlocks for the new holder. It keeps no user database and no passwords.",
+    tags: ["liquiddesk", "desk", "app", "saas", "unlock", "workspace", "pro", "sign", "sample"],
+  },
+  {
+    id: "checkin",
+    title: "Checking in at a venue with a QR code",
+    text: "The check-in is for gyms, co-working spaces and events. The venue opens the scanner page, which shows a QR code holding a one-time challenge that changes every 2 minutes. The pass holder scans it, picks a pass and signs the challenge with their wallet; signing is free and sends no transaction. The scanner works out which wallet signed and reads the contract to confirm that wallet holds an active pass, then shows admit or do not admit. Each code is accepted once, so a screenshot cannot be reused.",
+    tags: ["check", "checkin", "check-in", "qr", "venue", "door", "scanner", "scan", "gym", "event", "screenshot", "code"],
+  },
+  {
+    id: "autosell",
+    title: "Auto-sell rules",
+    text: "In My Passes you can write a rule in plain English, such as: if I do not use my pass for 7 days, sell it for 0.001. A rule can watch the days left on a pass, a date, or how long the pass has gone unused. A pass counts as used when it unlocks LiquidDesk, when you sign a venue check-in with it, or when you verify it. Rules are kept in your own browser. When a rule fires it offers a one-click listing that you sign; nothing is ever listed without your signature.",
+    tags: ["auto", "autosell", "auto-sell", "rule", "rules", "automatic", "unused", "idle", "watch", "remind"],
+  },
+  {
+    id: "fairprice",
+    title: "The suggested asking price",
+    text: "When you open Sell remaining time on a pass, Liquid Pass suggests an asking price. It is calculated from the time left in proportion to the original price, and moved toward what past resales of the same plan actually sold for when there are any. Liquidity AI then explains the reasoning in two sentences; the server discards any explanation that contains a number not found in the chain data. You can accept the suggestion or type your own price, and you sign the listing yourself.",
+    tags: ["price", "pricing", "fair", "suggest", "suggested", "asking", "advisor", "worth", "value", "how", "much"],
+  },
 ];
 
 /**

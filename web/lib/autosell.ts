@@ -22,9 +22,10 @@ import { remaining } from "./contract";
  * The three observable conditions:
  *   daysLeft     -- from the pass's expiry. Fully on-chain.
  *   byDate       -- wall clock.
- *   idle         -- how long since this pass was last used to prove access
- *                   through /verify on this device. A real signal about YOUR
- *                   usage of Liquid Pass, not a claim about Netflix.
+ *   idle         -- how long since this pass was last USED in this browser:
+ *                   unlocking LiquidDesk with it, signing a venue check-in
+ *                   with it, or proving access on /verify. A real signal
+ *                   about YOUR usage of the pass, not a claim about Netflix.
  *
  * Rules live in localStorage: per-browser, never sent anywhere. There is no
  * backend to hold them and adding one to store a handful of preferences would
@@ -91,16 +92,50 @@ export function removeRule(id: string): Rule[] {
   return next;
 }
 
-/** Called by /verify whenever a pass is confirmed as granting access. */
+/**
+ * Records a use of a pass in this browser. Called by /verify when a pass is
+ * confirmed as granting access, and by the check-in page when the holder
+ * signs a venue's code with it.
+ */
 export function markUsed(tokenId: string) {
   const map = read<Record<string, number>>(USE_KEY, {});
   map[tokenId] = Date.now();
   write(USE_KEY, map);
 }
 
+/**
+ * Uses recorded by LiquidDesk.
+ *
+ * LiquidDesk runs on its own address (desk.liquidpass.xyz), so it cannot
+ * write this site's localStorage. Each time it unlocks for a pass it sets a
+ * cookie on the shared parent domain instead: `lp_used`, holding
+ * `<tokenId>.<unix seconds>` pairs joined by `_`. Like the rest of this file
+ * it is advisory and lives in the user's own browser; nothing trusts it for
+ * access.
+ */
+export const USE_COOKIE = "lp_used";
+
+function usedElsewhere(tokenId: string): number | null {
+  if (typeof document === "undefined") return null;
+  const raw = document.cookie
+    .split("; ")
+    .find((c) => c.startsWith(`${USE_COOKIE}=`))
+    ?.slice(USE_COOKIE.length + 1);
+  if (!raw) return null;
+  for (const pair of raw.split("_")) {
+    const [id, seconds] = pair.split(".");
+    if (id === tokenId && /^\d+$/.test(seconds ?? "")) return Number(seconds) * 1000;
+  }
+  return null;
+}
+
+/** The most recent use of a pass from any source, in ms, or null. */
 export function lastUsed(tokenId: string): number | null {
-  const map = read<Record<string, number>>(USE_KEY, {});
-  return map[tokenId] ?? null;
+  const here = read<Record<string, number>>(USE_KEY, {})[tokenId] ?? null;
+  const elsewhere = usedElsewhere(tokenId);
+  if (here === null) return elsewhere;
+  if (elsewhere === null) return here;
+  return Math.max(here, elsewhere);
 }
 
 export type Evaluated = {
@@ -157,10 +192,12 @@ export function evaluate(rule: Rule, pass: Pass | undefined, nowMs: number): Eva
           rule,
           fired: false,
           because:
-            "No access check recorded yet for this pass. Verify it once and the idle clock starts.",
+            "No use recorded yet for this pass. Open LiquidDesk with it, check in at a venue or verify it once, and the idle clock starts.",
         };
       }
-      const idleDays = Math.floor((nowMs - seen) / 86_400_000);
+      // Never negative: a use stamped by LiquidDesk's server, or logged a
+      // moment after this page's clock last ticked, must read as today.
+      const idleDays = Math.max(0, Math.floor((nowMs - seen) / 86_400_000));
       const fired = idleDays >= rule.condition.days;
       return {
         rule,

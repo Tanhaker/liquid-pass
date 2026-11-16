@@ -14,6 +14,7 @@ import {
   type Pass,
   type Plan,
 } from "@/lib/contract";
+import { markUsed } from "@/lib/autosell";
 import { fetchPasses, fetchPlans } from "@/lib/data";
 import { publicClient } from "@/lib/publicClient";
 import {
@@ -124,6 +125,9 @@ export default function CheckInSignPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(response),
       }).catch(() => undefined);
+      // Checking in IS using the pass: it resets any "sell if unused" rule
+      // set for it in this browser.
+      markUsed(chosen);
       setSent(response);
     } catch (e) {
       const err = e as { name?: string; shortMessage?: string; message?: string };

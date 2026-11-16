@@ -306,10 +306,11 @@ export function AutoSell({
                 <p className="mt-0.5 text-[11px] text-zincGrey/70">{because}</p>
 
                 {/*
-                  An idle rule measures time since the last access check, and
-                  until something records one it can never fire. The check
-                  itself lives on /verify, which is a long way to go from here,
-                  so the same signal can be recorded in place.
+                  An idle rule measures time since the pass was last used, and
+                  until something records a use it can never fire. LiquidDesk,
+                  the venue check-in and /verify each record one; all three are
+                  a long way to go from here, so the same signal can be
+                  recorded in place.
                 */}
                 {rule.condition.kind === "idle" && (
                   <button

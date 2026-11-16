@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAccount } from "wagmi";
 import {
   X,
   Minus,
@@ -22,18 +23,20 @@ const DEFAULT_MESSAGES: Message[] = [
   {
     id: "m-1",
     sender: "bot",
-    text: "LIQUIDPASS PROTOCOL TERMINAL v1.4 // ONLINE\n\nI am your on-chain escrow co-pilot. Ask me about dynamic time decay, listing secondary passes, or smart contract verification on Arbitrum Stylus.",
-    time: "10:42",
+    text: "Hi, I am Liquidity AI. Ask me about your passes, what is on resale right now, or how Liquid Pass works. I answer from the product documentation and live chain data.",
+    time: "",
   },
 ];
 
 const SUGGESTED_PROMPTS = [
-  "How does the time decay formula work?",
-  "What is the 90/10 escrow split?",
-  "How do I log in with a Passkey?",
+  "What is listed right now?",
+  "Which of my passes expire soon?",
+  "How is the resale payment split?",
 ];
 
 export function ChatbotWidget() {
+  // Sent with each question so the assistant can answer about THIS wallet's passes.
+  const { address } = useAccount();
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [input, setInput] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>(DEFAULT_MESSAGES);
@@ -100,31 +103,38 @@ export function ChatbotWidget() {
     setInput("");
     setIsTyping(true);
 
-    // Mock interactive response until backend endpoint is hooked up
-    setTimeout(() => {
-      let reply = "Query processed by Stylus telemetry node. Standby for backend endpoint sync.";
-      const lower = query.toLowerCase();
-
-      if (lower.includes("decay") || lower.includes("formula")) {
-        reply = "Dynamic Resale Pricing Formula:\nPrice = (Remaining Seconds / Total Seconds) × Original Face Value.\nAs on-chain block timestamps advance, the fair resale floor decreases linearly.";
-      } else if (lower.includes("split") || lower.includes("royalty") || lower.includes("90")) {
-        reply = "LiquidPass Secondary Escrow Split:\n• 90% of proceeds go directly to the Seller.\n• 10% royalty is sent automatically to the original SaaS Issuer on-chain.";
-      } else if (lower.includes("passkey") || lower.includes("webauthn") || lower.includes("p-256")) {
-        reply = "Passkey WebAuthn Authentication:\nLiquidPass verifies secp256r1 (P-256) signatures directly inside our Arbitrum Stylus Rust contract without seed phrases or gas overhead.";
-      } else {
-        reply = `Received: "${query}". Backend API listener is configured and ready for live LLM streaming.`;
+    // The real assistant: /api/ai answers from the product documentation and a
+    // live chain snapshot. This widget used to reply from a handful of canned
+    // strings on a timer, which looked like an assistant and was not one.
+    void (async () => {
+      let reply: string;
+      try {
+        const res = await fetch("/api/ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: query, address }),
+        });
+        const j = (await res.json()) as { answer?: string; mode?: string; error?: string };
+        if (j.answer) {
+          reply =
+            j.mode === "knowledge-base"
+              ? `${j.answer}\n\n(From the product documentation. The language model was not used for this answer.)`
+              : j.answer;
+        } else {
+          reply = `Sorry, I could not answer that: ${j.error ?? "no answer was returned"}.`;
+        }
+      } catch {
+        reply = "Sorry, I could not reach the assistant. Check your connection and try again.";
       }
-
       const botMsg: Message = {
         id: `b-${Date.now()}`,
         sender: "bot",
         text: reply,
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
-
       setMessages((prev) => [...prev, botMsg]);
       setIsTyping(false);
-    }, 900);
+    })();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -205,7 +215,7 @@ export function ChatbotWidget() {
 
             {/* Sub-header telemetry badge */}
             <div className="px-3 py-1.5 bg-dark border-b border-dark-border/80 flex items-center justify-end text-[10px] font-mono text-zincGrey">
-              <span className="text-uranium font-bold">LATENCY: 18ms</span>
+              <span className="text-uranium font-bold">ANSWERS FROM DOCS + LIVE CHAIN DATA</span>
             </div>
 
             {/* Message Stream */}
@@ -255,7 +265,7 @@ export function ChatbotWidget() {
                   </div>
                   <div className="p-3 bg-dark border border-dark-border text-zincGrey flex items-center space-x-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-uranium animate-ping" />
-                    <span className="text-[11px]">Computing contract response...</span>
+                    <span className="text-[11px]">Reading the chain and thinking...</span>
                   </div>
                 </div>
               )}
