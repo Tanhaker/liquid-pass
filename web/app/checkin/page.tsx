@@ -5,10 +5,12 @@ import QRCode from "qrcode";
 import { CheckCircle2, ExternalLink, Loader2, QrCode, ScanLine, ShieldCheck, XCircle } from "lucide-react";
 import { formatRemaining, remaining, shortAddress } from "@/lib/contract";
 import {
+  CHALLENGE_TTL_LABEL,
   CHALLENGE_TTL_S,
   CHECKIN_CHANNEL,
   ROTATE_S,
   decodeResponse,
+  formatCountdown,
   isResponse,
   newChallenge,
   signUrl,
@@ -21,7 +23,7 @@ import {
 /**
  * The venue's side of a QR check-in.
  *
- * This screen shows a challenge that changes every few seconds. The pass
+ * This screen shows a challenge that changes every two minutes. The pass
  * holder scans it, their wallet signs it, and the signed answer comes back
  * here -- by the relay, by a same-browser channel, or pasted in by hand.
  * The decision is made on this page: recover who signed, then ask the
@@ -164,7 +166,7 @@ export default function CheckInScannerPage() {
         </div>
         <h1 className="font-header font-extrabold text-3xl sm:text-5xl text-alabaster tracking-tight">Check In With a Signed Code</h1>
         <p className="font-body text-zincGrey text-sm mt-2 max-w-2xl">
-          The pass holder scans this code and signs it with their wallet. Each code lasts {CHALLENGE_TTL_S} seconds and
+          The pass holder scans this code and signs it with their wallet. Each code lasts {CHALLENGE_TTL_LABEL} and
           works once, so a screenshot cannot be reused.
         </p>
       </div>
@@ -173,7 +175,7 @@ export default function CheckInScannerPage() {
         <div className="lg:col-span-6 p-6 bg-dark-card border border-dark-border shadow-grunge space-y-6">
           <div className="flex items-center justify-between border-b border-dark-border pb-4 gap-3">
             <div className="flex items-center space-x-2"><QrCode className="w-4 h-4 text-uranium" /><h3 className="font-header font-bold text-xl text-alabaster">Live Challenge</h3></div>
-            <span className="font-mono text-[11px] uppercase text-zincGrey whitespace-nowrap">NEW CODE IN {nextIn}S</span>
+            <span className="font-mono text-[11px] uppercase text-zincGrey whitespace-nowrap">NEW CODE IN {formatCountdown(nextIn)}</span>
           </div>
 
           <div className="space-y-3 font-mono text-xs">
@@ -207,7 +209,7 @@ export default function CheckInScannerPage() {
                 <div className="h-full bg-uranium transition-[width] duration-500 ease-linear" style={{ width: `${(secondsLeft / CHALLENGE_TTL_S) * 100}%` }} />
               </div>
               <div className="mt-2 flex justify-between font-mono text-[11px] text-zincGrey uppercase">
-                <span>CODE VALID FOR {secondsLeft}S</span>
+                <span>CODE VALID FOR {formatCountdown(secondsLeft)}</span>
                 <span>CHALLENGE {current ? `${current.nonce.slice(0, 8)}...` : "-"}</span>
               </div>
             </div>

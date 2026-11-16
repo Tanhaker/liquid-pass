@@ -17,9 +17,11 @@ import {
 import { fetchPasses, fetchPlans } from "@/lib/data";
 import { publicClient } from "@/lib/publicClient";
 import {
+  CHALLENGE_TTL_LABEL,
   CHECKIN_CHANNEL,
   checkInMessage,
   encodeResponse,
+  formatCountdown,
   parseChallenge,
   type Challenge,
   type CheckInResponse,
@@ -154,7 +156,7 @@ export default function CheckInSignPage() {
           <div className="flex items-center space-x-2 min-w-0"><Ticket className="w-4 h-4 text-uranium flex-shrink-0" /><h3 className="font-header font-bold text-xl text-alabaster truncate">{challenge ? challenge.venue : "Check-In"}</h3></div>
           {challenge && !sent && (
             <span className={`font-mono text-[11px] uppercase whitespace-nowrap ${expired ? "text-red-400" : "text-zincGrey"}`}>
-              {expired ? "CODE EXPIRED" : `CODE VALID FOR ${secondsLeft}S`}
+              {expired ? "CODE EXPIRED" : `CODE VALID FOR ${formatCountdown(secondsLeft)}`}
             </span>
           )}
         </div>
@@ -186,7 +188,7 @@ export default function CheckInSignPage() {
           </>
         ) : expired ? (
           <Notice bad title="THIS CODE HAS EXPIRED">
-            Codes last less than a minute. Scan the code the scanner is showing now.
+            Codes last {CHALLENGE_TTL_LABEL}. Scan the code the scanner is showing now.
           </Notice>
         ) : !isConnected ? (
           <div className="space-y-4">

@@ -15,18 +15,38 @@ import {
  * anyone. Here the scanner makes up a random challenge, the holder's wallet
  * signs it (EIP-191 personal_sign, free, no transaction), and the scanner
  * recovers the signer and asks the contract whether that signer holds an
- * active pass. A screenshot is useless twice over: the challenge expires in
- * seconds, and each one is accepted once.
+ * active pass. A screenshot is useless twice over: the challenge expires
+ * after two minutes, and each one is accepted once.
  *
  * Everything that decides admit-or-reject runs in the SCANNER's browser. The
  * relay in /api/checkin only carries the signed blob from one screen to the
  * other; it cannot forge a signature and is trusted with nothing.
  */
 
-/** How long a challenge can be answered. */
-export const CHALLENGE_TTL_S = 45;
-/** How often the scanner shows a fresh one. Older ones stay valid until they expire. */
-export const ROTATE_S = 15;
+/**
+ * How long a challenge can be answered, and how often the scanner shows a
+ * fresh one. One clock for both, so the code on screen is always the valid
+ * one and the countdown beside it means exactly what it says.
+ *
+ * Two minutes rather than seconds because the holder's side is slow in real
+ * life: unlock the phone, open the wallet, wait for it to load, approve. A
+ * short window expired on people before they finished. What stops reuse is
+ * not the window but that each challenge is accepted once.
+ */
+export const CHALLENGE_TTL_S: number = 120;
+export const ROTATE_S = CHALLENGE_TTL_S;
+
+/** 95 -> "1:35". */
+export function formatCountdown(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/** 120 -> "2 minutes", 45 -> "45 seconds". */
+export const CHALLENGE_TTL_LABEL =
+  CHALLENGE_TTL_S % 60 === 0
+    ? `${CHALLENGE_TTL_S / 60} minute${CHALLENGE_TTL_S === 60 ? "" : "s"}`
+    : `${CHALLENGE_TTL_S} seconds`;
 
 export const CHECKIN_CHANNEL = "liquidpass-checkin";
 
@@ -148,7 +168,7 @@ export async function verifyCheckIn(
   if (!challenge) return { admit: false, reason: "This code was not issued by this scanner.", tokenId };
   if (alreadyUsed) return { admit: false, reason: "This code was already used. Each code works once.", tokenId };
   if (nowMs / 1000 > challenge.expires) {
-    return { admit: false, reason: `This code has expired. Codes last ${CHALLENGE_TTL_S} seconds.`, tokenId };
+    return { admit: false, reason: `This code has expired. Codes last ${CHALLENGE_TTL_LABEL}.`, tokenId };
   }
 
   let signer: `0x${string}`;
