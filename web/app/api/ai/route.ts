@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { formatEther } from "viem";
 import { LIQUID_PASS_ADDRESS } from "@/lib/contract";
-import { fetchActivity, fetchPasses, fetchPlans } from "@/lib/data";
+import { loadActivity } from "@/lib/activityServer";
+import { fetchPasses, fetchPlans } from "@/lib/data";
 import { retrieve } from "@/lib/knowledge";
 
 /**
@@ -50,10 +51,10 @@ export async function POST(req: Request) {
   let snapshot = "";
   let chainFailed = false;
   try {
-    const [plans, passes, activity] = await Promise.all([
+    const [plans, passes, { activity }] = await Promise.all([
       fetchPlans(),
       fetchPasses(),
-      fetchActivity(20),
+      loadActivity(20),
     ]);
     const now = Math.floor(Date.now() / 1000);
     const sold = passes.filter((p) => p.paid > 0n);
