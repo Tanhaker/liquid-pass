@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import QRCode from "qrcode";
 import { CheckCircle2, ExternalLink, Loader2, QrCode, ScanLine, ShieldCheck, XCircle } from "lucide-react";
 import { formatRemaining, remaining, shortAddress } from "@/lib/contract";
@@ -161,6 +162,9 @@ export default function CheckInScannerPage() {
   return (
     <div className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
       <div className="border-b border-dark-border pb-8">
+        <Link href="/use" className="mb-4 block w-fit font-mono text-[11px] uppercase tracking-wider text-zincGrey hover:text-uranium">
+          &larr; All the ways to use a pass
+        </Link>
         <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 bg-dark-card border border-dark-border text-uranium font-mono text-xs uppercase mb-2">
           <ScanLine className="w-3.5 h-3.5" /><span>SECURE QR CHECK-IN // VENUE SCANNER</span>
         </div>

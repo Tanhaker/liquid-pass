@@ -155,6 +155,63 @@ body {
   text-transform: uppercase;
   color: var(--text-2);
 }
+/* The main site's section links, same shape as its nav. */
+.nav-links {
+  display: none;
+  align-items: center;
+  gap: 4px;
+}
+.nav-link {
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--text-2);
+  text-decoration: none;
+  transition: color 0.15s, background-color 0.15s;
+}
+a.nav-link:hover {
+  background: rgba(22, 26, 34, 0.5);
+  color: var(--text);
+}
+.nav-link.active {
+  border-bottom: 2px solid var(--uranium);
+  background: var(--bg-nested);
+  font-weight: 700;
+  color: var(--uranium);
+}
+/* Below the width where they fit beside the wallet controls, the links drop to their own row. */
+.nav-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-top: 1px solid var(--border);
+  background: var(--bg-card);
+  padding: 8px 12px;
+}
+.nav-row::-webkit-scrollbar {
+  display: none;
+}
+.nav-row > * {
+  padding: 4px 10px;
+  background: var(--bg-nested);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 16.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--text-2);
+  text-decoration: none;
+}
+.nav-row > .active {
+  background: var(--uranium);
+  font-weight: 700;
+  color: #000;
+}
 .nav-right {
   display: flex;
   align-items: center;
@@ -720,6 +777,14 @@ footer {
   }
   .foot-in {
     padding: 24px;
+  }
+}
+@media (min-width: 1100px) {
+  .nav-links {
+    display: flex;
+  }
+  .nav-row {
+    display: none;
   }
 }
 @media (min-width: 1024px) {

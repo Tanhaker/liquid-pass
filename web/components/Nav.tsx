@@ -26,8 +26,14 @@ const LINKS = [
   { href: "/issuer", label: "ISSUER" },
   { href: "/analytics", label: "ANALYTICS" },
   { href: "/verify", label: "VERIFY" },
-  { href: "/checkin", label: "CHECK-IN" },
+  // The gateway to what a pass opens: LiquidDesk, the QR check-in and the
+  // verifier. The check-in pages live under it, so they light this link up.
+  { href: "/use", label: "USE PASS", also: ["/checkin"] },
 ];
+
+function isActive(pathname: string, link: { href: string; also?: string[] }) {
+  return [link.href, ...(link.also ?? [])].some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
 
 // Passkey sits with the account controls on the right, beside the wallet
 // button, rather than among the page sections.
@@ -68,8 +74,9 @@ export function Nav() {
 
           {/* Sections */}
           <nav className="hidden items-center gap-1 min-[1400px]:flex">
-            {LINKS.map(({ href, label }) => {
-              const active = pathname === href || pathname.startsWith(href + "/");
+            {LINKS.map((link) => {
+              const { href, label } = link;
+              const active = isActive(pathname, link);
               return (
                 <Link
                   key={href}
@@ -139,8 +146,9 @@ export function Nav() {
 
       {/* Mobile section bar */}
       <div className="scrollbar-none flex gap-2 overflow-x-auto border-t border-dark-border bg-surface px-3 py-2 min-[1400px]:hidden">
-        {LINKS.map(({ href, label }) => {
-          const active = pathname === href || pathname.startsWith(href + "/");
+        {LINKS.map((link) => {
+          const { href, label } = link;
+          const active = isActive(pathname, link);
           return (
             <Link
               key={href}

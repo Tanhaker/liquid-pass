@@ -19,6 +19,16 @@ import { getAddress, stringToHex } from "viem";
 const LIQUID_PASS_URL = process.env.NEXT_PUBLIC_LIQUID_PASS_URL || "https://liquidpass.xyz";
 const RECHECK_MS = 4_000;
 
+/**
+ * The main site's sections, so moving between the two apps feels like moving
+ * between pages of one product. LiquidDesk itself is the highlighted entry.
+ */
+const SITE_LINKS = [
+  { href: `${LIQUID_PASS_URL}/market`, label: "Market" },
+  { href: `${LIQUID_PASS_URL}/dashboard`, label: "My Passes" },
+  { href: `${LIQUID_PASS_URL}/use`, label: "Use Pass" },
+];
+
 type Eip1193 = {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>;
   on?(event: string, listener: (...args: unknown[]) => void): void;
@@ -198,8 +208,18 @@ export default function Page() {
               <span className="brand-sub">Sample SaaS app // Unlocked by Liquid Pass</span>
             </span>
           </a>
+          <nav className="nav-links" aria-label="Liquid Pass">
+            {SITE_LINKS.map((l) => (
+              <a key={l.href} className="nav-link" href={l.href}>
+                {l.label}
+              </a>
+            ))}
+            <span className="nav-link active" aria-current="page">
+              LiquidDesk
+            </span>
+          </nav>
           <div className="nav-right">
-            <a className="nav-item powered" href={LIQUID_PASS_URL} target="_blank" rel="noreferrer">
+            <a className="nav-item powered" href={LIQUID_PASS_URL}>
               <ZapIcon />
               <span>Powered by:</span>
               <b>LiquidPass</b>
@@ -215,6 +235,14 @@ export default function Page() {
               </>
             )}
           </div>
+        </div>
+        <div className="nav-row">
+          {SITE_LINKS.map((l) => (
+            <a key={l.href} href={l.href}>
+              {l.label}
+            </a>
+          ))}
+          <span className="active">LiquidDesk</span>
         </div>
       </header>
 
