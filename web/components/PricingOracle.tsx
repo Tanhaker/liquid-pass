@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { formatEthShort, type Pass, type Plan } from "@/lib/contract";
 import { suggestPrice, type PlanSignal } from "@/lib/signals";
@@ -15,11 +16,18 @@ import { suggestPrice, type PlanSignal } from "@/lib/signals";
  * When there is no resale history the panel says exactly that and falls back
  * to the time value, marked as a starting point rather than a recommendation.
  *
+ * The figure is always computed here, from chain data. Liquidity AI is asked
+ * only to put the reasoning into words (/api/price), its answer is validated
+ * on the server, and the line under the text says which of the two wrote it.
+ * Until it answers, or if it cannot, the rule-based wording stands.
+ *
  * STYLING: restyled from the earlier token set (line / ink / faint / muted,
  * plus inline CSS-variable colours) to the grunge tokens used by the page it
  * sits on. The grounded/ungrounded distinction is now carried by uranium
  * versus zincGrey rather than by inline styles.
  */
+type Advice = { explanation: string; source: "gemini" | "rules"; note?: string };
+
 export function PricingOracle({
   pass,
   plan,
@@ -34,6 +42,34 @@ export function PricingOracle({
   onUse: (price: string) => void;
 }) {
   const s = suggestPrice(pass, plan, signal, nowMs);
+  const tokenId = pass.tokenId.toString();
+  const priced = s !== null;
+  const [advice, setAdvice] = useState<Advice | null>(null);
+  const [asking, setAsking] = useState(false);
+
+  useEffect(() => {
+    if (!priced) return;
+    let cancelled = false;
+    setAdvice(null);
+    setAsking(true);
+    fetch("/api/price", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tokenId }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: Advice | null) => {
+        if (!cancelled && body?.explanation) setAdvice(body);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setAsking(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tokenId, priced]);
+
   if (!s) return null;
 
   return (
@@ -56,7 +92,16 @@ export function PricingOracle({
         )}
       </div>
 
-      <p className="mt-2 font-body text-[11px] leading-relaxed text-zincGrey">{s.evidence}</p>
+      <p className="mt-2 font-body text-[11px] leading-relaxed text-zincGrey">
+        {advice?.explanation ?? s.evidence}
+      </p>
+      <p className="mt-1.5 font-mono text-[9px] uppercase tracking-wider text-zincGrey" title={advice?.note}>
+        {asking
+          ? "Liquidity AI is writing the explanation..."
+          : advice?.source === "gemini"
+            ? "Explained by Liquidity AI // price computed from chain data"
+            : "Rule-based explanation // price computed from chain data"}
+      </p>
 
       <button
         type="button"
