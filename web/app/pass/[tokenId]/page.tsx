@@ -44,6 +44,7 @@ import {
 import { fetchActivity, fetchPasses, fetchPlans, type Activity } from "@/lib/data";
 import { useTransferPass } from "@/lib/useTransferPass";
 import { PricingOracle } from "@/components/PricingOracle";
+import { Usd } from "@/components/Usd";
 import { StreamRentalPanel } from "@/components/StreamRentalPanel";
 import { planSignals } from "@/lib/signals";
 import { useDemo } from "@/lib/demo";
@@ -266,12 +267,14 @@ export default function PassDetail({
                 <span>currentPrice({pass.tokenId.toString()}):</span>
                 <span className="text-alabaster">
                   {pass.listed > 0n ? `${formatEthShort(pass.current)} ETH` : "0 (Not Listed)"}
+                  {pass.listed > 0n && <Usd amount={pass.current} className="ml-1.5" />}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>paidOf({pass.tokenId.toString()}):</span>
                 <span className="text-alabaster">
                   {pass.paid > 0n ? `${formatEther(pass.paid)} ETH` : "issued directly"}
+                  {pass.paid > 0n && <Usd amount={pass.paid} className="ml-1.5" />}
                 </span>
               </div>
             </div>
@@ -362,11 +365,13 @@ export default function PassDetail({
               <div className="border border-dark-border bg-dark p-3">
                 <div className="text-[10px] uppercase text-zincGrey">Seller Take (90%)</div>
                 <div className="text-lg font-bold text-uranium">{sellerProceeds} ETH</div>
+                <Usd amount={sellerProceeds} className="block" />
                 <div className="mt-1 text-[10px] text-zincGrey">Paid directly to seller wallet</div>
               </div>
               <div className="border border-dark-border bg-dark p-3">
                 <div className="text-[10px] uppercase text-zincGrey">Issuer Royalty (10%)</div>
                 <div className="text-lg font-bold text-periwinkle">{issuerRoyalty} ETH</div>
+                <Usd amount={issuerRoyalty} className="block" />
                 <div className="mt-1 text-[10px] text-zincGrey">Paid to the original issuer</div>
               </div>
             </div>

@@ -11,6 +11,7 @@ import {
   shortAddress, formatEthShort, type Plan,
 } from "@/lib/contract";
 import { fetchPlans } from "@/lib/data";
+import { Usd } from "@/components/Usd";
 import { Banner, humanise, useFees } from "@/components/ui";
 import { IssuerAccess } from "@/components/IssuerAccess";
 
@@ -239,7 +240,7 @@ export default function IssuerPage() {
                           {plan.open ? "OPEN" : "CLOSED"}
                         </span>
                       </div>
-                      <span className="text-uranium font-bold">{formatEthShort(plan.price)} ETH</span>
+                      <span className="text-uranium font-bold">{formatEthShort(plan.price)} ETH <Usd amount={plan.price} /></span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-[11px] text-zincGrey pt-1 border-t border-dark-border/60">
                       <div><span>Duration: </span><span className="text-alabaster font-bold">{Math.round(Number(plan.duration) / 86400)} days</span></div>

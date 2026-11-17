@@ -116,7 +116,8 @@ export default function UsePassPage() {
         <div className="text-alabaster font-bold uppercase">Access follows the pass</div>
         <p>
           Resell or gift a pass and both doors close for you and open for the new holder, with the same expiry date.
-          No pass yet? <Link href="/dashboard" className="text-uranium hover:underline">Get one in My Passes</Link> or
+          New here? <Link href="/try" className="text-uranium hover:underline">Take the guided tour</Link>. No pass yet?{" "}
+          <Link href="/dashboard" className="text-uranium hover:underline">Get one in My Passes</Link> or
           buy someone&apos;s remaining days on the <Link href="/market" className="text-uranium hover:underline">Market</Link>.
         </p>
       </div>

@@ -3,7 +3,8 @@
 import React, { useRef, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { SubscriptionPass } from "@/lib/types";
-import { DecayRate, LivePrice } from "@/components/LivePrice";
+import { LivePrice, DecayRate } from "@/components/LivePrice";
+import { Usd } from "@/components/Usd";
 import { Clock, ShieldCheck, ArrowRight, Zap, Flame } from "lucide-react";
 import { Button3D, LinkButton3D } from "@/components/Button3D";
 
@@ -189,6 +190,7 @@ export function PassCard3D({
           <div className="p-2.5 border border-dark-border bg-dark">
             <span className="text-[10px] text-zincGrey block uppercase mb-0.5">Original Retail</span>
             <span className="text-zincGrey-light line-through text-sm">{pass.originalPriceEth} ETH</span>
+            <Usd amount={pass.originalPriceEth} className="block" />
           </div>
           <div className="p-2.5 border border-dark-border bg-dark-surface">
             <span className="text-[10px] text-uranium block uppercase mb-0.5">
@@ -201,9 +203,13 @@ export function PassCard3D({
               <>
                 <LivePrice decay={pass.decay} className="text-uranium font-bold text-base tnum" />
                 <DecayRate decay={pass.decay} className="block text-[10px] text-aviation mt-0.5" />
+                <Usd amount={pass.listingPriceEth ?? "0"} className="block" />
               </>
             ) : (
-              <span className="text-uranium font-bold text-base">{effectivePrice} ETH</span>
+              <>
+                <span className="text-uranium font-bold text-base">{effectivePrice} ETH</span>
+                <Usd amount={effectivePrice} className="block" />
+              </>
             )}
           </div>
         </div>

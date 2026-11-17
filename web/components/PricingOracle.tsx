@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { formatEthShort, type Pass, type Plan } from "@/lib/contract";
 import { suggestPrice, type PlanSignal } from "@/lib/signals";
+import { Usd } from "@/components/Usd";
 
 /**
  * Pricing suggestion for a pass the user is about to list.
@@ -108,7 +109,7 @@ export function PricingOracle({
         onClick={() => onUse(formatEthShort(s.price))}
         className="tnum mt-2.5 border border-dark-border bg-dark-surface px-2.5 py-1.5 font-mono text-[11px] uppercase text-zincGrey transition-all hover:border-uranium hover:text-alabaster"
       >
-        use {formatEthShort(s.price)} ETH
+        use {formatEthShort(s.price)} ETH <Usd amount={s.price} className="ml-1 normal-case" prefix="(≈ " />
       </button>
     </div>
   );

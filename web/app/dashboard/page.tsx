@@ -28,6 +28,7 @@ import {
   type Plan,
 } from "@/lib/contract";
 import { fetchPasses, fetchPlans, passesOf } from "@/lib/data";
+import { Usd } from "@/components/Usd";
 import { Banner, humanise, useFees, useNow } from "@/components/ui";
 import { useTxToast } from "@/lib/useTxToast";
 import { useTransferPass } from "@/lib/useTransferPass";
@@ -345,7 +346,7 @@ export default function DashboardPage() {
                   <div key={plan.id.toString()} className="p-4 bg-dark border border-dark-border space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-alabaster">{plan.name || `Plan #${plan.id}`}</span>
-                      <span className="text-uranium font-bold">{formatEthShort(plan.price)} ETH</span>
+                      <span className="text-uranium font-bold">{formatEthShort(plan.price)} ETH <Usd amount={plan.price} /></span>
                     </div>
                     <div className="text-zincGrey text-[11px]">Duration: {Math.round(Number(plan.duration) / 86400)} days</div>
                     <button onClick={() => handleBuyFromPlan(plan)} disabled={busy || !isConnected || wrongNetwork}

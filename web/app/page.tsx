@@ -7,6 +7,7 @@ import { ArrowRight, ArrowUpRight, Cpu, Fingerprint, Sliders } from "lucide-reac
 import { PassCard3D } from "@/components/PassCard3D";
 import { LinkButton3D } from "@/components/Button3D";
 import { DualSettlementAnimation } from "@/components/DualSettlementAnimation";
+import { LiveImpact, ProblemEvidence } from "@/components/HomeEvidence";
 import { useNow } from "@/components/ui";
 import dynamic from "next/dynamic";
 // Three.js runs in the browser only, and pulling it through next/dynamic keeps
@@ -168,8 +169,8 @@ export default function Home() {
                 <span>BROWSE THE MARKET</span>
                 <ArrowRight className="size-4" />
               </LinkButton3D>
-              <LinkButton3D href="/dashboard" variant="ghost" size="lg">
-                MY PASSES &amp; VAULT
+              <LinkButton3D href="/try" variant="ghost" size="lg">
+                TRY THE FULL FLOW
               </LinkButton3D>
             </div>
 
@@ -242,6 +243,9 @@ export default function Home() {
         </div>
       </section>
       </div>
+
+      {/* Why this matters, in sourced figures. */}
+      <ProblemEvidence />
 
       {/* ---------------------------------------------------------------- */}
       {/* LIFECYCLE                                                        */}
@@ -348,6 +352,9 @@ export default function Home() {
           every resale. */}
       <DualSettlementAnimation />
 
+      {/* What the contract has actually done, read from the chain. */}
+      <LiveImpact />
+
       {/* ---------------------------------------------------------------- */}
       {/* CTA                                                              */}
       {/* ---------------------------------------------------------------- */}
@@ -366,6 +373,13 @@ export default function Home() {
               ENTER THE MARKETPLACE
               <ArrowRight className="size-4" />
             </Link>
+            <p className="mt-6 font-mono text-xs text-zinc-grey">
+              First time here?{" "}
+              <Link href="/try" className="text-uranium hover:underline">
+                Take the five-minute guided tour
+              </Link>
+              .
+            </p>
           </motion.div>
 
           <div className="mt-20 flex flex-wrap items-center justify-center gap-4 font-mono text-[11px] text-zinc-grey">
