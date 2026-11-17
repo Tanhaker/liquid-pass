@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Liquid Pass",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "See the subscription passes you own and how much time is left on each.",
   "action": { "default_popup": "popup.html", "default_title": "Liquid Pass" },
   "permissions": ["storage"],
-  "host_permissions": ["https://sepolia-rollup.arbitrum.io/*"],
+  "host_permissions": ["https://arbitrum-sepolia-rpc.publicnode.com/*", "https://sepolia-rollup.arbitrum.io/*"],
   "icons": { "128": "icon128.png" }
 }

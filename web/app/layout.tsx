@@ -5,6 +5,7 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { DemoBar } from "@/components/DemoBar";
 import { ChatbotWidget } from "@/components/ChatbotWidget";
+import { PassAlerts } from "@/components/PassAlerts";
 import { TransactionToasts } from "@/components/TransactionToasts";
 import { DemoProvider } from "@/lib/demo";
 
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <main className="grow">{children}</main>
             <Footer />
             <ChatbotWidget />
+            <PassAlerts />
             {/* Global transaction toasts. Fed by lib/useTxToast, which the
                 write paths call -- without that this renders an empty div,
                 which is what it did for as long as it had no caller. */}

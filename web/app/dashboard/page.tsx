@@ -36,6 +36,7 @@ import { GiftSplit } from "@/components/GiftSplit";
 import { YieldDashboard } from "@/components/YieldDashboard";
 import { PassBundler } from "@/components/PassBundler";
 import { AutoSell } from "@/components/AutoSell";
+import { AlertsToggle } from "@/components/PassAlerts";
 
 export default function DashboardPage() {
   const { address, isConnected, chainId } = useAccount();
@@ -227,6 +228,9 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between text-zincGrey">
             <span>MARKET LISTINGS:</span>
             <span className="text-aviation font-bold">{myListings.length} Offered</span>
+          </div>
+          <div className="pt-2 border-t border-dark-border">
+            <AlertsToggle />
           </div>
         </div>
       </div>

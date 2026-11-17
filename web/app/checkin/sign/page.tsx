@@ -17,6 +17,7 @@ import {
 import { markUsed } from "@/lib/autosell";
 import { fetchPasses, fetchPlans } from "@/lib/data";
 import { publicClient } from "@/lib/publicClient";
+import { QrScanner } from "@/components/QrScanner";
 import {
   CHALLENGE_TTL_LABEL,
   CHECKIN_CHANNEL,
@@ -168,9 +169,25 @@ export default function CheckInSignPage() {
         {challenge === undefined ? (
           <div className="p-5 text-center font-mono text-xs text-zincGrey">Reading the code...</div>
         ) : challenge === null ? (
-          <Notice bad title="NO CHECK-IN CODE FOUND">
-            Open this page by scanning the code on the venue&apos;s scanner. <Link href="/checkin" className="text-uranium hover:underline">Go to the scanner</Link>.
-          </Notice>
+          <>
+            <Notice bad title="NO CHECK-IN CODE YET">
+              Scan the code on the venue&apos;s scanner to check in. Venue staff can open it at{" "}
+              <Link href="/checkin" className="text-uranium hover:underline">/checkin</Link>.
+            </Notice>
+            <QrScanner
+              onResult={(text) => {
+                try {
+                  const found = parseChallenge(new URL(text, window.location.href).search);
+                  if (!found) throw new Error();
+                  setChallenge(found);
+                  window.history.replaceState(null, "", `/checkin/sign${new URL(text, window.location.href).search}`);
+                } catch {
+                  setError("That QR code is not a Liquid Pass check-in code.");
+                }
+              }}
+            />
+            {error && <p className="font-mono text-[11px] text-red-400">{error}</p>}
+          </>
         ) : sent ? (
           <>
             <Notice title="SIGNED AND SENT TO THE SCANNER">

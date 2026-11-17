@@ -70,6 +70,16 @@ export function Footer() {
                   06 // Issuer Portal
                 </Link>
               </li>
+              <li>
+                <Link href="/developers" className="hover:text-uranium transition-colors">
+                  07 // Developer Guide
+                </Link>
+              </li>
+              <li>
+                <Link href="/try" className="hover:text-uranium transition-colors">
+                  08 // Guided Tour
+                </Link>
+              </li>
             </ul>
           </div>
 

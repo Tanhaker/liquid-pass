@@ -101,13 +101,16 @@ export default function UsePassPage() {
           title="Verify Any Pass"
           name="Access Verifier"
           body="Look up a pass number and see who holds access right now, read straight from the contract. This is the same check LiquidDesk and the scanner run, in a form any developer can copy."
-          steps={["Enter a pass number", "See the holder and the time left", "Copy the three-line check"]}
+          steps={["Enter a pass number", "See the holder and the time left", "Copy the check into your own app"]}
         >
           <Link
             href="/verify"
             className="inline-flex items-center justify-center space-x-2 px-6 py-3 bg-dark border border-dark-border hover:border-uranium text-alabaster hover:text-uranium font-mono text-xs uppercase tracking-wider transition-colors"
           >
             <span>OPEN THE VERIFIER</span><ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+          <Link href="/developers" className="ml-4 font-mono text-[11px] uppercase tracking-wider text-zincGrey hover:text-uranium">
+            Developer guide &rarr;
           </Link>
         </Door>
       </div>

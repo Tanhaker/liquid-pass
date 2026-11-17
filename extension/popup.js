@@ -10,7 +10,9 @@
  * would be more code than the encoding it replaces.
  */
 
-const RPC = "https://sepolia-rollup.arbitrum.io/rpc";
+// PublicNode first: Arbitrum's own public endpoint rate-limits per visitor and
+// answers its 429s without CORS headers, which reads as a network failure.
+const RPCS = ["https://arbitrum-sepolia-rpc.publicnode.com", "https://sepolia-rollup.arbitrum.io/rpc"];
 
 /**
  * Two contracts, not one.
@@ -28,7 +30,7 @@ const RPC = "https://sepolia-rollup.arbitrum.io/rpc";
 const CORE = "0xac20ef73723e7c620df1024eb04cc0b71fca1055";
 const MARKETPLACE = "0x63a9edec92baf3e74f19d301808c56104e786241";
 
-const SITE = "https://web-tanmaygaming206-5537s-projects.vercel.app";
+const SITE = "https://liquidpass.xyz";
 
 /**
  * Function selectors: first 4 bytes of keccak256 of the signature.
@@ -64,7 +66,7 @@ function encAddr(a) {
   return pad32(a.toLowerCase().replace(/^0x/, ""));
 }
 
-async function call(data, to = CORE) {
+async function callVia(RPC, data, to) {
   const res = await fetch(RPC, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -78,6 +80,19 @@ async function call(data, to = CORE) {
   const json = await res.json();
   if (json.error) throw new Error(json.error.message);
   return json.result;
+}
+
+/** eth_call against each endpoint in turn, so one being down or rate-limited is not fatal. */
+async function call(data, to = CORE) {
+  let last;
+  for (const rpc of RPCS) {
+    try {
+      return await callVia(rpc, data, to);
+    } catch (e) {
+      last = e;
+    }
+  }
+  throw last;
 }
 
 const asBigInt = (hex) => (hex && hex !== "0x" ? BigInt(hex) : 0n);
@@ -167,7 +182,7 @@ async function loadFor(address) {
     li.querySelector(".time").textContent = t.text;
     li.querySelector(".id").textContent = `#${p.id}`;
     li.querySelector(".listed").textContent =
-      p.listed > 0n ? `listed · ${fmtEth(p.listed)} ETH` : "";
+      p.listed > 0n ? `listed · ${fmtEth(p.listed)} ETH` : "sell remaining time →";
     li.addEventListener("click", () => {
       chrome.tabs.create({ url: `${SITE}/pass/${p.id}` });
     });
@@ -204,6 +219,7 @@ async function main() {
 
   $("market").addEventListener("click", () => chrome.tabs.create({ url: `${SITE}/market` }));
   $("dash").addEventListener("click", () => chrome.tabs.create({ url: `${SITE}/dashboard` }));
+  $("use").addEventListener("click", () => chrome.tabs.create({ url: `${SITE}/use` }));
 }
 
 main();
