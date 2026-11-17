@@ -49,6 +49,8 @@ const abi = parseAbi([
   "function expiryOf(uint256 tokenId) view returns (uint256)",
   "function planOf(uint256 tokenId) view returns (uint256)",
   "function planName(uint256 planId) view returns (string)",
+  "function nextPlanId() view returns (uint256)",
+  "function planIssuerOf(uint256 planId) view returns (address)",
 ]);
 const rentalAbi = parseAbi(["function activeRenter(uint256 tokenId) view returns (address)"]);
 
@@ -61,6 +63,46 @@ const client = createPublicClient({
 });
 
 const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
+/**
+ * Which plans count as LiquidDesk's own.
+ *
+ * A product sells its own plan, so a pass for some other plan from the same
+ * issuer should not open it. Any plan whose name starts with "LiquidDesk" is
+ * LiquidDesk's. Until the issuer has created one, every plan of theirs is
+ * accepted, so the app keeps working before that plan exists and narrows by
+ * itself the moment it does -- no redeploy, no setting to change.
+ */
+const OWN_PLAN = /^liquid\s?desk/i;
+const PLANS_MEMO_MS = 30_000;
+let ownPlansMemo: { at: number; ids: bigint[] } | null = null;
+
+async function ownPlans(): Promise<bigint[]> {
+  if (ownPlansMemo && Date.now() - ownPlansMemo.at < PLANS_MEMO_MS) return ownPlansMemo.ids;
+  const count = Number(await client.readContract({ address: CORE, abi, functionName: "nextPlanId" }));
+  const ids = Array.from({ length: count }, (_, i) => BigInt(i)).filter((id) => !HIDDEN_PLAN_IDS.includes(id));
+  const reads = await client.multicall({
+    allowFailure: true,
+    contracts: ids.flatMap(
+      (id) =>
+        [
+          { address: CORE, abi, functionName: "planName", args: [id] },
+          { address: CORE, abi, functionName: "planIssuerOf", args: [id] },
+        ] as const,
+    ),
+  });
+  const own = ids.filter((_, i) => {
+    const [name, issuer] = [reads[i * 2], reads[i * 2 + 1]];
+    return (
+      name.status === "success" &&
+      issuer.status === "success" &&
+      OWN_PLAN.test(name.result as string) &&
+      same(issuer.result as string, ISSUER)
+    );
+  });
+  ownPlansMemo = { at: Date.now(), ids: own };
+  return own;
+}
 
 export type PassAccess = {
   tokenId: number;
@@ -92,6 +134,7 @@ export async function checkAccess(wallet: `0x${string}`): Promise<Access> {
   const count = Number(await client.readContract({ address: CORE, abi, functionName: "nextTokenId" }));
   if (count === 0) return { granted: false, reason: "no-pass" };
 
+  const own = await ownPlans();
   const ids = Array.from({ length: count }, (_, i) => BigInt(i));
   // allowFailure: a pass burnt by `bundle` reverts on read and must not take
   // the whole check down with it.
@@ -123,7 +166,9 @@ export async function checkAccess(wallet: `0x${string}`): Promise<Access> {
       };
     })
     .filter((p): p is NonNullable<typeof p> => p !== null && same(p.issuer, ISSUER))
-    .filter((p) => !HIDDEN_PLAN_IDS.includes(p.plan));
+    .filter((p) => !HIDDEN_PLAN_IDS.includes(p.plan))
+    // Only LiquidDesk's own plan, once the issuer has created one.
+    .filter((p) => own.length === 0 || own.includes(p.plan));
 
   const escrowed = ours.filter((p) => p.active && same(p.owner, RENTAL));
   const renters = escrowed.length

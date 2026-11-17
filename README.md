@@ -6,7 +6,14 @@ Subscriptions expire whether you use them or not. Liquid Pass turns the
 remaining time into something you can hand to somebody else — and the buyer
 inherits your expiry date, not a fresh term.
 
-Built for the Arbitrum showcase, 2 September 2026.
+First built for the Arbitrum showcase (2 September 2026); extended for
+HackSphere 2026, Phase 2.
+
+| | |
+|---|---|
+| Marketplace | https://liquidpass.xyz |
+| LiquidDesk, a sample app a pass unlocks | https://desk.liquidpass.xyz |
+| Network | Arbitrum Sepolia (testnet; no real money moves) |
 
 ## The idea
 
@@ -23,6 +30,45 @@ transfers ownership and never touches the expiry timestamp.
 
 On every resale: **90% to the seller, 10% to the original issuer**, forever,
 for as long as the pass keeps trading.
+
+## Using a pass
+
+Holding a pass is the access. The **Use Pass** page (`/use`) gathers the
+places that accept one; all of them read the same contract, so when a pass is
+sold or gifted they close for the old holder and open for the new one.
+
+- **LiquidDesk** (`liquiddesk/`, its own app and address). A sample SaaS
+  product. You sign in by signing a one-time message with your wallet; its
+  server reads `isActive`, `ownerOf` and `issuerOf` on every request and runs
+  the Pro feature only while they pass. Sell the pass and it locks on screen
+  within seconds. No user database, no passwords.
+- **QR check-in** (`/checkin`, `/checkin/sign`). For physical venues. The
+  scanner shows a one-time challenge that changes every 2 minutes; the
+  holder's wallet signs it (EIP-191, free, no transaction); the scanner
+  recovers the signer and confirms on chain that it holds an active pass.
+  Each challenge is accepted once, so a screenshot cannot be reused. The
+  admit-or-refuse decision is made in the scanner's browser; `/api/checkin`
+  only relays the signed answer between the two screens.
+- **Verify** (`/verify`). Who holds access to any pass right now, with the
+  few lines of code another app needs to make the same check.
+
+## Liquidity AI
+
+Google Gemini behind server routes, so the key never reaches the browser.
+Every answer is grounded in what the server hands the model, and checked.
+
+- **Assistant** (the corner widget on both apps, `/api/ai`). Answers from the
+  in-repo knowledge base and a live chain snapshot, including the connected
+  wallet's own passes. It is told to say it does not know rather than guess.
+- **Auto-sell rules** (`/api/rule`, My Passes). A sentence such as *if I don't
+  use this pass for 7 days, sell it for 0.001* becomes a validated rule. A
+  pass counts as used when it unlocks LiquidDesk, when a check-in is signed
+  with it, or when it is verified. A rule that fires offers a one-click
+  listing for the holder to sign; nothing is listed without a signature.
+- **Fair-price advisor** (`/api/price`, the sell form). The price is computed
+  first, from the time left and from past resales read off the chain. The
+  model only explains it, and an explanation containing any number that was
+  not in the supplied facts is discarded in favour of rule-based wording.
 
 ## The Web 2.5 Vision (Bridging Fiat & Crypto)
 
@@ -41,15 +87,20 @@ We don't need them. **Arbitrum Stylus and The Graph handle our state, execution,
 ```
 contracts/     PassKeyWallet — earlier work, not on the product path
 subscription/  the Liquid Pass contract (Rust + Stylus) and its e2e suite
-web/           Next.js 15 marketplace
+web/           Next.js 15 marketplace (liquidpass.xyz)
+liquiddesk/    Next.js sample app unlocked by a pass (desk.liquidpass.xyz)
 subgraph/      The Graph mappings — optional, nothing depends on it
 extension/     read-only Chrome companion
 bench/         P-256 gas benchmark from the earlier project
 ```
 
 **There is no backend server and no database.** The marketplace reads the
-chain directly with viem. Two API routes exist — IPFS pinning and the AI
-assistant — and the product works fully with neither configured.
+chain directly with viem. A handful of serverless routes cover what cannot run
+in a browser or on chain: IPFS pinning (`/api/ipfs`), the three Liquidity AI
+routes, the activity feed (`/api/activity`, one cached read of the contract's
+events shared by every visitor) and the check-in relay. None of them holds a
+wallet key or can move a pass, and buying, selling and gifting work with none
+of them configured.
 
 The contract deliberately **does not implement ERC-721**: no approvals, no
 operators, no enumeration, and ownership moves emit `PassTransferred` rather
@@ -146,6 +197,9 @@ See `web/.env.example`. Everything is optional:
 | `PINATA_JWT` | `/api/ipfs` returns 501; plan names and prices are on chain anyway |
 | `GEMINI_API_KEY` | Liquid AI answers from the in-repo knowledge base, labelled as documentation |
 | `NEXT_PUBLIC_SUBGRAPH_URL` | Direct chain reads, which are the primary path regardless |
+
+LiquidDesk needs one variable in production: `SESSION_SECRET`, any long random
+string, which signs its session cookie.
 
 Server-only keys have **no** `NEXT_PUBLIC_` prefix, which is what keeps Next
 from inlining them into the browser bundle.

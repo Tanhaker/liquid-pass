@@ -35,9 +35,11 @@ function isActive(pathname: string, link: { href: string; also?: string[] }) {
   return [link.href, ...(link.also ?? [])].some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 
-// Passkey sits with the account controls on the right, beside the wallet
-// button, rather than among the page sections.
-const PASSKEY = { href: "/passkey", label: "PASSKEY" };
+// The passkey verifier is a lab page, not how anyone signs in: the deployed
+// wallet contract only accepts passkeys created at localhost, and sign-in on
+// this site is by wallet. It is labelled as a lab so nobody reads the button
+// as a login, and it is dropped on phones, where the header has no room.
+const PASSKEY = { href: "/passkey", label: "PASSKEY LAB" };
 
 export function Nav() {
   const pathname = usePathname();
@@ -50,7 +52,7 @@ export function Nav() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-dark-border bg-ink/90 backdrop-blur-md">
-      <div className="w-full px-4 sm:px-8">
+      <div className="w-full px-3 sm:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Brand */}
           <Link href="/" className="group flex shrink-0 items-center gap-3">
@@ -94,7 +96,7 @@ export function Nav() {
           </nav>
 
           {/* Controls */}
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <div className="border border-dark-border bg-surface transition-colors hover:border-uranium">
               <HorizontalThemeWipeToggle direction="left" />
             </div>
@@ -102,7 +104,7 @@ export function Nav() {
             <button
               onClick={() => setDemo(!demo)}
               title="Toggle simulated state vs live contract RPC"
-              className={`flex items-center gap-2 border px-3 py-1.5 font-mono text-xs uppercase tracking-wider transition-all ${
+              className={`flex items-center gap-2 whitespace-nowrap border px-2 py-1.5 font-mono text-xs uppercase tracking-wider transition-all sm:px-3 ${
                 demo
                   ? "border-aviation bg-aviation/10 text-aviation shadow-glow-amber"
                   : "border-dark-border bg-raised text-zinc-grey hover:border-uranium"
@@ -115,8 +117,8 @@ export function Nav() {
 
             <Link
               href={PASSKEY.href}
-              title="Passkey verifier"
-              className={`flex items-center gap-2 border px-3 py-1.5 font-mono text-xs uppercase tracking-wider transition-all ${
+              title="Experimental: verify a passkey signature against the Stylus contract"
+              className={`hidden items-center gap-2 whitespace-nowrap border px-3 py-1.5 font-mono text-xs uppercase tracking-wider transition-all md:flex ${
                 pathname === PASSKEY.href
                   ? "border-uranium bg-uranium/10 font-semibold text-uranium"
                   : "border-dark-border bg-raised text-zinc-grey hover:border-uranium hover:text-text"

@@ -414,7 +414,7 @@ export function DualSettlementAnimation() {
 
               {/* Card Footer */}
               <div className="pt-4 mt-6 border-t border-dark-border flex items-center justify-between text-[11px] font-mono text-zincGrey h-10">
-                <span>Instant Passkey WebAuthn Login</span>
+                <span>Wallet sign-in, no password</span>
                 <span className="text-aviation font-semibold">40% Discount</span>
               </div>
             </motion.div>
