@@ -105,10 +105,10 @@ export default function TryItPage() {
     },
     {
       title: "Buy a pass",
-      body: "Pick a plan on the market and buy it. The contract records you as the owner with a fixed expiry, and the issuer is paid in the same transaction.",
+      body: "In My Passes, under \"Buy a pass from an open plan\", pick a plan and buy it. The contract records you as the owner with a fixed expiry, and the issuer is paid in the same transaction. You can also buy someone's remaining days on the market.",
       done: address ? active.length > 0 : null,
       status: best ? `You hold pass #${best.tokenId}, ${formatRemaining(remaining(best.expiry))} left` : undefined,
-      action: <StepLink href="/market">Open the market</StepLink>,
+      action: <StepLink href="/dashboard">Buy a pass in My Passes</StepLink>,
     },
     {
       title: "Use it: unlock LiquidDesk",
