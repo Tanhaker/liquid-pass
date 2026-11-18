@@ -111,6 +111,12 @@ export const KNOWLEDGE: Doc[] = [
     text: "When you open Sell remaining time on a pass, Liquid Pass suggests an asking price. It is calculated from the time left in proportion to the original price, and moved toward what past resales of the same plan actually sold for when there are any. Liquidity AI then explains the reasoning in two sentences; the server discards any explanation that contains a number not found in the chain data. You can accept the suggestion or type your own price, and you sign the listing yourself.",
     tags: ["price", "pricing", "fair", "suggest", "suggested", "asking", "advisor", "worth", "value", "how", "much"],
   },
+  {
+    id: "business",
+    title: "How Liquid Pass makes money",
+    text: "Liquid Pass earns only when unused time is resold. Planned revenue streams: a 2.5% marketplace fee on each resale, taken alongside the seller's share and the issuer's 10% royalty; Issuer Pro plans with revenue analytics, branding and promoted plans; a paid hosted Access Gateway API, with basic on-chain verification free; revenue share from card on-ramp partners; and an enterprise exchange for unused team seats. The fee is not charged yet: the deployed marketplace pays 90% to the seller and 10% to the issuer. At $100,000 of resales a month, a 2.5% fee earns Liquid Pass $2,500 while issuers earn $10,000 in royalties. The Business Model page shows the live figures.",
+    tags: ["business", "model", "revenue", "money", "earn", "fee", "fees", "profit", "monetise", "monetize", "pricing", "sustainable"],
+  },
 ];
 
 /**

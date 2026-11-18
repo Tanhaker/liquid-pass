@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Activity, ArrowUpRight, BarChart3 } from "lucide-react";
 import { fetchActivity, fetchPasses, type Activity as Event } from "@/lib/data";
@@ -161,6 +162,7 @@ export function LiveImpact() {
           </div>
           <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-zinc-grey">
             <BarChart3 className="size-3.5" /> Read from the chain on every visit
+            <Link href="/business" className="ml-3 text-uranium hover:underline">Business model &rarr;</Link>
           </span>
         </motion.div>
         {failed ? (

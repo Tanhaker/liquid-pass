@@ -80,6 +80,11 @@ export function Footer() {
                   08 // Guided Tour
                 </Link>
               </li>
+              <li>
+                <Link href="/business" className="hover:text-uranium transition-colors">
+                  09 // Business Model
+                </Link>
+              </li>
             </ul>
           </div>
 
