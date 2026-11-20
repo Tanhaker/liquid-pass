@@ -23,7 +23,11 @@ export const DEPLOY_BLOCK = 304290900n;
  * the check-in scanner), which answer for such a pass as for one that does
  * not exist. LiquidDesk keeps its own copy of this list.
  */
-export const HIDDEN_PLAN_IDS: readonly bigint[] = [0n];
+export const HIDDEN_PLAN_IDS: readonly bigint[] = [
+  // Plans 0-11: every plan created while building and testing (21 Nov 2026 reset
+  // for the final demo). Fresh plans start at #12.
+  0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n, 11n,
+];
 
 export function isHiddenPlan(planId: bigint | number | string | null | undefined): boolean {
   if (planId === null || planId === undefined) return false;

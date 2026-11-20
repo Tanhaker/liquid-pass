@@ -39,7 +39,11 @@ export const ISSUER = env(
  * They cannot be deleted from the chain, so a pass on one is ignored here,
  * exactly as the main site ignores it (HIDDEN_PLAN_IDS in web/lib/contract.ts).
  */
-const HIDDEN_PLAN_IDS: readonly bigint[] = [0n];
+const HIDDEN_PLAN_IDS: readonly bigint[] = [
+  // Plans 0-11: every plan created while building and testing (21 Nov 2026 reset
+  // for the final demo). Fresh plans start at #12.
+  0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n, 11n,
+];
 
 const abi = parseAbi([
   "function nextTokenId() view returns (uint256)",
