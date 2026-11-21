@@ -27,7 +27,7 @@ export const HIDDEN_PLAN_IDS: readonly bigint[] = [
   // Plans 0-11: every plan created while building and testing (21 Nov 2026 reset
   // for the final demo). Fresh plans start at #12.
   0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n, 11n,
-  12n, // rehearsal, 21 Nov 2026
+  12n, 13n, // rehearsals, 21 Nov 2026
 ];
 
 export function isHiddenPlan(planId: bigint | number | string | null | undefined): boolean {
